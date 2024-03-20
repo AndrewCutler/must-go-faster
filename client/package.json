@@ -6,5 +6,8 @@
 	"devDependencies": {
 		"webpack": "^5.90.3",
 		"webpack-cli": "^5.1.4"
+	},
+	"dependencies": {
+		"chessground": "^9.0.4"
 	}
 }

@@ -1,0 +1,10 @@
+{
+	"main": "index.js",
+	"scripts": {
+		"build": "npx webpack"
+	},
+	"devDependencies": {
+		"webpack": "^5.90.3",
+		"webpack-cli": "^5.1.4"
+	}
+}

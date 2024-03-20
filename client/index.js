@@ -1,5 +1,5 @@
-function test() {
-    console.log('testing 2...')
-}
+import { Chessground } from 'chessground';
 
-test();
+window.onload = function () {
+	const ground = Chessground(document.querySelector('#board'), {});
+};

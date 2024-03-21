@@ -37,6 +37,16 @@ function afterMove(board) {
 	};
 }
 
+function connectToWS() {
+	fetch('ws://10.0.0.73:8000/connect').then().catch();
+	const button = document.querySelector('#connect-button');
+	console.log({ button });
+	button.addEventListener('click', function () {
+		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
+		ws.send('testing send...');
+	});
+}
+
 window.onload = function () {
 	const initialConfig = {
 		movable: {
@@ -53,4 +63,6 @@ window.onload = function () {
 			},
 		},
 	});
+
+	connectToWS();
 };

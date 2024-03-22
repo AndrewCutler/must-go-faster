@@ -8,6 +8,8 @@ import (
 
 	handlers "mustgofaster/handlers"
 
+	utils "mustgofaster/utils"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
@@ -20,29 +22,34 @@ func main() {
 		WriteBufferSize: 1024,
 	}
 
+	game := utils.NewGame()
+
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("CONNECT")
+		fmt.Println("connect hit")
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		fmt.Println("connected to websocket")
 
-		for {
-			messageType, content, err := ws.ReadMessage()
-			if err != nil {
-				log.Println(err)
-				return
-			}
+		player := &utils.Player{Game: game, Connection: ws, Send: make(chan []byte, 256)}
+		player.Game.Register <- player
 
-			fmt.Println(string(content))
+		go player.Read()
+		// for {
+		// 	messageType, content, err := ws.ReadMessage()
+		// 	if err != nil {
+		// 		log.Println(err)
+		// 		return
+		// 	}
 
-			if err := ws.WriteMessage(messageType, []byte("test message")); err != nil {
-				log.Println(err)
-				return
-			}
-		}
+		// 	fmt.Println(string(content))
+
+		// 	if err := ws.WriteMessage(messageType, []byte("test message")); err != nil {
+		// 		log.Println(err)
+		// 		return
+		// 	}
+		// }
 	})
 
 	spa := handlers.SpaHandler{StaticPath: "../client", IndexPath: "index.html"}

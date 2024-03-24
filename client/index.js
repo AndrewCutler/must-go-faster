@@ -3,6 +3,7 @@ import { Chess } from 'chess.js';
 import { SQUARES } from 'chess.js';
 
 const chess = new Chess();
+let ws;
 
 function getValidMoves(_chess) {
 	const dests = new Map();
@@ -26,6 +27,9 @@ function getColor(_chess) {
 function afterMove(board) {
 	return function (from, to, meta) {
 		console.log({ from, to, meta });
+		if (ws) {
+			ws.send(JSON.stringify({ from, to }));
+		}
 		chess.move({ from, to });
 		board.set({
 			turnColor: getColor(chess),
@@ -38,12 +42,23 @@ function afterMove(board) {
 }
 
 function connectToWS() {
-	// fetch('ws://10.0.0.73:8000/connect').then().catch();
 	const button = document.querySelector('#connect-button');
-	console.log({ button });
 	button.addEventListener('click', function () {
-		const ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
-		ws.send('testing send...');
+		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
+		ws.onopen = function (event) {
+			console.log('Opened', { event });
+		};
+
+		ws.onmessage = function (event) {
+			console.log('OnMessage: ', event);
+		};
+	});
+}
+
+function sendWSMessage() {
+	const button = document.querySelector('#send-button');
+	button.addEventListener('click', function () {
+		ws.send('testing...');
 	});
 }
 
@@ -65,4 +80,5 @@ window.onload = function () {
 	});
 
 	connectToWS();
+	sendWSMessage();
 };

@@ -109,9 +109,9 @@ func (h *Hub) Run() {
 		select {
 		case player := <-h.Register:
 			// todo: randomize colors
-			gameId := uuid.New().String()
 			// if there are no games with only one player, make one
 			if len(h.GamesAwaitingOpponent) == 0 {
+				gameId := uuid.New().String()
 				game := Game{GameId: gameId, White: player}
 				h.GamesAwaitingOpponent = append(h.GamesAwaitingOpponent, game)
 				// otherwise, pair up with pending game and move to in progress
@@ -119,9 +119,10 @@ func (h *Hub) Run() {
 				game := h.GamesAwaitingOpponent[0]
 				game.Black = player
 				h.GamesAwaitingOpponent = make([]Game, 0)
-				h.GamesInProgress[gameId] = game
+				h.GamesInProgress[game.GameId] = game
 			}
 			fmt.Println(h.GamesAwaitingOpponent)
+			fmt.Println(h.GamesInProgress)
 			// fmt.Printf("register player gameId %s\n", player.GameId)
 			// game := h.GamesAwaitingOpponent[0]
 			// if game.Black == nil && game.White == nil {

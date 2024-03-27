@@ -4,25 +4,38 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
+	"mustgofaster/game"
 	handlers "mustgofaster/handlers"
-	"mustgofaster/utils"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
 
 func main() {
+	os.Setenv("DEVELOPMENT", "true")
 	r := mux.NewRouter()
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header.Get("Origin")
+			if strings.HasPrefix(origin, "http://10.0.0.73") {
+				return true
+			}
+			if os.Getenv("DEVELOPMENT") == "true" && strings.HasPrefix(origin, "chrome-extension://") {
+				return true
+			}
+
+			return false
+		},
 	}
 
-	// game := utils.NewGame()
-	hub := utils.NewHub()
+	hub := game.NewHub()
 	go hub.Run()
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
@@ -33,10 +46,10 @@ func main() {
 			return
 		}
 
-		player := &utils.Player{Connection: connection, Hub: hub}
+		player := &game.Player{Connection: connection, Hub: hub}
 		player.Hub.Register <- player
 		go player.Read()
-		go player.Write()
+		// go player.Write()
 	})
 
 	spa := handlers.SpaHandler{StaticPath: "../client", IndexPath: "index.html"}

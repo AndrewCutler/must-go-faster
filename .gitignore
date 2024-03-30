@@ -1,5 +1,5 @@
 node_modules
 tmp
 build
-server/temp
 .vscode
+run.ps1

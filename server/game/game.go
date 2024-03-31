@@ -26,6 +26,25 @@ func (p *Player) Read() {
 	}()
 
 	for {
+		// // TextMessage denotes a text data message. The text message payload is
+		// // interpreted as UTF-8 encoded text data.
+		// TextMessage = 1
+
+		// // BinaryMessage denotes a binary data message.
+		// BinaryMessage = 2
+
+		// // CloseMessage denotes a close control message. The optional message
+		// // payload contains a numeric code and text. Use the FormatCloseMessage
+		// // function to format a close message payload.
+		// CloseMessage = 8
+
+		// // PingMessage denotes a ping control message. The optional message payload
+		// // is UTF-8 encoded text.
+		// PingMessage = 9
+
+		// // PongMessage denotes a pong control message. The optional message payload
+		// // is UTF-8 encoded text.
+		// PongMessage = 10
 		_ /* messageType */, content, err := p.Connection.ReadMessage()
 		if err != nil {
 			log.Println(err)
@@ -101,6 +120,8 @@ func (h *Hub) Run() {
 		select {
 		case player := <-h.Register:
 			// todo: randomize colors
+			// todo: get starting position
+			// testing: 8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63
 			// if there are no games with only one player, make one
 			if len(h.GamesAwaitingOpponent) == 0 {
 				gameId := uuid.New().String()
@@ -109,6 +130,7 @@ func (h *Hub) Run() {
 				h.GamesAwaitingOpponent = append(h.GamesAwaitingOpponent, game)
 				// otherwise, pair up with pending game and move to in progress
 			} else {
+				// set game state to ready
 				game := h.GamesAwaitingOpponent[0]
 				game.Black = player
 				player.GameId = game.GameId

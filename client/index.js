@@ -20,7 +20,6 @@ function getValidMoves(_chess) {
 }
 
 function getColor(_chess) {
-	console.log(_chess.turn());
 	return _chess.turn() === 'w' ? 'white' : 'black';
 }
 
@@ -41,27 +40,6 @@ function afterMove(board) {
 	};
 }
 
-function connectToWS() {
-	const button = document.querySelector('#connect-button');
-	button.addEventListener('click', function () {
-		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
-		ws.onopen = function (event) {
-			console.log('Opened', { event });
-		};
-
-		ws.onmessage = function (event) {
-			console.log('OnMessage: ', event);
-		};
-	});
-}
-
-function sendWSMessage() {
-	const button = document.querySelector('#send-button');
-	button.addEventListener('click', function () {
-		ws.send('testing...');
-	});
-}
-
 window.onload = function () {
 	const initialConfig = {
 		movable: {
@@ -70,7 +48,7 @@ window.onload = function () {
 			dests: getValidMoves(chess),
 		},
 	};
-	const board = Chessground(document.querySelector('#board'), initialConfig);
+	const board = Chessground(document.getElementById('board'), initialConfig);
 	board.set({
 		movable: {
 			events: {
@@ -79,6 +57,19 @@ window.onload = function () {
 		},
 	});
 
-	connectToWS();
-	sendWSMessage();
+	const button = document.querySelector('#connect-button');
+	button.addEventListener('click', function () {
+		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
+		ws.onopen = function (event) {
+			console.log('Opened', { event });
+            // TODO: eventually,
+            // when another player joins, start countdown
+            // once countdown finishes, allow action
+            document.getElementById('board').style.pointerEvents = 'auto';
+		};
+
+		ws.onmessage = function (event) {
+			console.log('OnMessage: ', event);
+		};
+	});
 };

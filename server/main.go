@@ -46,10 +46,10 @@ func main() {
 			return
 		}
 
-		player := &game.Player{Connection: connection, Hub: hub}
+		player := &game.Player{Connection: connection, Hub: hub, Send: make(chan []byte)}
 		player.Hub.Register <- player
 		go player.Read()
-		// go player.Write()
+		go player.Write()
 	})
 
 	spa := handlers.SpaHandler{StaticPath: "../client", IndexPath: "index.html"}

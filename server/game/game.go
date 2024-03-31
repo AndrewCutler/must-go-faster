@@ -121,7 +121,7 @@ func (h *Hub) Run() {
 			// }
 		// todo: unregister
 		case message := <-h.Broadcast:
-			fmt.Println("message", message)
+			fmt.Println("message in Broadcast", message)
 			game, ok := h.GamesInProgress[message.GameId]
 			if !ok {
 				if len(h.GamesAwaitingOpponent) == 0 {

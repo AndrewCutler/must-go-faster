@@ -1,12 +1,21 @@
 package game
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
+
+type Message struct {
+	Move    Move
+	Message string
+	// todo: not this
+	// 0 = Game Started, 1 = Move
+	MessageType int
+}
 
 type Move struct {
 	GameId string
@@ -18,6 +27,7 @@ type Player struct {
 	Connection *websocket.Conn
 	Send       chan []byte
 	Hub        *Hub
+	Color      string
 }
 
 func (p *Player) Read() {
@@ -52,7 +62,7 @@ func (p *Player) Read() {
 		}
 
 		fmt.Println("content: ", string(content))
-		p.Hub.Broadcast <- Move{GameId: p.GameId, Data: content}
+		p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId, Data: content}, MessageType: 1}
 	}
 }
 
@@ -62,7 +72,7 @@ func (p *Player) Write() {
 	}()
 
 	for message := range p.Send {
-		fmt.Println("message in Send: ", string(message))
+		fmt.Printf("message in Send for player %s: %s\n\n", p.Color, string(message))
 		// if !ok {
 		// 	p.Connection.WriteMessage(websocket.CloseMessage, []byte{})
 		// 	return
@@ -89,6 +99,7 @@ func (p *Player) Write() {
 
 type Game struct {
 	GameId string
+	Fen    string
 	White  *Player
 	Black  *Player
 }
@@ -100,14 +111,14 @@ func (g *Game) GetPlayers() []*Player {
 type Hub struct {
 	GamesInProgress       map[string]Game
 	GamesAwaitingOpponent []Game
-	Broadcast             chan Move
+	Broadcast             chan Message
 	Register              chan *Player
 	Unregister            chan *Player
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		Broadcast:             make(chan Move),
+		Broadcast:             make(chan Message),
 		Register:              make(chan *Player),
 		Unregister:            make(chan *Player),
 		GamesInProgress:       make(map[string]Game),
@@ -122,11 +133,13 @@ func (h *Hub) Run() {
 			// todo: randomize colors
 			// todo: get starting position
 			// testing: 8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63
+			fen := "8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63"
 			// if there are no games with only one player, make one
 			if len(h.GamesAwaitingOpponent) == 0 {
 				gameId := uuid.New().String()
-				game := Game{GameId: gameId, White: player}
+				game := Game{GameId: gameId, White: player, Fen: fen}
 				player.GameId = gameId
+				player.Color = "white"
 				h.GamesAwaitingOpponent = append(h.GamesAwaitingOpponent, game)
 				// otherwise, pair up with pending game and move to in progress
 			} else {
@@ -134,8 +147,11 @@ func (h *Hub) Run() {
 				game := h.GamesAwaitingOpponent[0]
 				game.Black = player
 				player.GameId = game.GameId
+				player.Color = "black"
 				h.GamesAwaitingOpponent = make([]Game, 0)
-				h.GamesInProgress[game.GameId] = game
+				fmt.Println("broadcasting game started to white...")
+				message := formatGameStartMessage(game.Fen)
+				player.Send <- message
 			}
 			// fmt.Println(h.GamesAwaitingOpponent)
 			// fmt.Println(h.GamesInProgress)
@@ -143,32 +159,71 @@ func (h *Hub) Run() {
 			// }
 		// todo: unregister
 		case message := <-h.Broadcast:
-			fmt.Println("message in Broadcast", message)
-			game, ok := h.GamesInProgress[message.GameId]
-			if !ok {
-				if len(h.GamesAwaitingOpponent) == 0 {
-					log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+			fmt.Printf("message in Broadcast of type %d", message.MessageType)
+			switch message.MessageType {
+			case 0:
+				fmt.Println("case 0: game started")
+				return
+			case 1:
+				game, ok := h.GamesInProgress[message.Move.GameId]
+				if !ok {
+					if len(h.GamesAwaitingOpponent) == 0 {
+						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
+						return
+					}
+
+					log.Printf("Game awaiting opponent; gameId: %s\n", message.Move.GameId)
+					return
+				}
+				if game.GameId == "" {
+					log.Printf("Unknown gameId: %s\n", message.Move.GameId)
 					return
 				}
 
-				log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
-				return
-			}
-			if game.GameId == "" {
-				log.Printf("Unknown gameId: %s\n", message.GameId)
-				return
-			}
+				_message := formatMoveMessage(message.Move.Data, game.Fen)
 
-			for _, player := range game.GetPlayers() {
-				select {
-				case player.Send <- message.Data:
-					fmt.Println("sending data to players")
-				default:
-					fmt.Println("default")
-					close(player.Send) // panic: close of nil channel
-					// delete(game, player) // todo
+				for _, player := range game.GetPlayers() {
+					select {
+					case player.Send <- _message:
+					default:
+						fmt.Println("default")
+						close(player.Send) // panic: close of nil channel
+						// delete(game, player) // todo
+					}
 				}
+			default:
+				return
 			}
 		}
 	}
+}
+
+func formatGameStartMessage(fen string) []byte {
+	data := map[string]interface{}{
+		"gameStarted": true,
+		"fen":         fen,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
+}
+
+func formatMoveMessage(moveData []byte, fen string) []byte {
+	data := map[string]interface{}{
+		"move": string(moveData),
+		"fen":  fen,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
 }

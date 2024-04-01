@@ -62,14 +62,30 @@ window.onload = function () {
 		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
 		ws.onopen = function (event) {
 			console.log('Opened', { event });
-            // TODO: eventually,
-            // when another player joins, start countdown
-            // once countdown finishes, allow action
-            document.getElementById('board').style.pointerEvents = 'auto';
+			// TODO: eventually,
+			// when another player joins, start countdown
+			// once countdown finishes, allow action
+			document.getElementById('board').style.pointerEvents = 'auto';
 		};
 
 		ws.onmessage = function (event) {
 			console.log('OnMessage: ', event);
+			try {
+				const response = JSON.parse(event.data);
+				if ('fen' in response) {
+					console.log({ response });
+					console.log(chess.ascii());
+					// only call this when other player moves?
+					// chess.move(response.move);
+					chess.fen(response.fen);
+				} else if ('gameStarted' in response) {
+                    if (response.gameStarted) {
+                        // start countdown, set fen etc
+                    }
+                }
+			} catch (e) {
+				console.error(e);
+			}
 		};
 	});
 };

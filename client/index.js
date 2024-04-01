@@ -72,17 +72,22 @@ window.onload = function () {
 			console.log('OnMessage: ', event);
 			try {
 				const response = JSON.parse(event.data);
-				if ('fen' in response) {
+				if ('gameStarted' in response) {
+                    console.log('game started...')
+					if (response.gameStarted) {
+                        // start countdown, set fen etc
+						chess.load(response.fen);
+                        board.set({ fen: response.fen });
+					}
+				} else if ('fen' in response) {
+                    console.log('making move...')
 					console.log({ response });
-					console.log(chess.ascii());
 					// only call this when other player moves?
 					// chess.move(response.move);
-					chess.fen(response.fen);
-				} else if ('gameStarted' in response) {
-                    if (response.gameStarted) {
-                        // start countdown, set fen etc
-                    }
-                }
+					chess.load(response.fen);
+					board.set({ fen: response.fen });
+				}
+				console.log(chess.ascii());
 			} catch (e) {
 				console.error(e);
 			}

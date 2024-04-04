@@ -72,22 +72,32 @@ window.onload = function () {
 			console.log('OnMessage: ', event);
 			try {
 				const response = JSON.parse(event.data);
-				if ('gameStarted' in response) {
-                    console.log('game started...')
+				if ('gameStarted' in response && 'color' in response) {
+					console.log('game started...');
 					if (response.gameStarted) {
-                        // start countdown, set fen etc
+						// start countdown, set fen etc
 						chess.load(response.fen);
-                        board.set({ fen: response.fen });
+						board.set({
+                            // ...board.state,
+							fen: response.fen,
+                            turnColor: response.color,
+							orientation: response.color,
+							movable: {
+                                // ...board.state.movable,
+                                dests: getValidMoves(chess),
+								color: response.color,
+								events: {
+									after: afterMove(board),
+								},
+							},
+						});
 					}
 				} else if ('fen' in response) {
-                    console.log('making move...')
+					console.log('making move...');
 					console.log({ response });
-					// only call this when other player moves?
-					// chess.move(response.move);
 					chess.load(response.fen);
-					board.set({ fen: response.fen });
 				}
-				console.log(chess.ascii());
+				console.log(chess.ascii(), board.state);
 			} catch (e) {
 				console.error(e);
 			}

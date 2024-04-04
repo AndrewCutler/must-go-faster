@@ -2,4 +2,3 @@ node_modules
 tmp
 build
 .vscode
-run.ps1

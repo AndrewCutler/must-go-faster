@@ -150,8 +150,10 @@ func (h *Hub) Run() {
 				player.Color = "black"
 				h.GamesAwaitingOpponent = make([]Game, 0)
 				fmt.Println("broadcasting game started to white...")
-				message := formatGameStartMessage(game.Fen)
-				player.Send <- message
+				blackMessage := formatGameStartMessage(game.Fen, "black")
+				whiteMessage := formatGameStartMessage(game.Fen, "white")
+				player.Send <- blackMessage
+				game.White.Send <- whiteMessage
 			}
 			// fmt.Println(h.GamesAwaitingOpponent)
 			// fmt.Println(h.GamesInProgress)
@@ -187,7 +189,7 @@ func (h *Hub) Run() {
 					case player.Send <- _message:
 					default:
 						fmt.Println("default")
-						close(player.Send) // panic: close of nil channel
+						close(player.Send)
 						// delete(game, player) // todo
 					}
 				}
@@ -198,10 +200,11 @@ func (h *Hub) Run() {
 	}
 }
 
-func formatGameStartMessage(fen string) []byte {
+func formatGameStartMessage(fen string, playerColor string) []byte {
 	data := map[string]interface{}{
 		"gameStarted": true,
 		"fen":         fen,
+		"color":       playerColor,
 	}
 
 	jsonData, err := json.Marshal(data)

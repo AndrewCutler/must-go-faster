@@ -2,7 +2,7 @@
 const path = require('path');
 
 module.exports = {
-	entry: './index.js', // Entry point of your application
+	entry: './index.ts', // Entry point of your application
 	watch: true,
 	watchOptions: {
 		ignored: /node_modules/,

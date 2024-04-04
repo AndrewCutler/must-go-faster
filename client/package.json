@@ -1,5 +1,5 @@
 {
-	"main": "index.js",
+	"main": "index.ts",
 	"scripts": {
 		"build": "webpack"
 	},

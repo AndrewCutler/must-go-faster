@@ -26,13 +26,17 @@ function getColor(_chess: Chess) {
 	return _chess.turn() === 'w' ? 'white' : 'black';
 }
 
-function afterMove(board: ChessgroundApi) {
-	return function (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata) {
-		console.log({ from, to, meta });
+function afterMove(
+	board: ChessgroundApi,
+): (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata) => void {
+	return function (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
+		type move = { from: cg.Key; to: cg.Key };
+		const move: move = { from, to };
+		console.log({ move, meta });
 		if (ws) {
-			ws.send(JSON.stringify({ from, to }));
+			ws.send(JSON.stringify(move));
 		}
-		chess.move({ from, to });
+		chess.move(move);
 		board.set({
 			turnColor: getColor(chess),
 			movable: {
@@ -81,17 +85,23 @@ window.onload = function () {
 				if ('gameStarted' in response && 'color' in response) {
 					console.log('game started...');
 					if (response.gameStarted) {
+						type response = {
+							gameStarted: boolean;
+							fen: string;
+							color: 'white' | 'black';
+						};
+						const _response = response as response;
 						// start countdown, set fen etc
-						chess.load(response.fen);
+						chess.load(_response.fen);
 						board.set({
 							// ...board.state,
-							fen: response.fen,
-							turnColor: response.color,
-							orientation: response.color,
+							fen: _response.fen,
+							turnColor: _response.color,
+							orientation: _response.color,
 							movable: {
 								// ...board.state.movable,
 								dests: getValidMoves(chess),
-								color: response.color,
+								color: _response.color,
 								events: {
 									after: afterMove(board),
 								},
@@ -99,9 +109,14 @@ window.onload = function () {
 						});
 					}
 				} else if ('fen' in response) {
+					type response = {
+						move: any;
+						fen: string;
+					};
+					const _response = response as response;
 					console.log('making move...');
-					console.log({ response });
-					chess.load(response.fen);
+					console.log({ _response });
+					chess.load(_response.fen);
 				}
 				console.log(chess.ascii(), board.state);
 			} catch (e) {

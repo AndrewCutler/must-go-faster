@@ -1,11 +1,14 @@
 import { Chessground } from 'chessground';
 import { Chess } from 'chess.js';
 import { SQUARES } from 'chess.js';
+import { Config as ChessgroundConfig } from 'chessground/config';
+import { Api as ChessgroundApi } from 'chessground/api';
+import * as cg from 'chessground/types.js';
 
 const chess = new Chess();
-let ws;
+let ws: WebSocket;
 
-function getValidMoves(_chess) {
+function getValidMoves(_chess: Chess) {
 	const dests = new Map();
 	SQUARES.forEach((s) => {
 		const moves = _chess.moves({ square: s, verbose: true });
@@ -19,12 +22,12 @@ function getValidMoves(_chess) {
 	return dests;
 }
 
-function getColor(_chess) {
+function getColor(_chess: Chess) {
 	return _chess.turn() === 'w' ? 'white' : 'black';
 }
 
-function afterMove(board) {
-	return function (from, to, meta) {
+function afterMove(board: ChessgroundApi) {
+	return function (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata) {
 		console.log({ from, to, meta });
 		if (ws) {
 			ws.send(JSON.stringify({ from, to }));
@@ -41,14 +44,17 @@ function afterMove(board) {
 }
 
 window.onload = function () {
-	const initialConfig = {
+	const initialConfig: ChessgroundConfig = {
 		movable: {
 			free: false,
 			color: 'white',
 			dests: getValidMoves(chess),
 		},
 	};
-	const board = Chessground(document.getElementById('board'), initialConfig);
+	const board: ChessgroundApi = Chessground(
+		document.getElementById('board')!,
+		initialConfig,
+	);
 	board.set({
 		movable: {
 			events: {
@@ -57,7 +63,7 @@ window.onload = function () {
 		},
 	});
 
-	const button = document.querySelector('#connect-button');
+	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
 		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
 		ws.onopen = function (event) {
@@ -65,7 +71,7 @@ window.onload = function () {
 			// TODO: eventually,
 			// when another player joins, start countdown
 			// once countdown finishes, allow action
-			document.getElementById('board').style.pointerEvents = 'auto';
+			document.getElementById('board')!.style.pointerEvents = 'auto';
 		};
 
 		ws.onmessage = function (event) {
@@ -78,13 +84,13 @@ window.onload = function () {
 						// start countdown, set fen etc
 						chess.load(response.fen);
 						board.set({
-                            // ...board.state,
+							// ...board.state,
 							fen: response.fen,
-                            turnColor: response.color,
+							turnColor: response.color,
 							orientation: response.color,
 							movable: {
-                                // ...board.state.movable,
-                                dests: getValidMoves(chess),
+								// ...board.state.movable,
+								dests: getValidMoves(chess),
 								color: response.color,
 								events: {
 									after: afterMove(board),

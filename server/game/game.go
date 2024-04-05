@@ -110,19 +110,20 @@ func (g *Game) GetPlayers() []*Player {
 
 type Hub struct {
 	GamesInProgress       map[string]Game
-	GamesAwaitingOpponent []Game
+	GamesAwaitingOpponent *[]Game
 	Broadcast             chan Message
 	Register              chan *Player
 	Unregister            chan *Player
 }
 
 func NewHub() *Hub {
+	gao := make([]Game, 0)
 	return &Hub{
 		Broadcast:             make(chan Message),
 		Register:              make(chan *Player),
 		Unregister:            make(chan *Player),
 		GamesInProgress:       make(map[string]Game),
-		GamesAwaitingOpponent: make([]Game, 0),
+		GamesAwaitingOpponent: &gao,
 	}
 }
 
@@ -135,20 +136,23 @@ func (h *Hub) Run() {
 			// testing: 8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63
 			fen := "8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63"
 			// if there are no games with only one player, make one
-			if len(h.GamesAwaitingOpponent) == 0 {
+			if len(*h.GamesAwaitingOpponent) == 0 {
 				gameId := uuid.New().String()
 				game := Game{GameId: gameId, White: player, Fen: fen}
 				player.GameId = gameId
 				player.Color = "white"
-				h.GamesAwaitingOpponent = append(h.GamesAwaitingOpponent, game)
+				*h.GamesAwaitingOpponent = append(*h.GamesAwaitingOpponent, game)
+				fmt.Printf("Creating new pending game...\n")
+				fmt.Println(game)
 				// otherwise, pair up with pending game and move to in progress
 			} else {
 				// set game state to ready
-				game := h.GamesAwaitingOpponent[0]
+				game := (*h.GamesAwaitingOpponent)[0]
 				game.Black = player
 				player.GameId = game.GameId
 				player.Color = "black"
-				h.GamesAwaitingOpponent = make([]Game, 0)
+				*h.GamesAwaitingOpponent = make([]Game, 0)
+				h.GamesInProgress[game.GameId] = game
 				fmt.Println("broadcasting game started to white...")
 				blackMessage := formatGameStartMessage(game.Fen, "black")
 				whiteMessage := formatGameStartMessage(game.Fen, "white")
@@ -161,16 +165,17 @@ func (h *Hub) Run() {
 			// }
 		// todo: unregister
 		case message := <-h.Broadcast:
-			fmt.Printf("message in Broadcast of type %d", message.MessageType)
+			fmt.Printf("message in Broadcast of type %d\n", message.MessageType)
 			switch message.MessageType {
 			case 0:
-				fmt.Println("case 0: game started")
+				fmt.Printf("case 0: game started\n")
 				return
 			case 1:
 				game, ok := h.GamesInProgress[message.Move.GameId]
 				if !ok {
-					if len(h.GamesAwaitingOpponent) == 0 {
+					if len(*h.GamesAwaitingOpponent) == 0 {
 						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
+						fmt.Println(h.GamesAwaitingOpponent)
 						return
 					}
 
@@ -188,7 +193,6 @@ func (h *Hub) Run() {
 					select {
 					case player.Send <- _message:
 					default:
-						fmt.Println("default")
 						close(player.Send)
 						// delete(game, player) // todo
 					}

@@ -1,12 +1,13 @@
 package game
 
 import (
+	"encoding/json"
+
 	"github.com/notnil/chess"
 )
 
 type Message struct {
 	Move        Move
-	Message     string
 	MessageType int
 }
 
@@ -42,4 +43,25 @@ func ValidMovesMap(g *chess.Game) map[string][]string {
 	}
 
 	return result
+}
+
+func makeMove(m string, g *chess.Game) error {
+	type move struct {
+		Move struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+		}
+		GameId string `json:"gameId"`
+	}
+	var result move
+
+	if err := json.Unmarshal([]byte(m), &result); err != nil {
+		return err
+	}
+
+	if err := g.MoveStr(result.Move.From + result.Move.To); err != nil {
+		return err
+	}
+
+	return nil
 }

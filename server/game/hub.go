@@ -47,8 +47,9 @@ func (h *Hub) Run() {
 				player.GameId = gameId
 				player.Color = "white"
 				gameMeta := GameMeta{
-					Game:  game,
-					White: player,
+					Game:   game,
+					White:  player,
+					GameId: gameId,
 				}
 				*h.GamesAwaitingOpponent = append(*h.GamesAwaitingOpponent, &gameMeta)
 				fmt.Printf("Creating new pending game...\n")
@@ -63,15 +64,9 @@ func (h *Hub) Run() {
 				*h.GamesAwaitingOpponent = make([]*GameMeta, 0)
 				h.GamesInProgress[game.GameId] = game
 				fmt.Println("broadcasting game started to white...")
-				_fen := game.getFen()
-				validMoves := ValidMovesMap(game.Game)
-				player.Send <- gameStartMessage(_fen, "black", validMoves)
-				game.White.Send <- gameStartMessage(_fen, "white", validMoves)
+				player.Send <- gameStartMessage(game, player.Color)
+				game.White.Send <- gameStartMessage(game, game.White.Color)
 			}
-			// fmt.Println(h.GamesAwaitingOpponent)
-			// fmt.Println(h.GamesInProgress)
-
-			// }
 		// todo: unregister
 		case message := <-h.Broadcast:
 			fmt.Printf("message in Broadcast of type %d\n", message.MessageType)
@@ -91,14 +86,20 @@ func (h *Hub) Run() {
 					log.Printf("Game awaiting opponent; gameId: %s\n", message.Move.GameId)
 					return
 				}
+
 				if game.GameId == "" {
-					log.Printf("Unknown gameId: %s\n", message.Move.GameId)
+					log.Printf("Missing gameId.")
+					return
+				}
+
+				if err := makeMove(string(message.Move.Data), game.Game); err != nil {
+					log.Panicln(err)
 					return
 				}
 
 				for _, player := range game.GetPlayers() {
 					select {
-					case player.Send <- moveMessage(message.Move.Data, game.getFen()):
+					case player.Send <- moveMessage(game, player.Color):
 					default:
 						close(player.Send)
 						// delete(game, player) // todo
@@ -111,12 +112,13 @@ func (h *Hub) Run() {
 	}
 }
 
-func gameStartMessage(fen string, playerColor string, validMoves map[string][]string) []byte {
+func gameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
 	data := map[string]interface{}{
 		"gameStarted": true,
-		"fen":         fen,
-		"color":       playerColor,
-		"validMoves":  validMoves,
+		"fen":         gameMeta.getFen(),
+		"gameId":      gameMeta.GameId,
+		"color":       playerColor, // is this necessary
+		"validMoves":  ValidMovesMap(gameMeta.Game),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -128,10 +130,12 @@ func gameStartMessage(fen string, playerColor string, validMoves map[string][]st
 	return jsonData
 }
 
-func moveMessage(moveData []byte, fen string) []byte {
+func moveMessage(gameMeta *GameMeta, playerColor string) []byte {
 	data := map[string]interface{}{
-		"move": string(moveData),
-		"fen":  fen,
+		"fen":        gameMeta.getFen(),
+		"gameId":     gameMeta.GameId,
+		"color":      playerColor, // is this necessary
+		"validMoves": ValidMovesMap(gameMeta.Game),
 	}
 
 	jsonData, err := json.Marshal(data)

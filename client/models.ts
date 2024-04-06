@@ -1,6 +1,7 @@
 export type GameStartedResponse = {
 	gameStarted: boolean;
 	fen: string;
+	gameId: string;
 	color: 'white' | 'black';
 	validMoves: { [key: string]: string[] };
 };

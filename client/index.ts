@@ -6,6 +6,7 @@ import { GameStartedResponse, MoveResponse } from './models';
 
 let ws: WebSocket;
 let board: ChessgroundApi;
+let gameId: string;
 
 function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
 	console.log('$$$ afterMove $$$\n');
@@ -20,15 +21,16 @@ function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
 	// 	},
 	// });
 
-	// send gameId too
 	if (ws) {
-		ws.send(JSON.stringify({ move }));
+		const message = { move: { from, to }, gameId };
+		ws.send(JSON.stringify(message));
 	}
 }
 
 function onGameStarted(response: GameStartedResponse): void {
 	console.log('game started...', response);
 	if (response.gameStarted) {
+		gameId = response.gameId;
 		const validMoves = new Map();
 		for (const key in response.validMoves) {
 			validMoves.set(key, response.validMoves[key]);

@@ -46,7 +46,6 @@ func (p *Player) Read() {
 			return
 		}
 
-		fmt.Println("content: ", string(content))
 		p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId, Data: content}, MessageType: 1}
 	}
 }
@@ -58,10 +57,6 @@ func (p *Player) Write() {
 
 	for message := range p.Send {
 		fmt.Printf("message in Send for player %s: %s\n\n", p.Color, string(message))
-		// if !ok {
-		// 	p.Connection.WriteMessage(websocket.CloseMessage, []byte{})
-		// 	return
-		// }
 
 		w, err := p.Connection.NextWriter(websocket.TextMessage)
 		if err != nil {

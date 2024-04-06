@@ -118,6 +118,18 @@ func (g *GameMeta) GetPlayers() []*Player {
 	return []*Player{g.White, g.Black}
 }
 
+func ValidMovesMap(g *chess.Game) map[string][]string {
+	validMoves := g.ValidMoves()
+	result := make(map[string][]string)
+	for _, move := range validMoves {
+		originatingSquare := move.S1()
+		destinationSquare := move.S2()
+		result[originatingSquare.String()] = append(result[originatingSquare.String()], destinationSquare.String())
+	}
+
+	return result
+}
+
 type Hub struct {
 	GamesInProgress       map[string]*GameMeta
 	GamesAwaitingOpponent *[]*GameMeta
@@ -173,8 +185,10 @@ func (h *Hub) Run() {
 				h.GamesInProgress[game.GameId] = game
 				fmt.Println("broadcasting game started to white...")
 				_fen := game.getFen()
-				blackMessage := formatGameStartMessage(_fen, "black")
-				whiteMessage := formatGameStartMessage(_fen, "white")
+				validMoves := game.Game.ValidMoves()
+				fmt.Println(validMoves)
+				blackMessage := formatGameStartMessage(_fen, "black", "{\"a3\": \"a2\"}")
+				whiteMessage := formatGameStartMessage(_fen, "white", "{\"a3\": \"a2\"}")
 				player.Send <- blackMessage
 				game.White.Send <- whiteMessage
 			}
@@ -223,11 +237,12 @@ func (h *Hub) Run() {
 	}
 }
 
-func formatGameStartMessage(fen string, playerColor string) []byte {
+func formatGameStartMessage(fen string, playerColor string, validMoves string) []byte {
 	data := map[string]interface{}{
 		"gameStarted": true,
 		"fen":         fen,
 		"color":       playerColor,
+		"validMoves":  validMoves,
 	}
 
 	jsonData, err := json.Marshal(data)

@@ -1,29 +1,22 @@
 import { Chessground } from 'chessground';
-import { Chess } from 'chess.js';
 import { SQUARES } from 'chess.js';
 import { Config as ChessgroundConfig } from 'chessground/config';
 import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 
-const chess = new Chess();
 let ws: WebSocket;
-
-function getValidMoves(_chess: Chess) {
+function getValidMoves(x: any) {
 	const dests = new Map();
 	SQUARES.forEach((s) => {
-		const moves = _chess.moves({ square: s, verbose: true });
-		if (moves.length)
-			dests.set(
-				s,
-				moves.map((m) => m.to),
-			);
+		// const moves = _chess.moves({ square: s, verbose: true });
+		// if (moves.length)
+		// 	dests.set(
+		// 		s,
+		// 		moves.map((m) => m.to),
+		// 	);
 	});
 
 	return dests;
-}
-
-function getColor(_chess: Chess) {
-	return _chess.turn() === 'w' ? 'white' : 'black';
 }
 
 function afterMove(
@@ -33,21 +26,18 @@ function afterMove(
 		console.log('$$$ afterMove $$$\n');
 		type move = { from: cg.Key; to: cg.Key };
 		const move: move = { from, to };
-		chess.move(move);
-		const fen = chess.fen();
-		console.log(chess.ascii());
-		console.log({ move, meta, fen });
-		board.set({
-			fen: fen,
-			turnColor: getColor(chess),
-			movable: {
-				color: getColor(chess),
-				dests: getValidMoves(chess),
-			},
-		});
+		// board.set({
+		// 	fen: fen,
+		// 	turnColor: getColor(chess),
+		// 	movable: {
+		// 		color: getColor(chess),
+		// 		dests: getValidMoves(chess),
+		// 	},
+		// });
 
+		// send gameId too
 		if (ws) {
-			ws.send(JSON.stringify({ move, fen }));
+			ws.send(JSON.stringify({ move }));
 		}
 	};
 }
@@ -57,7 +47,7 @@ window.onload = function () {
 		movable: {
 			free: false,
 			color: 'white',
-			dests: getValidMoves(chess),
+			// dests: getValidMoves(chess),
 		},
 	};
 	const board: ChessgroundApi = Chessground(
@@ -88,16 +78,23 @@ window.onload = function () {
 			try {
 				const response = JSON.parse(event.data);
 				if ('gameStarted' in response && 'color' in response) {
-					console.log('game started...');
+					console.log('game started...', response);
 					if (response.gameStarted) {
 						type response = {
 							gameStarted: boolean;
 							fen: string;
 							color: 'white' | 'black';
+							validMoves: cg.Dests;
 						};
 						const _response = response as response;
+						let validMoves;
+						try {
+							validMoves = JSON.parse(response.validMoves);
+							console.log(validMoves);
+						} catch (e) {
+							console.error(e);
+						}
 						// start countdown, set fen etc
-						chess.load(_response.fen);
 						board.set({
 							// ...board.state,
 							fen: _response.fen,
@@ -105,7 +102,7 @@ window.onload = function () {
 							orientation: _response.color,
 							movable: {
 								// ...board.state.movable,
-								dests: getValidMoves(chess),
+								dests: validMoves,
 								color: _response.color,
 								events: {
 									after: afterMove(board),
@@ -120,16 +117,14 @@ window.onload = function () {
 					};
 					const _response = response as response;
 					console.log('making move...');
-					// console.log({ _response });
-					chess.load(_response.fen);
-					console.log(chess.ascii(), { fen: _response.fen });
+					console.log({ fen: _response.fen });
 					board.set({
 						// ...board.state,
 						fen: _response.fen,
 						// turnColor: chess.,
 						movable: {
 							// ...board.state.movable,
-							dests: getValidMoves(chess),
+							// dests: getValidMoves(chess),
 							// color: chess.,
 							events: {
 								after: afterMove(board),

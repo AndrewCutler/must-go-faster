@@ -1,0 +1,144 @@
+package game
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+
+	"github.com/google/uuid"
+	"github.com/notnil/chess"
+)
+
+type Hub struct {
+	GamesInProgress       map[string]*GameMeta
+	GamesAwaitingOpponent *[]*GameMeta
+	Broadcast             chan Message
+	Register              chan *Player
+	Unregister            chan *Player
+}
+
+func NewHub() *Hub {
+	gao := make([]*GameMeta, 0)
+	return &Hub{
+		Broadcast:             make(chan Message),
+		Register:              make(chan *Player),
+		Unregister:            make(chan *Player),
+		GamesInProgress:       make(map[string]*GameMeta),
+		GamesAwaitingOpponent: &gao,
+	}
+}
+
+func (h *Hub) Run() {
+	for {
+		select {
+		case player := <-h.Register:
+			// todo: randomize colors
+			// todo: get starting position
+			// testing: 8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63
+			fen := "8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63"
+			// if there are no games with only one player, make one
+			if len(*h.GamesAwaitingOpponent) == 0 {
+				gameId := uuid.New().String()
+				_fen, err := chess.FEN(fen)
+				if err != nil {
+					log.Println(err)
+				}
+				game := chess.NewGame(_fen)
+				player.GameId = gameId
+				player.Color = "white"
+				gameMeta := GameMeta{
+					Game:  game,
+					White: player,
+				}
+				*h.GamesAwaitingOpponent = append(*h.GamesAwaitingOpponent, &gameMeta)
+				fmt.Printf("Creating new pending game...\n")
+				fmt.Println(game)
+				// otherwise, pair up with pending game and move to in progress
+			} else {
+				// set game state to ready
+				game := (*h.GamesAwaitingOpponent)[0]
+				game.Black = player
+				player.GameId = game.GameId
+				player.Color = "black"
+				*h.GamesAwaitingOpponent = make([]*GameMeta, 0)
+				h.GamesInProgress[game.GameId] = game
+				fmt.Println("broadcasting game started to white...")
+				_fen := game.getFen()
+				validMoves := ValidMovesMap(game.Game)
+				player.Send <- gameStartMessage(_fen, "black", validMoves)
+				game.White.Send <- gameStartMessage(_fen, "white", validMoves)
+			}
+			// fmt.Println(h.GamesAwaitingOpponent)
+			// fmt.Println(h.GamesInProgress)
+
+			// }
+		// todo: unregister
+		case message := <-h.Broadcast:
+			fmt.Printf("message in Broadcast of type %d\n", message.MessageType)
+			switch message.MessageType {
+			case 0:
+				fmt.Printf("case 0: game started\n")
+				return
+			case 1:
+				game, ok := h.GamesInProgress[message.Move.GameId]
+				if !ok {
+					if len(*h.GamesAwaitingOpponent) == 0 {
+						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
+						fmt.Println(h.GamesAwaitingOpponent)
+						return
+					}
+
+					log.Printf("Game awaiting opponent; gameId: %s\n", message.Move.GameId)
+					return
+				}
+				if game.GameId == "" {
+					log.Printf("Unknown gameId: %s\n", message.Move.GameId)
+					return
+				}
+
+				for _, player := range game.GetPlayers() {
+					select {
+					case player.Send <- moveMessage(message.Move.Data, game.getFen()):
+					default:
+						close(player.Send)
+						// delete(game, player) // todo
+					}
+				}
+			default:
+				return
+			}
+		}
+	}
+}
+
+func gameStartMessage(fen string, playerColor string, validMoves map[string][]string) []byte {
+	data := map[string]interface{}{
+		"gameStarted": true,
+		"fen":         fen,
+		"color":       playerColor,
+		"validMoves":  validMoves,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
+}
+
+func moveMessage(moveData []byte, fen string) []byte {
+	data := map[string]interface{}{
+		"move": string(moveData),
+		"fen":  fen,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
+}

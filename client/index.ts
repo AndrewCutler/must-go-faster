@@ -1,54 +1,80 @@
 import { Chessground } from 'chessground';
-import { SQUARES } from 'chess.js';
 import { Config as ChessgroundConfig } from 'chessground/config';
 import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
+import { GameStartedResponse, MoveResponse } from './models';
 
 let ws: WebSocket;
+let board: ChessgroundApi;
 
-function afterMove(
-	board: ChessgroundApi,
-): (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata) => void {
-	return function (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
-		console.log('$$$ afterMove $$$\n');
-		type move = { from: cg.Key; to: cg.Key };
-		const move: move = { from, to };
-		// board.set({
-		// 	fen: fen,
-		// 	turnColor: getColor(chess),
-		// 	movable: {
-		// 		color: getColor(chess),
-		// 		dests: getValidMoves(chess),
-		// 	},
-		// });
+function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
+	console.log('$$$ afterMove $$$\n');
+	type move = { from: cg.Key; to: cg.Key };
+	const move: move = { from, to };
+	// board.set({
+	// 	fen: fen,
+	// 	turnColor: getColor(chess),
+	// 	movable: {
+	// 		color: getColor(chess),
+	// 		dests: getValidMoves(chess),
+	// 	},
+	// });
 
-		// send gameId too
-		if (ws) {
-			ws.send(JSON.stringify({ move }));
-		}
-	};
+	// send gameId too
+	if (ws) {
+		ws.send(JSON.stringify({ move }));
+	}
 }
 
-window.onload = function () {
-	const initialConfig: ChessgroundConfig = {
-		movable: {
-			free: false,
-			color: 'white',
-			// dests: getValidMoves(chess),
-		},
+function onGameStarted(response: GameStartedResponse): void {
+	console.log('game started...', response);
+	if (response.gameStarted) {
+		const validMoves = new Map();
+		for (const key in response.validMoves) {
+			validMoves.set(key, response.validMoves[key]);
+		}
+		console.log(response, validMoves);
+		// start countdown, set fen etc
+		board.set({
+			// ...board.state,
+			fen: response.fen,
+			turnColor: response.color,
+			orientation: response.color,
+			movable: {
+				// ...board.state.movable,
+				dests: validMoves,
+				color: response.color,
+				events: {
+					after: afterMove,
+				},
+			},
+		});
+	}
+}
+
+function onMove(response: MoveResponse): void {
+	type response = {
+		move: any;
+		fen: string;
 	};
-	const board: ChessgroundApi = Chessground(
-		document.getElementById('board')!,
-		initialConfig,
-	);
+	console.log('making move...');
+	console.log({ fen: response.fen });
 	board.set({
+		// ...board.state,
+		fen: response.fen,
+		// turnColor: chess.,
 		movable: {
+			// ...board.state.movable,
+			// dests: getValidMoves(chess),
+			// color: chess.,
 			events: {
-				after: afterMove(board),
+				after: afterMove,
 			},
 		},
 	});
+}
 
+function joinGame(): void {
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
 		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
@@ -65,61 +91,35 @@ window.onload = function () {
 			try {
 				const response = JSON.parse(event.data);
 				if ('gameStarted' in response && 'color' in response) {
-					console.log('game started...', response);
-					if (response.gameStarted) {
-						type response = {
-							gameStarted: boolean;
-							fen: string;
-							color: 'white' | 'black';
-							validMoves: { [key: string]: string[] };
-						};
-						const _response = response as response;
-						const validMoves = new Map();
-						for (const key in response.validMoves) {
-							validMoves.set(key, response.validMoves[key]);
-						}
-						console.log(response, validMoves);
-						// start countdown, set fen etc
-						board.set({
-							// ...board.state,
-							fen: _response.fen,
-							turnColor: _response.color,
-							orientation: _response.color,
-							movable: {
-								// ...board.state.movable,
-								dests: validMoves,
-								color: _response.color,
-								events: {
-									after: afterMove(board),
-								},
-							},
-						});
-					}
+					onGameStarted(response);
 				} else if ('fen' in response) {
-					type response = {
-						move: any;
-						fen: string;
-					};
-					const _response = response as response;
-					console.log('making move...');
-					console.log({ fen: _response.fen });
-					board.set({
-						// ...board.state,
-						fen: _response.fen,
-						// turnColor: chess.,
-						movable: {
-							// ...board.state.movable,
-							// dests: getValidMoves(chess),
-							// color: chess.,
-							events: {
-								after: afterMove(board),
-							},
-						},
-					});
+					onMove(response);
 				}
 			} catch (e) {
 				console.error(e);
 			}
 		};
 	});
+}
+
+function initialize(): void {
+	const initialConfig: ChessgroundConfig = {
+		movable: {
+			free: false,
+			color: 'white',
+		},
+	};
+	board = Chessground(document.getElementById('board')!, initialConfig);
+	board.set({
+		movable: {
+			events: {
+				after: afterMove,
+			},
+		},
+	});
+}
+
+window.onload = function () {
+	initialize();
+	joinGame();
 };

@@ -30,20 +30,25 @@ function afterMove(
 	board: ChessgroundApi,
 ): (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata) => void {
 	return function (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
+		console.log('$$$ afterMove $$$\n');
 		type move = { from: cg.Key; to: cg.Key };
 		const move: move = { from, to };
-		console.log({ move, meta });
-		if (ws) {
-			ws.send(JSON.stringify(move));
-		}
 		chess.move(move);
+		const fen = chess.fen();
+		console.log(chess.ascii());
+		console.log({ move, meta, fen });
 		board.set({
+			fen: fen,
 			turnColor: getColor(chess),
 			movable: {
 				color: getColor(chess),
 				dests: getValidMoves(chess),
 			},
 		});
+
+		if (ws) {
+			ws.send(JSON.stringify({ move, fen }));
+		}
 	};
 }
 
@@ -115,10 +120,23 @@ window.onload = function () {
 					};
 					const _response = response as response;
 					console.log('making move...');
-					console.log({ _response });
+					// console.log({ _response });
 					chess.load(_response.fen);
+					console.log(chess.ascii(), { fen: _response.fen });
+					board.set({
+						// ...board.state,
+						fen: _response.fen,
+						// turnColor: chess.,
+						movable: {
+							// ...board.state.movable,
+							dests: getValidMoves(chess),
+							// color: chess.,
+							events: {
+								after: afterMove(board),
+							},
+						},
+					});
 				}
-				console.log(chess.ascii(), board.state);
 			} catch (e) {
 				console.error(e);
 			}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/notnil/chess"
 )
 
 type Message struct {
@@ -30,10 +31,26 @@ type Player struct {
 	Color      string
 }
 
+type GameMeta struct {
+	Game   *chess.Game
+	White  *Player
+	Black  *Player
+	GameId string
+}
+
+func (g *GameMeta) getFen() string {
+	fen := g.Game.Position().String()
+
+	return fen
+}
+
 func (p *Player) Read() {
 	defer func() {
 		p.Connection.Close()
 	}()
+
+	g := chess.NewGame()
+	fmt.Println(g)
 
 	for {
 		// // TextMessage denotes a text data message. The text message payload is
@@ -97,32 +114,25 @@ func (p *Player) Write() {
 
 }
 
-type Game struct {
-	GameId string
-	Fen    string
-	White  *Player
-	Black  *Player
-}
-
-func (g *Game) GetPlayers() []*Player {
+func (g *GameMeta) GetPlayers() []*Player {
 	return []*Player{g.White, g.Black}
 }
 
 type Hub struct {
-	GamesInProgress       map[string]Game
-	GamesAwaitingOpponent *[]Game
+	GamesInProgress       map[string]*GameMeta
+	GamesAwaitingOpponent *[]*GameMeta
 	Broadcast             chan Message
 	Register              chan *Player
 	Unregister            chan *Player
 }
 
 func NewHub() *Hub {
-	gao := make([]Game, 0)
+	gao := make([]*GameMeta, 0)
 	return &Hub{
 		Broadcast:             make(chan Message),
 		Register:              make(chan *Player),
 		Unregister:            make(chan *Player),
-		GamesInProgress:       make(map[string]Game),
+		GamesInProgress:       make(map[string]*GameMeta),
 		GamesAwaitingOpponent: &gao,
 	}
 }
@@ -138,10 +148,18 @@ func (h *Hub) Run() {
 			// if there are no games with only one player, make one
 			if len(*h.GamesAwaitingOpponent) == 0 {
 				gameId := uuid.New().String()
-				game := Game{GameId: gameId, White: player, Fen: fen}
+				_fen, err := chess.FEN(fen)
+				if err != nil {
+					log.Println(err)
+				}
+				game := chess.NewGame(_fen)
 				player.GameId = gameId
 				player.Color = "white"
-				*h.GamesAwaitingOpponent = append(*h.GamesAwaitingOpponent, game)
+				gameMeta := GameMeta{
+					Game:  game,
+					White: player,
+				}
+				*h.GamesAwaitingOpponent = append(*h.GamesAwaitingOpponent, &gameMeta)
 				fmt.Printf("Creating new pending game...\n")
 				fmt.Println(game)
 				// otherwise, pair up with pending game and move to in progress
@@ -151,11 +169,12 @@ func (h *Hub) Run() {
 				game.Black = player
 				player.GameId = game.GameId
 				player.Color = "black"
-				*h.GamesAwaitingOpponent = make([]Game, 0)
+				*h.GamesAwaitingOpponent = make([]*GameMeta, 0)
 				h.GamesInProgress[game.GameId] = game
 				fmt.Println("broadcasting game started to white...")
-				blackMessage := formatGameStartMessage(game.Fen, "black")
-				whiteMessage := formatGameStartMessage(game.Fen, "white")
+				_fen := game.getFen()
+				blackMessage := formatGameStartMessage(_fen, "black")
+				whiteMessage := formatGameStartMessage(_fen, "white")
 				player.Send <- blackMessage
 				game.White.Send <- whiteMessage
 			}
@@ -187,7 +206,7 @@ func (h *Hub) Run() {
 					return
 				}
 
-				_message := formatMoveMessage(message.Move.Data, game.Fen)
+				_message := formatMoveMessage(message.Move.Data, game.getFen())
 
 				for _, player := range game.GetPlayers() {
 					select {

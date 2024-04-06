@@ -185,10 +185,9 @@ func (h *Hub) Run() {
 				h.GamesInProgress[game.GameId] = game
 				fmt.Println("broadcasting game started to white...")
 				_fen := game.getFen()
-				validMoves := game.Game.ValidMoves()
-				fmt.Println(validMoves)
-				blackMessage := formatGameStartMessage(_fen, "black", "{\"a3\": \"a2\"}")
-				whiteMessage := formatGameStartMessage(_fen, "white", "{\"a3\": \"a2\"}")
+				validMoves := ValidMovesMap(game.Game)
+				blackMessage := formatGameStartMessage(_fen, "black", validMoves)
+				whiteMessage := formatGameStartMessage(_fen, "white", validMoves)
 				player.Send <- blackMessage
 				game.White.Send <- whiteMessage
 			}
@@ -237,7 +236,7 @@ func (h *Hub) Run() {
 	}
 }
 
-func formatGameStartMessage(fen string, playerColor string, validMoves string) []byte {
+func formatGameStartMessage(fen string, playerColor string, validMoves map[string][]string) []byte {
 	data := map[string]interface{}{
 		"gameStarted": true,
 		"fen":         fen,

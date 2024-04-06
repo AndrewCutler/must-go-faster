@@ -5,19 +5,6 @@ import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 
 let ws: WebSocket;
-function getValidMoves(x: any) {
-	const dests = new Map();
-	SQUARES.forEach((s) => {
-		// const moves = _chess.moves({ square: s, verbose: true });
-		// if (moves.length)
-		// 	dests.set(
-		// 		s,
-		// 		moves.map((m) => m.to),
-		// 	);
-	});
-
-	return dests;
-}
 
 function afterMove(
 	board: ChessgroundApi,
@@ -84,16 +71,14 @@ window.onload = function () {
 							gameStarted: boolean;
 							fen: string;
 							color: 'white' | 'black';
-							validMoves: cg.Dests;
+							validMoves: { [key: string]: string[] };
 						};
 						const _response = response as response;
-						let validMoves;
-						try {
-							validMoves = JSON.parse(response.validMoves);
-							console.log(validMoves);
-						} catch (e) {
-							console.error(e);
+						const validMoves = new Map();
+						for (const key in response.validMoves) {
+							validMoves.set(key, response.validMoves[key]);
 						}
+						console.log(response, validMoves);
 						// start countdown, set fen etc
 						board.set({
 							// ...board.state,

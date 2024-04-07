@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/gorilla/websocket"
@@ -56,7 +55,7 @@ func (p *Player) Write() {
 	}()
 
 	for message := range p.Send {
-		fmt.Printf("message in Send for player %s: %s\n\n", p.Color, string(message))
+		// fmt.Printf("message in Send for player %s: %s\n\n", p.Color, string(message))
 
 		w, err := p.Connection.NextWriter(websocket.TextMessage)
 		if err != nil {

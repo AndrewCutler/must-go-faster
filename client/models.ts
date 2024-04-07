@@ -1,12 +1,15 @@
-export type GameStartedResponse = {
-	gameStarted: boolean;
+export type BaseResponse = {
 	fen: string;
 	gameId: string;
-	color: 'white' | 'black';
+	whosNext: 'white' | 'black';
+    playerColor: 'white' | 'black'
+};
+
+export type GameStartedResponse = BaseResponse & {
+	gameStarted: boolean;
 	validMoves: { [key: string]: string[] };
 };
 
-export type MoveResponse = {
+export type MoveResponse = BaseResponse & {
 	move: any; // todo
-	fen: string;
 };

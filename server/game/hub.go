@@ -53,7 +53,6 @@ func (h *Hub) Run() {
 				}
 				*h.GamesAwaitingOpponent = append(*h.GamesAwaitingOpponent, &gameMeta)
 				fmt.Printf("Creating new pending game...\n")
-				fmt.Println(game)
 				// otherwise, pair up with pending game and move to in progress
 			} else {
 				// set game state to ready
@@ -69,17 +68,14 @@ func (h *Hub) Run() {
 			}
 		// todo: unregister
 		case message := <-h.Broadcast:
-			fmt.Printf("message in Broadcast of type %d\n", message.MessageType)
 			switch message.MessageType {
 			case 0:
-				fmt.Printf("case 0: game started\n")
 				return
 			case 1:
 				game, ok := h.GamesInProgress[message.Move.GameId]
 				if !ok {
 					if len(*h.GamesAwaitingOpponent) == 0 {
 						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
-						fmt.Println(h.GamesAwaitingOpponent)
 						return
 					}
 
@@ -96,6 +92,12 @@ func (h *Hub) Run() {
 					log.Panicln(err)
 					return
 				}
+
+				// if len(game.Game.MoveHistory()) > 0 {
+				// 	for _, history := range game.Game.MoveHistory() {
+				// 		fmt.Println(history)
+				// 	}
+				// }
 
 				for _, player := range game.GetPlayers() {
 					select {
@@ -117,8 +119,9 @@ func gameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
 		"gameStarted": true,
 		"fen":         gameMeta.getFen(),
 		"gameId":      gameMeta.GameId,
-		"color":       playerColor, // is this necessary
+		"playerColor": playerColor, // is this necessary
 		"validMoves":  ValidMovesMap(gameMeta.Game),
+		"whosNext":    gameMeta.whoseMoveIsIt(),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -132,10 +135,11 @@ func gameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
 
 func moveMessage(gameMeta *GameMeta, playerColor string) []byte {
 	data := map[string]interface{}{
-		"fen":        gameMeta.getFen(),
-		"gameId":     gameMeta.GameId,
-		"color":      playerColor, // is this necessary
-		"validMoves": ValidMovesMap(gameMeta.Game),
+		"fen":         gameMeta.getFen(),
+		"gameId":      gameMeta.GameId,
+		"playerColor": playerColor, // is this necessary
+		"validMoves":  ValidMovesMap(gameMeta.Game),
+		"whosNext":    gameMeta.whoseMoveIsIt(),
 	}
 
 	jsonData, err := json.Marshal(data)

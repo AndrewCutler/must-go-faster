@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/notnil/chess"
 )
@@ -31,6 +32,22 @@ func (g *GameMeta) getFen() string {
 
 func (g *GameMeta) GetPlayers() []*Player {
 	return []*Player{g.White, g.Black}
+}
+
+func (g *GameMeta) whoseMoveIsIt() string {
+	split := strings.Split(g.getFen(), " ")
+	if len(split) == 6 {
+		switch split[1] {
+		case "w":
+			return "white"
+		case "b":
+			return "black"
+		default:
+			return ""
+		}
+	}
+
+	return ""
 }
 
 func ValidMovesMap(g *chess.Game) map[string][]string {

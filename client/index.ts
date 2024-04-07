@@ -2,7 +2,7 @@ import { Chessground } from 'chessground';
 import { Config as ChessgroundConfig } from 'chessground/config';
 import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
-import { GameStartedResponse, MoveResponse } from './models';
+import { BaseResponse, GameStartedResponse, MoveResponse } from './models';
 
 let ws: WebSocket;
 let board: ChessgroundApi;
@@ -40,12 +40,12 @@ function onGameStarted(response: GameStartedResponse): void {
 		board.set({
 			// ...board.state,
 			fen: response.fen,
-			turnColor: response.color,
-			orientation: response.color,
+			turnColor: response.whosNext,
+			orientation: response.playerColor,
 			movable: {
 				// ...board.state.movable,
 				dests: validMoves,
-				color: response.color,
+				color: response.playerColor,
 				events: {
 					after: afterMove,
 				},
@@ -55,20 +55,16 @@ function onGameStarted(response: GameStartedResponse): void {
 }
 
 function onMove(response: MoveResponse): void {
-	type response = {
-		move: any;
-		fen: string;
-	};
 	console.log('making move...');
 	console.log({ fen: response.fen });
 	board.set({
 		// ...board.state,
 		fen: response.fen,
-		// turnColor: chess.,
+        turnColor: response.whosNext,
 		movable: {
 			// ...board.state.movable,
 			// dests: getValidMoves(chess),
-			// color: chess.,
+				color: response.whosNext,
 			events: {
 				after: afterMove,
 			},
@@ -89,13 +85,13 @@ function joinGame(): void {
 		};
 
 		ws.onmessage = function (event) {
-			console.log('OnMessage: ', event);
+			console.log('OnMessage: ', event.data);
 			try {
-				const response = JSON.parse(event.data);
-				if ('gameStarted' in response && 'color' in response) {
-					onGameStarted(response);
+				const response: BaseResponse = JSON.parse(event.data);
+				if ('gameStarted' in response && 'playerColor' in response) {
+					onGameStarted(response as GameStartedResponse);
 				} else if ('fen' in response) {
-					onMove(response);
+					onMove(response as MoveResponse);
 				}
 			} catch (e) {
 				console.error(e);

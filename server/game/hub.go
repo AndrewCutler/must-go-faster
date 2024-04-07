@@ -43,7 +43,7 @@ func (h *Hub) Run() {
 				if err != nil {
 					log.Println(err)
 				}
-				game := chess.NewGame(_fen)
+				game := chess.NewGame(_fen, chess.UseNotation(chess.UCINotation{}))
 				player.GameId = gameId
 				player.Color = "white"
 				gameMeta := GameMeta{

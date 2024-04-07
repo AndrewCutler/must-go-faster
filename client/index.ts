@@ -10,41 +10,37 @@ let gameId: string;
 
 function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
 	console.log('$$$ afterMove $$$\n');
-	type move = { from: cg.Key; to: cg.Key };
-	const move: move = { from, to };
-	// board.set({
-	// 	fen: fen,
-	// 	turnColor: getColor(chess),
-	// 	movable: {
-	// 		color: getColor(chess),
-	// 		dests: getValidMoves(chess),
-	// 	},
-	// });
-
+	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
-		const message = { move: { from, to }, gameId };
+		const message = { move, gameId };
 		ws.send(JSON.stringify(message));
 	}
+}
+
+function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
+	const validMoves = new Map();
+	for (const [key, value] of Object.entries(moves)) {
+		validMoves.set(key, value);
+	}
+	// for (const key in moves) {
+	// 	validMoves.set(key, moves[key]);
+	// }
+
+	return validMoves;
 }
 
 function onGameStarted(response: GameStartedResponse): void {
 	console.log('game started...', response);
 	if (response.gameStarted) {
 		gameId = response.gameId;
-		const validMoves = new Map();
-		for (const key in response.validMoves) {
-			validMoves.set(key, response.validMoves[key]);
-		}
-		console.log(response, validMoves);
-		// start countdown, set fen etc
+		// todo: start countdown, set fen etc
 		board.set({
-			// ...board.state,
+			viewOnly: response.whosNext !== response.playerColor,
 			fen: response.fen,
 			turnColor: response.whosNext,
 			orientation: response.playerColor,
 			movable: {
-				// ...board.state.movable,
-				dests: validMoves,
+				dests: toValidMoves(response.validMoves),
 				color: response.playerColor,
 				events: {
 					after: afterMove,
@@ -58,13 +54,13 @@ function onMove(response: MoveResponse): void {
 	console.log('making move...');
 	console.log({ fen: response.fen });
 	board.set({
-		// ...board.state,
+		viewOnly: response.whosNext !== response.playerColor,
 		fen: response.fen,
-        turnColor: response.whosNext,
+		turnColor: response.whosNext,
+		orientation: response.playerColor,
 		movable: {
-			// ...board.state.movable,
-			// dests: getValidMoves(chess),
-				color: response.whosNext,
+			dests: toValidMoves(response.validMoves),
+			color: response.whosNext,
 			events: {
 				after: afterMove,
 			},

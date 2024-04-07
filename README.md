@@ -9,4 +9,4 @@
 
 ### TODO
 
-1. [move chess logic to backend](https://github.com/notnil/chess)
+1. Menu for piece selection during promotion (not supported by Chessground)

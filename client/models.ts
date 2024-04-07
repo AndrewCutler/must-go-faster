@@ -10,6 +10,7 @@ export type GameStartedResponse = BaseResponse & {
 	gameStarted: boolean;
 };
 
-export type MoveResponse = BaseResponse & {
-	move: any; // todo
-};
+
+export function isGameStartedResponse(obj: any): obj is GameStartedResponse {
+	return obj.gameStarted !== undefined;
+}

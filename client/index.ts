@@ -2,7 +2,11 @@ import { Chessground } from 'chessground';
 import { Config as ChessgroundConfig } from 'chessground/config';
 import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
-import { BaseResponse, GameStartedResponse, MoveResponse } from './models';
+import {
+	BaseResponse,
+	GameStartedResponse,
+	isGameStartedResponse,
+} from './models';
 
 let ws: WebSocket;
 let board: ChessgroundApi;
@@ -10,6 +14,15 @@ let gameId: string;
 
 function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
 	console.log('$$$ afterMove $$$\n');
+	const movedPiece = board.state.pieces.get(to);
+
+	// handle promotion here; autopromote to queen for now
+	console.log(movedPiece, to);
+	if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
+		console.log('PROMOTE');
+		to += 'q';
+	}
+
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
 		const message = { move, gameId };
@@ -22,9 +35,6 @@ function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
 	for (const [key, value] of Object.entries(moves)) {
 		validMoves.set(key, value);
 	}
-	// for (const key in moves) {
-	// 	validMoves.set(key, moves[key]);
-	// }
 
 	return validMoves;
 }
@@ -50,7 +60,7 @@ function onGameStarted(response: GameStartedResponse): void {
 	}
 }
 
-function onMove(response: MoveResponse): void {
+function onMove(response: BaseResponse): void {
 	console.log('making move...');
 	console.log({ fen: response.fen });
 	board.set({
@@ -81,13 +91,12 @@ function joinGame(): void {
 		};
 
 		ws.onmessage = function (event) {
-			console.log('OnMessage: ', event.data);
 			try {
 				const response: BaseResponse = JSON.parse(event.data);
-				if ('gameStarted' in response && 'playerColor' in response) {
+				if (isGameStartedResponse(response)) {
 					onGameStarted(response as GameStartedResponse);
 				} else if ('fen' in response) {
-					onMove(response as MoveResponse);
+					onMove(response);
 				}
 			} catch (e) {
 				console.error(e);

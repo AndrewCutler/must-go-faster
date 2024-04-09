@@ -2,7 +2,9 @@ package game
 
 import (
 	"encoding/json"
+	"log"
 	"strings"
+	"time"
 
 	"github.com/notnil/chess"
 )
@@ -22,6 +24,7 @@ type GameMeta struct {
 	White  *Player
 	Black  *Player
 	GameId string
+	Timer  time.Time
 }
 
 func (g *GameMeta) getFen() string {
@@ -48,6 +51,17 @@ func (g *GameMeta) whoseMoveIsIt() string {
 	}
 
 	return ""
+}
+
+func (g *GameMeta) getTimeRemaining() float64 {
+	gameTime, err := time.ParseDuration("30s")
+	if err != nil {
+		log.Println("Unable to create duration of 30s")
+	} else {
+		return (gameTime - time.Since(g.Timer)).Seconds()
+	}
+
+	return 0
 }
 
 func ValidMovesMap(g *chess.Game) map[string][]string {

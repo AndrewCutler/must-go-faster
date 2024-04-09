@@ -1,6 +1,6 @@
 export type PlayerColor = 'white' | 'black';
 
-export type GameStatus = 'ongoing' | 'lost' | 'won';
+export type GameStatus = 'ongoing' | 'lost' | 'won' | 'draw';
 
 export type BaseResponse = {
 	fen: string;

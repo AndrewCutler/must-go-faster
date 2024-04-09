@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/notnil/chess"
@@ -57,6 +58,7 @@ func (h *Hub) Run() {
 			} else {
 				// set game state to ready
 				game := (*h.GamesAwaitingOpponent)[0]
+				game.Timer = time.Now()
 				game.Black = player
 				player.GameId = game.GameId
 				player.Color = "black"
@@ -124,6 +126,7 @@ func gameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
 		"playerColor": playerColor, // is this necessary
 		"validMoves":  ValidMovesMap(gameMeta.Game),
 		"whosNext":    gameMeta.whoseMoveIsIt(),
+		"timeLeft":    gameMeta.getTimeRemaining(),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -151,6 +154,7 @@ func moveMessage(gameMeta *GameMeta, playerColor string) []byte {
 		"validMoves":   ValidMovesMap(gameMeta.Game),
 		"whosNext":     gameMeta.whoseMoveIsIt(),
 		"isCheckmated": isCheckmated,
+		"timeLeft":     gameMeta.getTimeRemaining(),
 	}
 
 	jsonData, err := json.Marshal(data)

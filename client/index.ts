@@ -61,11 +61,15 @@ function onGameStarted(response: GameStartedResponse): void {
 	}
 }
 
-function gameOver(gameStatus: Omit<GameStatus, 'ongoing'>): void {
+function gameOver(gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>): void {
 	// let's render a modal
 	const modal = document.querySelector<HTMLDivElement>('#game-status-modal')!;
 	modal.style.display = 'block';
-	modal.innerHTML = `You ${gameStatus}!`;
+	const modalHeader =
+		document.querySelector<HTMLDivElement>('#modal-header')!;
+	modalHeader.innerHTML = `<div style="display: flex; align-items: center; font-color: white;">You ${gameStatus}!</div>`;
+    const modalContent = document.querySelector<HTMLDivElement>('#modal-content')!;
+    modalContent.innerHTML = "Try again?"
 }
 
 function onMove(response: BaseResponse): void {

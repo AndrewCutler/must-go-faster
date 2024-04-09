@@ -5,6 +5,7 @@ import * as cg from 'chessground/types.js';
 import {
 	BaseResponse,
 	GameStartedResponse,
+	GameStatus,
 	isGameStartedResponse,
 } from './models';
 
@@ -60,9 +61,23 @@ function onGameStarted(response: GameStartedResponse): void {
 	}
 }
 
+function gameOver(gameStatus: Omit<GameStatus, 'ongoing'>): void {
+	// let's render a modal
+	const modal = document.querySelector<HTMLDivElement>('#game-status-modal')!;
+	modal.style.display = 'block';
+	modal.innerHTML = `You ${gameStatus}!`;
+}
+
 function onMove(response: BaseResponse): void {
 	console.log('making move...');
-	console.log({ fen: response.fen });
+	console.log(response);
+	let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
+	if (response.isCheckmated) {
+		gameStatus =
+			response.isCheckmated === response.playerColor ? 'lost' : 'won';
+		gameOver(gameStatus);
+	}
+	console.log({ gameStatus });
 	board.set({
 		viewOnly: response.whosNext !== response.playerColor,
 		fen: response.fen,

@@ -6,20 +6,28 @@
 		<title>Must Go Faster</title>
 		<script src="build/must-go-faster.js"></script>
 		<link rel="stylesheet" href="index.css" />
-        <style>
-            body {
-                width: 100vw;
-                height: 100vh;
-                background-color: #2e2e2e;
-            }
-            #board {
-                pointer-events: none;
-            }
-        </style>
+		<style>
+			body {
+				width: 100vw;
+				height: 100vh;
+				background-color: #2e2e2e;
+			}
+			#board {
+				pointer-events: none;
+			}
+		</style>
 	</head>
 	<body>
-		<div id="board"></div>
-		<br />
-		<button id="connect-button">WS Connect</button>
+		<div id="board-container">
+			<!-- modal -->
+			<div id="game-status-modal">
+				<div class="modal-content"></div>
+			</div>
+
+			<!-- board ui -->
+			<div id="board"></div>
+			<button id="connect-button">WS Connect</button>
+			<br />
+		</div>
 	</body>
 </html>

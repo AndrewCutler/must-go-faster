@@ -1,8 +1,18 @@
-@import "./node_modules/chessground/assets/chessground.base.css";
-@import "./node_modules/chessground/assets/chessground.brown.css";
-@import "./node_modules/chessground/assets/chessground.cburnett.css";
+@import './node_modules/chessground/assets/chessground.base.css';
+@import './node_modules/chessground/assets/chessground.brown.css';
+@import './node_modules/chessground/assets/chessground.cburnett.css';
 
 #board {
 	width: 400px;
 	height: 400px;
+}
+
+#game-status-modal {
+	display: none;
+	position: absolute;
+	z-index: 5;
+	height: 300px;
+	width: 300px;
+	background-color: green;
+	margin: 40px 0 0 40px;
 }

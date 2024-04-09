@@ -34,8 +34,7 @@ func (h *Hub) Run() {
 		case player := <-h.Register:
 			// todo: randomize colors
 			// todo: get starting position
-			// testing: 8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63
-			fen := "8/7R/1P6/2K3p1/2P3k1/7p/1r6/8 b - - 1 63"
+			fen := "rnbqkbnr/pppp1ppp/4p3/8/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq g3 0 2"
 			// if there are no games with only one player, make one
 			if len(*h.GamesAwaitingOpponent) == 0 {
 				gameId := uuid.New().String()
@@ -43,6 +42,7 @@ func (h *Hub) Run() {
 				if err != nil {
 					log.Println(err)
 				}
+				// game := chess.NewGame(chess.UseNotation(chess.UCINotation{}))
 				game := chess.NewGame(_fen, chess.UseNotation(chess.UCINotation{}))
 				player.GameId = gameId
 				player.Color = "white"
@@ -93,6 +93,8 @@ func (h *Hub) Run() {
 					return
 				}
 
+				fmt.Println("Outcome: ", game.Game.Outcome())
+
 				// if len(game.Game.MoveHistory()) > 0 {
 				// 	for _, history := range game.Game.MoveHistory() {
 				// 		fmt.Println(history)
@@ -134,12 +136,21 @@ func gameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
 }
 
 func moveMessage(gameMeta *GameMeta, playerColor string) []byte {
+	isCheckmated := ""
+	switch gameMeta.Game.Outcome() {
+	case "0-1":
+		isCheckmated = "white"
+	case "1-0":
+		isCheckmated = "black"
+	}
+
 	data := map[string]interface{}{
-		"fen":         gameMeta.getFen(),
-		"gameId":      gameMeta.GameId,
-		"playerColor": playerColor, // is this necessary
-		"validMoves":  ValidMovesMap(gameMeta.Game),
-		"whosNext":    gameMeta.whoseMoveIsIt(),
+		"fen":          gameMeta.getFen(),
+		"gameId":       gameMeta.GameId,
+		"playerColor":  playerColor,
+		"validMoves":   ValidMovesMap(gameMeta.Game),
+		"whosNext":     gameMeta.whoseMoveIsIt(),
+		"isCheckmated": isCheckmated,
 	}
 
 	jsonData, err := json.Marshal(data)

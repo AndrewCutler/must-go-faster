@@ -12,17 +12,24 @@ import {
 let ws: WebSocket;
 let board: ChessgroundApi;
 let gameId: string;
+let timer: string;
 
-function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
-	console.log('$$$ afterMove $$$\n');
+// todo: stop using regions
+// region chess utils
+function checkIsPromotion(to: cg.Key): cg.Key {
 	const movedPiece = board.state.pieces.get(to);
-
-	// handle promotion here; autopromote to queen for now
-	console.log(movedPiece, to);
+    // any pawn move ending in 1 or 8, i.e. last rank
 	if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
-		console.log('PROMOTE');
 		to += 'q';
 	}
+
+	return to;
+}
+
+function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
+	// handle promotion here; autopromote to queen for now
+	to = checkIsPromotion(to);
+
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
@@ -44,6 +51,7 @@ function onGameStarted(response: GameStartedResponse): void {
 	console.log('game started...', response);
 	if (response.gameStarted) {
 		gameId = response.gameId;
+		timer = '30.0s';
 		// todo: start countdown, set fen etc
 		board.set({
 			viewOnly: response.whosNext !== response.playerColor,
@@ -59,17 +67,6 @@ function onGameStarted(response: GameStartedResponse): void {
 			},
 		});
 	}
-}
-
-function gameOver(gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>): void {
-	// let's render a modal
-	const modal = document.querySelector<HTMLDivElement>('#game-status-modal')!;
-	modal.style.display = 'block';
-	const modalHeader =
-		document.querySelector<HTMLDivElement>('#modal-header')!;
-	modalHeader.innerHTML = `<div style="display: flex; align-items: center; font-color: white;">You ${gameStatus}!</div>`;
-    const modalContent = document.querySelector<HTMLDivElement>('#modal-content')!;
-    modalContent.innerHTML = "Try again?"
 }
 
 function onMove(response: BaseResponse): void {
@@ -96,7 +93,9 @@ function onMove(response: BaseResponse): void {
 		},
 	});
 }
+//endregion
 
+// region ui
 function joinGame(): void {
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
@@ -123,6 +122,20 @@ function joinGame(): void {
 		};
 	});
 }
+
+function gameOver(gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>): void {
+	// let's render a modal
+	const modal = document.querySelector<HTMLDivElement>('#game-status-modal')!;
+	modal.style.display = 'block';
+	const modalHeader =
+		document.querySelector<HTMLDivElement>('#modal-header')!;
+	modalHeader.innerHTML = `<div style="display: flex; align-items: center; font-color: white;">You ${gameStatus}!</div>`;
+	const modalContent =
+		document.querySelector<HTMLDivElement>('#modal-content')!;
+	modalContent.innerHTML = 'Try again?';
+}
+
+//endregion
 
 function initialize(): void {
 	const initialConfig: ChessgroundConfig = {

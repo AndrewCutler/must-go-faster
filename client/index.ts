@@ -6,19 +6,22 @@ import {
 	BaseResponse,
 	GameStartedResponse,
 	GameStatus,
+	Timer,
 	isGameStartedResponse,
 } from './models';
 
 let ws: WebSocket;
 let board: ChessgroundApi;
 let gameId: string;
-let timer: string;
+// let timer: Timer;
+let timeLeft: number;
+let interval: number;
 
 // todo: stop using regions
 // region chess utils
 function checkIsPromotion(to: cg.Key): cg.Key {
 	const movedPiece = board.state.pieces.get(to);
-    // any pawn move ending in 1 or 8, i.e. last rank
+	// any pawn move ending in 1 or 8, i.e. last rank
 	if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
 		to += 'q';
 	}
@@ -29,7 +32,6 @@ function checkIsPromotion(to: cg.Key): cg.Key {
 function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
 	// handle promotion here; autopromote to queen for now
 	to = checkIsPromotion(to);
-
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
@@ -51,8 +53,10 @@ function onGameStarted(response: GameStartedResponse): void {
 	console.log('game started...', response);
 	if (response.gameStarted) {
 		gameId = response.gameId;
-		timer = '30.0s';
+		// timer = new Timer(30.0); // '30.0s';
+        timeLeft = 30;
 		// todo: start countdown, set fen etc
+		showTime();
 		board.set({
 			viewOnly: response.whosNext !== response.playerColor,
 			fen: response.fen,
@@ -78,7 +82,11 @@ function onMove(response: BaseResponse): void {
 			response.isCheckmated === response.playerColor ? 'lost' : 'won';
 		gameOver(gameStatus);
 	}
-	console.log({ gameStatus });
+	// timer.timeLeft = response.timeLeft;
+	timeLeft = response.timeLeft;
+	console.log({ timeLeft });
+	window.clearInterval(interval);
+	showTime();
 	board.set({
 		viewOnly: response.whosNext !== response.playerColor,
 		fen: response.fen,
@@ -133,6 +141,21 @@ function gameOver(gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>): void {
 	const modalContent =
 		document.querySelector<HTMLDivElement>('#modal-content')!;
 	modalContent.innerHTML = 'Try again?';
+}
+
+function showTime(): void {
+	const timerDiv = document.querySelector<HTMLDivElement>('#timer')!;
+	const start = new Date();
+	interval = window.setInterval(function () {
+		const diff = new Date().getTime() - start.getTime();
+		if (diff >= 30 * 1000) {
+			window.clearInterval(interval);
+			return;
+		}
+        const countdown = (timeLeft - (diff / 1_000)).toFixed(1);
+
+		timerDiv.innerHTML = '<div>' + countdown + 's</div>';
+	}, 10);
 }
 
 //endregion

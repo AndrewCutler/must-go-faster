@@ -15,20 +15,30 @@
 			#board {
 				pointer-events: none;
 			}
+			#container {
+				display: flex;
+			}
+			#timer {
+				display: flex;
+				align-items: center;
+			}
 		</style>
 	</head>
 	<body>
-		<div id="board-container">
-			<!-- modal -->
-			<div id="game-status-modal">
-				<div id="modal-header"></div>
-				<div id="modal-content"></div>
-			</div>
+		<div id="container">
+			<div id="board-container">
+				<!-- modal -->
+				<div id="game-status-modal">
+					<div id="modal-header"></div>
+					<div id="modal-content"></div>
+				</div>
 
-			<!-- board ui -->
-			<div id="board"></div>
-			<button id="connect-button">WS Connect</button>
-			<br />
+				<!-- board ui -->
+				<div id="board"></div>
+				<button id="connect-button">WS Connect</button>
+				<br />
+			</div>
+			<div id="timer"></div>
 		</div>
 	</body>
 </html>

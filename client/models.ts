@@ -9,6 +9,7 @@ export type BaseResponse = {
 	playerColor: PlayerColor;
 	validMoves: { [key: string]: string[] };
 	isCheckmated: PlayerColor | '';
+    timeLeft: number;
 };
 
 export type GameStartedResponse = BaseResponse & {
@@ -17,4 +18,12 @@ export type GameStartedResponse = BaseResponse & {
 
 export function isGameStartedResponse(obj: any): obj is GameStartedResponse {
 	return obj.gameStarted !== undefined;
+}
+
+export class Timer {
+	timeLeft: number;
+
+	constructor(value: number) {
+		this.timeLeft = value;
+	}
 }

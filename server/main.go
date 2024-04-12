@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"mustgofaster/game"
-	handlers "mustgofaster/handlers"
+	"server/game"
+	handlers "server/handlers"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"

@@ -9,7 +9,9 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      name: Build parser
-      with:
-        go-version: 1.21.5
-        run: go build -o parse.exe parser/parse.go
+      - name: Setup
+        with:
+          go-version: 1.21.5
+
+      - name: Build
+        run: go build parser/parser.go

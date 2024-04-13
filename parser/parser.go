@@ -20,14 +20,19 @@ func splitGames(filename string, dest string) {
 
 	scanner := bufio.NewScanner(file)
 
-	gameNumber := 1
 	for scanner.Scan() {
 		line := scanner.Text()
-		// grab pgns for all games that don't include eval, for easy of parsing
+		// grab pgns for all games that don't include eval, for easier of parsing
 		if strings.HasPrefix(line, "1. ") && !strings.Contains(line, "eval") {
 			pgnId := uuid.New().String()
-			os.WriteFile(dest+"/"+pgnId+".pgn", []byte(line), 0064)
-			gameNumber++
+			fmt.Println(dest + "/" + pgnId + ".pgn")
+
+			if err := os.MkdirAll(dest, 0755); err != nil {
+				log.Println(err)
+			}
+			if err := os.WriteFile(dest+"\\"+pgnId+".pgn", []byte(line), 0644); err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }
@@ -42,8 +47,7 @@ func main() {
 	}
 	if *dest == "" {
 		wd, _ := os.Getwd()
-		*dest = wd + "\\output"
-		fmt.Println(*dest)
+		*dest = wd + "\\pgns"
 	}
 
 	splitGames(*srcFile, *dest)

@@ -1,4 +1,4 @@
-name: Do stuff
+ackname: Do stuff
 
 on:
   pull_request:
@@ -6,13 +6,43 @@ on:
       - main
 
 jobs:
-  build:
+  build-go:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        go-version: ['1.21.x']
     steps:
-      - name: Setup
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.21.5
+          go-version: ${{ matrix.go-version }}
 
-      - name: Build
+      - name: Build parser
         run: go build parser/parser.go
+
+      - name: Build server
+        run: go build server/server.go
+
+  build-js:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node-version: ['20.x']
+    
+    steps:
+    # todo: do we have to checkout in both jobs?
+    - uses: action/checkout@v4
+    - name: Setup Node ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: cd into client
+      run: cd client
+
+    - name: Install
+      run: npm install
+    
+    -name: Build
+      run: npm run build

@@ -30,8 +30,8 @@ jobs:
       matrix:
         node-version: ['20.x']
     
+    # todo: do we have to checkout in both jobs?
     steps:
-      # todo: do we have to checkout in both jobs?
       - uses: action/checkout@v4
       - name: Setup Node ${{ matrix.node-version }}
         uses: actions/setup-node@v4

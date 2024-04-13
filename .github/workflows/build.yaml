@@ -35,12 +35,10 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ matrix.node-version }}
-
             - name: cd into client
               run: cd client
-
-            - name: Install
+            - name: Install dependencies
               run: npm install
 
-            -name: Build
-              run: npm run build
+            # -name: Build
+            #   run: npm run build

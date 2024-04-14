@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,17 +36,22 @@ func (h *Hub) Run() {
 		select {
 		case player := <-h.Register:
 			// todo: randomize colors
-			// todo: get starting position
-			fen := "rnbqkbnr/pppp1ppp/4p3/8/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq g3 0 2"
 			// if there are no games with only one player, make one
 			if len(*h.GamesAwaitingOpponent) == 0 {
-				gameId := uuid.New().String()
-				_fen, err := chess.FEN(fen)
+				fen, err := getGameFEN()
 				if err != nil {
 					log.Println(err)
+					return
 				}
-				// game := chess.NewGame(chess.UseNotation(chess.UCINotation{}))
-				game := chess.NewGame(_fen, chess.UseNotation(chess.UCINotation{}))
+
+				f, err := chess.FEN(fen)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				gameId := uuid.New().String()
+				game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
 				player.GameId = gameId
 				player.Color = "white"
 				gameMeta := GameMeta{
@@ -64,6 +71,7 @@ func (h *Hub) Run() {
 				player.Color = "black"
 				*h.GamesAwaitingOpponent = make([]*GameMeta, 0)
 				h.GamesInProgress[game.GameId] = game
+
 				fmt.Println("broadcasting game started to white...")
 				player.Send <- gameStartMessage(game, player.Color)
 				game.White.Send <- gameStartMessage(game, game.White.Color)
@@ -97,12 +105,6 @@ func (h *Hub) Run() {
 
 				fmt.Println("Outcome: ", game.Game.Outcome())
 
-				// if len(game.Game.MoveHistory()) > 0 {
-				// 	for _, history := range game.Game.MoveHistory() {
-				// 		fmt.Println(history)
-				// 	}
-				// }
-
 				for _, player := range game.GetPlayers() {
 					select {
 					case player.Send <- moveMessage(game, player.Color):
@@ -116,6 +118,47 @@ func (h *Hub) Run() {
 			}
 		}
 	}
+}
+
+// todo: consider using https://github.com/notnil/chess?tab=readme-ov-file#scan-pgn
+func getGameFEN() (string, error) {
+	// todo: grab from database or something
+	dir := "./pgns"
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return "", err
+	}
+
+	var result string
+	var isGameAcceptable bool
+	for !isGameAcceptable {
+		fileName := files[rand.Intn(len(files))].Name()
+		file, err := os.Open(dir + "\\" + fileName)
+		if err != nil {
+			return "", err
+		}
+
+		pgn, err := chess.PGN(file)
+		if err != nil {
+			return "", err
+		}
+
+		game := chess.NewGame(pgn)
+		fmt.Println(fileName)
+		fmt.Println(game.Position().String())
+		fmt.Println(game.Outcome())
+
+		moveLength := len(game.MoveHistory())
+		fmt.Println(moveLength)
+
+		// only use games of at least 20 full moves
+		if moveLength > 40 {
+			isGameAcceptable = true
+			result = game.MoveHistory()[moveLength-20].PrePosition.String()
+		}
+	}
+
+	return result, nil
 }
 
 func gameStartMessage(gameMeta *GameMeta, playerColor string) []byte {

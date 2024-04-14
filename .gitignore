@@ -2,3 +2,7 @@ node_modules
 tmp
 build
 .vscode
+parser/output
+test.pgn
+*.exe
+server/pgns

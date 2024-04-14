@@ -1,9 +1,9 @@
 // webpack.config.js
 const path = require('path');
 
-module.exports = {
+module.exports = env => ({
 	entry: './index.ts', // Entry point of your application
-	watch: true,
+	watch: env.watch === 'true',
 	watchOptions: {
 		ignored: /node_modules/,
 	},
@@ -23,4 +23,4 @@ module.exports = {
 	resolve: {
 		extensions: ['.ts', '.ts'],
 	},
-};
+});

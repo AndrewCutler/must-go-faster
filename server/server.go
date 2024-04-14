@@ -16,7 +16,6 @@ import (
 )
 
 func main() {
-	return
 	os.Setenv("DEVELOPMENT", "true")
 	r := mux.NewRouter()
 

@@ -4,3 +4,4 @@ build
 .vscode
 parser/output
 test.pgn
+*.exe

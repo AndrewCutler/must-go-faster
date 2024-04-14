@@ -5,3 +5,4 @@ build
 parser/output
 test.pgn
 *.exe
+server/pgns

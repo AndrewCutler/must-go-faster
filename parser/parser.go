@@ -8,10 +8,12 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
 
+// performs very poorly lmao
 func splitGames(filename string, dest string) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -29,7 +31,17 @@ func splitGames(filename string, dest string) {
 			// grab pgns for all games that don't include eval, for easier of parsing
 			if strings.HasPrefix(line, "1. ") && !strings.Contains(line, "eval") {
 				pgnId := uuid.New().String()
-				fmt.Println(dest + "/" + pgnId + ".pgn")
+				go func() {
+					second := time.Now().Second() % 10
+					switch {
+					case second < 3:
+						fmt.Print("\rWriting files.   ")
+					case second >= 3 && second < 6:
+						fmt.Print("\rWriting files.. ")
+					case second >= 6 && second <= 9:
+						fmt.Print("\rWriting files...")
+					}
+				}()
 
 				if err := os.MkdirAll(dest, 0755); err != nil {
 					log.Println(err)

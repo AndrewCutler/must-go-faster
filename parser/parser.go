@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -18,23 +19,37 @@ func splitGames(filename string, dest string) {
 	}
 	defer file.Close()
 
+	var waitGroup sync.WaitGroup
 	scanner := bufio.NewScanner(file)
+	maxConcurrent := 10
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		// grab pgns for all games that don't include eval, for easier of parsing
-		if strings.HasPrefix(line, "1. ") && !strings.Contains(line, "eval") {
-			pgnId := uuid.New().String()
-			fmt.Println(dest + "/" + pgnId + ".pgn")
+	for maxConcurrent > 0 {
+		for scanner.Scan() {
+			line := scanner.Text()
+			// grab pgns for all games that don't include eval, for easier of parsing
+			if strings.HasPrefix(line, "1. ") && !strings.Contains(line, "eval") {
+				pgnId := uuid.New().String()
+				fmt.Println(dest + "/" + pgnId + ".pgn")
 
-			if err := os.MkdirAll(dest, 0755); err != nil {
-				log.Println(err)
-			}
-			if err := os.WriteFile(dest+"\\"+pgnId+".pgn", []byte(line), 0644); err != nil {
-				log.Println(err)
+				if err := os.MkdirAll(dest, 0755); err != nil {
+					log.Println(err)
+				}
+
+				maxConcurrent--
+
+				waitGroup.Add(1)
+				go func() {
+					defer waitGroup.Done()
+
+					if err := os.WriteFile(dest+"\\"+pgnId+".pgn", []byte(line), 0644); err != nil {
+						log.Println(err)
+					}
+				}()
 			}
 		}
 	}
+
+	waitGroup.Wait()
 }
 
 func main() {

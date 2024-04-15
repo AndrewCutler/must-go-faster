@@ -6,15 +6,16 @@ import {
 	BaseResponse,
 	GameStartedResponse,
 	GameStatus,
-	Timer,
+	MoveRequest,
+	TimeoutRequest,
 	isGameStartedResponse,
 } from './models';
 
 let ws: WebSocket;
 let board: ChessgroundApi;
 let gameId: string;
-// let timer: Timer;
 let timeLeft: number;
+let countdown: number;
 let interval: number;
 
 // todo: stop using regions
@@ -35,7 +36,7 @@ function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
-		const message = { move, gameId };
+		const message: MoveRequest = { move, gameId };
 		ws.send(JSON.stringify(message));
 	}
 }
@@ -54,7 +55,7 @@ function onGameStarted(response: GameStartedResponse): void {
 	if (response.gameStarted) {
 		gameId = response.gameId;
 		// timer = new Timer(30.0); // '30.0s';
-        timeLeft = 30;
+		timeLeft = countdown = 30;
 		// todo: start countdown, set fen etc
 		showTime();
 		board.set({
@@ -81,12 +82,14 @@ function onMove(response: BaseResponse): void {
 		gameStatus =
 			response.isCheckmated === response.playerColor ? 'lost' : 'won';
 		gameOver(gameStatus);
+		countdown = 0;
+		return;
 	}
-	// timer.timeLeft = response.timeLeft;
+
 	timeLeft = response.timeLeft;
-	console.log({ timeLeft });
-	window.clearInterval(interval);
+	// window.clearInterval(interval);
 	showTime();
+
 	board.set({
 		viewOnly: response.whosNext !== response.playerColor,
 		fen: response.fen,
@@ -143,18 +146,36 @@ function gameOver(gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>): void {
 	modalContent.innerHTML = 'Try again?';
 }
 
+function onTimeout() {
+	// send message to server to end game/find out the outcome
+	if (ws) {
+		const timeout: TimeoutRequest = {
+			gameId,
+			timeout: true,
+		};
+		ws.send(JSON.stringify(timeout));
+	} else {
+		console.error('ws is undefined.');
+	}
+}
+
 function showTime(): void {
+	// clear previous interval
+	window.clearInterval(interval);
+
 	const timerDiv = document.querySelector<HTMLDivElement>('#timer')!;
 	const start = new Date();
 	interval = window.setInterval(function () {
-		const diff = new Date().getTime() - start.getTime();
-		if (diff >= 30 * 1000) {
+		if (countdown <= 0) {
 			window.clearInterval(interval);
+			onTimeout();
 			return;
 		}
-        const countdown = (timeLeft - (diff / 1_000)).toFixed(1);
+		const diff = new Date().getTime() - start.getTime();
+		countdown = timeLeft - diff / 1_000;
 
-		timerDiv.innerHTML = '<div>' + countdown + 's</div>';
+		timerDiv.innerHTML =
+			'<div>' + (countdown > 0 ? countdown : 0).toFixed(1) + 's</div>';
 	}, 10);
 }
 

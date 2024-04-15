@@ -1,2 +1,2 @@
-start powershell {npm run build --prefix "./client"}
-cd server; air
+Start-Process powershell {npm run watch --prefix "./client"}
+Set-Location server; air

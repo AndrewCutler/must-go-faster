@@ -12,3 +12,5 @@
 1. Menu for piece selection during promotion (not supported by Chessground)
 2. Make game over modal presentable
 3. Increment
+4. Show material count
+5. 

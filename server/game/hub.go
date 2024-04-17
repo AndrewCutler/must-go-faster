@@ -98,21 +98,27 @@ func (h *Hub) Run() {
 					return
 				}
 
-				if err := makeMove(string(message.Move.Data), game.Game); err != nil {
-					log.Panicln(err)
+				timeout := handleTimeout(message, game)
+				if timeout {
 					return
 				}
 
-				fmt.Println("Outcome: ", game.Game.Outcome())
+				handleMove(message, game)
+				// if err := makeMove(string(message.Move.Data), game.Game); err != nil {
+				// 	log.Panicln(err)
+				// 	return
+				// }
 
-				for _, player := range game.GetPlayers() {
-					select {
-					case player.Send <- moveMessage(game, player.Color):
-					default:
-						close(player.Send)
-						// delete(game, player) // todo
-					}
-				}
+				// fmt.Println("Outcome: ", game.Game.Outcome())
+
+				// for _, player := range game.GetPlayers() {
+				// 	select {
+				// 	case player.Send <- moveMessage(game, player.Color):
+				// 	default:
+				// 		close(player.Send)
+				// 		// delete(game, player) // todo
+				// 	}
+				// }
 			default:
 				return
 			}
@@ -207,4 +213,76 @@ func moveMessage(gameMeta *GameMeta, playerColor string) []byte {
 	}
 
 	return jsonData
+}
+
+func timeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []byte {
+	data := map[string]interface{}{
+		"fen":         gameMeta.getFen(),
+		"gameId":      gameMeta.GameId,
+		"whosNext":    gameMeta.whoseMoveIsIt(),
+		"playerColor": playerColor,
+		"loser":       loser,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
+}
+
+func handleTimeout(message Message, game *GameMeta) bool {
+	type TimeoutRequest struct {
+		Timeout     bool   `json:"timeout"`
+		PlayerColor string `json:"playerColor"`
+	}
+	var timeout TimeoutRequest
+	err := json.Unmarshal(message.Move.Data, &timeout)
+	if err != nil {
+		fmt.Println(err)
+		return true
+	}
+	fmt.Println(timeout, timeout.Timeout)
+
+	if timeout.Timeout {
+		if game.whoseMoveIsIt() == timeout.PlayerColor {
+			fmt.Println("loser: ", game.whoseMoveIsIt())
+		}
+		m := timeoutMessage(game, "white", game.whoseMoveIsIt())
+
+		fmt.Println("is timeout!")
+		for _, player := range game.GetPlayers() {
+			select {
+			case player.Send <- m:
+			default:
+				close(player.Send)
+				// delete(game, player) // todo
+			}
+		}
+
+		return true
+	}
+
+	return false
+}
+
+func handleMove(message Message, game *GameMeta) {
+	if err := makeMove(string(message.Move.Data), game.Game); err != nil {
+		log.Panicln(err)
+		return
+	}
+
+	fmt.Println("Outcome: ", game.Game.Outcome())
+
+	for _, player := range game.GetPlayers() {
+		select {
+		// case player.Send <- moveMessage(game):
+		case player.Send <- moveMessage(game, player.Color):
+		default:
+			close(player.Send)
+			// delete(game, player) // todo
+		}
+	}
 }

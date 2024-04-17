@@ -13,4 +13,4 @@
 2. Make game over modal presentable
 3. Increment
 4. Show material count
-5. 
+5. Send config from server to frontend on page load

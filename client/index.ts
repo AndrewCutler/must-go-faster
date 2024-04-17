@@ -3,12 +3,16 @@ import { Config as ChessgroundConfig } from 'chessground/config';
 import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 import {
-	BaseResponse,
+	MoveResponse,
 	GameStartedResponse,
 	GameStatus,
 	MoveRequest,
+	PlayerColor,
 	TimeoutRequest,
 	isGameStartedResponse,
+	isMoveResponse,
+	isTimeoutResponse,
+	TimeoutResponse,
 } from './models';
 
 let ws: WebSocket;
@@ -17,6 +21,7 @@ let gameId: string;
 let timeLeft: number;
 let countdown: number;
 let interval: number;
+let playerColor: PlayerColor;
 
 // todo: stop using regions
 // region chess utils
@@ -51,21 +56,20 @@ function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
 }
 
 function onGameStarted(response: GameStartedResponse): void {
-	console.log('game started...', response);
 	if (response.gameStarted) {
 		gameId = response.gameId;
-		// timer = new Timer(30.0); // '30.0s';
+		playerColor = response.playerColor;
 		timeLeft = countdown = 30;
 		// todo: start countdown, set fen etc
 		showTime();
 		board.set({
-			viewOnly: response.whosNext !== response.playerColor,
+			viewOnly: response.whosNext !== playerColor,
 			fen: response.fen,
 			turnColor: response.whosNext,
-			orientation: response.playerColor,
+			orientation: playerColor,
 			movable: {
 				dests: toValidMoves(response.validMoves),
-				color: response.playerColor,
+				color: playerColor,
 				events: {
 					after: afterMove,
 				},
@@ -74,27 +78,25 @@ function onGameStarted(response: GameStartedResponse): void {
 	}
 }
 
-function onMove(response: BaseResponse): void {
+function onMove(response: MoveResponse): void {
 	console.log('making move...');
 	console.log(response);
 	let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 	if (response.isCheckmated) {
-		gameStatus =
-			response.isCheckmated === response.playerColor ? 'lost' : 'won';
+		gameStatus = response.isCheckmated === playerColor ? 'lost' : 'won';
 		gameOver(gameStatus);
 		countdown = 0;
 		return;
 	}
 
 	timeLeft = response.timeLeft;
-	// window.clearInterval(interval);
 	showTime();
 
 	board.set({
-		viewOnly: response.whosNext !== response.playerColor,
+		viewOnly: response.whosNext !== playerColor,
 		fen: response.fen,
 		turnColor: response.whosNext,
-		orientation: response.playerColor,
+		orientation: playerColor,
 		movable: {
 			dests: toValidMoves(response.validMoves),
 			color: response.whosNext,
@@ -104,7 +106,36 @@ function onMove(response: BaseResponse): void {
 		},
 	});
 }
+
+function onTimeout(response: TimeoutResponse): void {
+	let status: GameStatus = 'won';
+	if (response.loser === playerColor) {
+		status = 'lost';
+	}
+	gameOver(status);
+}
 //endregion
+
+// region ui utils
+function handleGameStarted(response: any): void {
+	if (isGameStartedResponse(response)) {
+		onGameStarted(response as GameStartedResponse);
+	}
+}
+
+function handleMove(response: any): void {
+	if (isMoveResponse(response)) {
+		onMove(response);
+	}
+}
+
+function handleTimeout(response: any): void {
+	if (isTimeoutResponse(response)) {
+		console.log('is timeout response', response);
+		onTimeout(response);
+	}
+}
+// endregion
 
 // region ui
 function joinGame(): void {
@@ -112,7 +143,6 @@ function joinGame(): void {
 	button.addEventListener('click', function () {
 		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
 		ws.onopen = function (event) {
-			console.log('Opened', { event });
 			// TODO: eventually,
 			// when another player joins, start countdown
 			// once countdown finishes, allow action
@@ -121,12 +151,11 @@ function joinGame(): void {
 
 		ws.onmessage = function (event) {
 			try {
-				const response: BaseResponse = JSON.parse(event.data);
-				if (isGameStartedResponse(response)) {
-					onGameStarted(response as GameStartedResponse);
-				} else if ('fen' in response) {
-					onMove(response);
-				}
+				const response: any = JSON.parse(event.data);
+				console.log(response);
+				handleGameStarted(response);
+				handleMove(response);
+				handleTimeout(response);
 			} catch (e) {
 				console.error(e);
 			}
@@ -146,11 +175,12 @@ function gameOver(gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>): void {
 	modalContent.innerHTML = 'Try again?';
 }
 
-function onTimeout() {
+function sendTimeoutMessage() {
 	// send message to server to end game/find out the outcome
 	if (ws) {
 		const timeout: TimeoutRequest = {
 			gameId,
+			playerColor,
 			timeout: true,
 		};
 		ws.send(JSON.stringify(timeout));
@@ -168,7 +198,7 @@ function showTime(): void {
 	interval = window.setInterval(function () {
 		if (countdown <= 0) {
 			window.clearInterval(interval);
-			onTimeout();
+			sendTimeoutMessage();
 			return;
 		}
 		const diff = new Date().getTime() - start.getTime();

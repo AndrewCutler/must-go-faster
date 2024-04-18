@@ -21,6 +21,6 @@ module.exports = env => ({
 		filename: 'must-go-faster.js', // Name of the bundled file
 	},
 	resolve: {
-		extensions: ['.ts', '.ts'],
+		extensions: ['.ts'],
 	},
 });

@@ -84,7 +84,7 @@ function onMove(response: MoveResponse): void {
 	let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 	if (response.isCheckmated) {
 		gameStatus = response.isCheckmated === playerColor ? 'lost' : 'won';
-		gameOver(gameStatus);
+		gameOver(gameStatus, 'checkmate');
 		countdown = 0;
 		return;
 	}
@@ -112,7 +112,7 @@ function onTimeout(response: TimeoutResponse): void {
 	if (response.loser === playerColor) {
 		status = 'lost';
 	}
-	gameOver(status);
+	gameOver(status, 'timeout');
 }
 //endregion
 
@@ -163,13 +163,16 @@ function joinGame(): void {
 	});
 }
 
-function gameOver(gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>): void {
-	// let's render a modal
+function gameOver(
+	gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
+	method: 'timeout' | 'checkmate' | 'resignation',
+): void {
+	// have to add draws
 	const modal = document.querySelector<HTMLDivElement>('#game-status-modal')!;
 	modal.style.display = 'block';
 	const modalHeader =
 		document.querySelector<HTMLDivElement>('#modal-header')!;
-	modalHeader.innerHTML = `<div style="display: flex; align-items: center; font-color: white;">You ${gameStatus}!</div>`;
+	modalHeader.innerHTML = `<div style="display: flex; align-items: center; font-color: white;">You ${gameStatus} via ${method}.</div>`;
 	const modalContent =
 		document.querySelector<HTMLDivElement>('#modal-content')!;
 	modalContent.innerHTML = 'Try again?';

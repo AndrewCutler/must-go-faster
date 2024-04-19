@@ -20,7 +20,7 @@ let board: ChessgroundApi;
 let gameId: string;
 let timeLeft: number;
 let countdown: number;
-let interval: number;
+let timerInterval: number;
 let playerColor: PlayerColor;
 
 // todo: stop using regions
@@ -55,12 +55,31 @@ function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
 	return validMoves;
 }
 
-function onGameStarted(response: GameStartedResponse): void {
+function showCountdown(): Promise<void> {
+	return new Promise((resolve) => {
+		let countdownInterval: number;
+		let i = 10;
+		countdownInterval = window.setInterval(function () {
+			if (i <= 0) {
+				window.clearInterval(countdownInterval);
+				resolve();
+			} else {
+				// show countdown in DOM
+				console.log(i);
+				i--;
+			}
+		}, 1000);
+	});
+}
+
+async function onGameStarted(response: GameStartedResponse): Promise<void> {
 	if (response.gameStarted) {
 		gameId = response.gameId;
 		playerColor = response.playerColor;
 		timeLeft = countdown = 30;
-		// todo: start countdown, set fen etc
+        
+        // todo: show position before countdown starts
+		await showCountdown();
 		showTime();
 		board.set({
 			viewOnly: response.whosNext !== playerColor,
@@ -126,6 +145,7 @@ function handleGameStarted(response: any): void {
 			'#connect-button-container',
 		)!;
 		connectButtonContainer.style.display = 'none';
+
 		onGameStarted(response as GameStartedResponse);
 	}
 }
@@ -199,13 +219,13 @@ function sendTimeoutMessage() {
 
 function showTime(): void {
 	// clear previous interval
-	window.clearInterval(interval);
+	window.clearInterval(timerInterval);
 
 	const timerDiv = document.querySelector<HTMLDivElement>('#timer')!;
 	const start = new Date();
-	interval = window.setInterval(function () {
+	timerInterval = window.setInterval(function () {
 		if (countdown <= 0) {
-			window.clearInterval(interval);
+			window.clearInterval(timerInterval);
 			sendTimeoutMessage();
 			return;
 		}

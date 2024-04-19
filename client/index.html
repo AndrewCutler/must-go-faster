@@ -15,21 +15,23 @@
 		<div id="container">
 			<div id="board-container">
 				<!-- modal -->
+                <!-- todo: bulma modal -->
 				<div id="game-status-modal">
-					<div id="modal-header">you won via checkmate</div>
+					<div id="modal-header"></div>
 					<div id="modal-content">
-						<div>Play again?</div>
 						<div id="modal-button-container">
-							<button class="button is-dark">No</button>
-							<button class="button is-dark">Yes</button>
+							<button class="button is-dark">Play again</button>
 						</div>
 					</div>
 				</div>
 
 				<!-- board ui -->
 				<div id="board"></div>
-				<button class="button is-dark" id="connect-button">WS Connect</button>
-				<br />
+				<div id="connect-button-container">
+					<button class="button is-dark" id="connect-button">
+						Find a game
+					</button>
+				</div>
 			</div>
 			<div id="timer"></div>
 		</div>

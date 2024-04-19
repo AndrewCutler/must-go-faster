@@ -119,6 +119,13 @@ function onTimeout(response: TimeoutResponse): void {
 // region ui utils
 function handleGameStarted(response: any): void {
 	if (isGameStartedResponse(response)) {
+		const connectButton =
+			document.querySelector<HTMLButtonElement>('#connect-button')!;
+		connectButton.classList.remove('is-loading');
+		const connectButtonContainer = document.querySelector<HTMLDivElement>(
+			'#connect-button-container',
+		)!;
+		connectButtonContainer.style.display = 'none';
 		onGameStarted(response as GameStartedResponse);
 	}
 }
@@ -141,6 +148,7 @@ function handleTimeout(response: any): void {
 function joinGame(): void {
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
+		button.classList.add('is-loading');
 		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
 		ws.onopen = function (event) {
 			// TODO: eventually,

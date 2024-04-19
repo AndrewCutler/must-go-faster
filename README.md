@@ -14,3 +14,4 @@
 3. Increment
 4. Show material count
 5. Send config from server to frontend on page load
+6. don't start timer immediately; first should countdown animation so players can assess board

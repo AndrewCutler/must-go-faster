@@ -33,6 +33,9 @@ body {
 
 #container {
 	display: flex;
+	justify-content: center;
+	width: 100%;
+	margin-top: 4rem;
 }
 
 #timer {
@@ -48,8 +51,14 @@ body {
 	height: 400px;
 }
 
+#connect-button-container {
+	display: flex;
+	justify-content: flex-end;
+    margin-top: 1rem;
+}
+
 #game-status-modal {
-	/* display: none; */
+	display: none;
 	position: absolute;
 	z-index: 5;
 	background-color: var(--bulma-body-background-color);

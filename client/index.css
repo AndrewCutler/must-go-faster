@@ -58,7 +58,7 @@ body {
 }
 
 #game-status-modal {
-	/* display: none; */
+	display: none;
 	position: absolute;
 	z-index: 5;
 	background-color: var(--bulma-body-background-color);

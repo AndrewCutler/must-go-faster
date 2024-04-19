@@ -5,6 +5,10 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Must Go Faster</title>
 		<script src="build/must-go-faster.js"></script>
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css"
+		/>
 		<link rel="stylesheet" href="index.css" />
 	</head>
 	<body>
@@ -12,13 +16,19 @@
 			<div id="board-container">
 				<!-- modal -->
 				<div id="game-status-modal">
-					<div id="modal-header"></div>
-					<div id="modal-content"></div>
+					<div id="modal-header">you won via checkmate</div>
+					<div id="modal-content">
+						<div>Play again?</div>
+						<div id="modal-button-container">
+							<button class="button is-dark">No</button>
+							<button class="button is-dark">Yes</button>
+						</div>
+					</div>
 				</div>
 
 				<!-- board ui -->
 				<div id="board"></div>
-				<button id="connect-button">WS Connect</button>
+				<button class="button is-dark" id="connect-button">WS Connect</button>
 				<br />
 			</div>
 			<div id="timer"></div>

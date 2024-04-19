@@ -172,10 +172,7 @@ function gameOver(
 	modal.style.display = 'block';
 	const modalHeader =
 		document.querySelector<HTMLDivElement>('#modal-header')!;
-	modalHeader.innerHTML = `<div style="display: flex; align-items: center; font-color: white;">You ${gameStatus} via ${method}.</div>`;
-	const modalContent =
-		document.querySelector<HTMLDivElement>('#modal-content')!;
-	modalContent.innerHTML = 'Try again?';
+	modalHeader.innerText = `You ${gameStatus} via ${method}.`;
 }
 
 function sendTimeoutMessage() {

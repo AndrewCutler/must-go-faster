@@ -85,6 +85,25 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 		// show seconds
 		// show whose move it is
 		// show player's color
+		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
+		gameMeta.style.display = 'flex';
+		const gameMetaIcon =
+			document.querySelector<HTMLElement>('#game-meta .icon i');
+		if (playerColor === 'black') {
+			gameMetaIcon?.classList.add('is-black');
+		} else {
+			gameMetaIcon?.classList.remove('is-black');
+		}
+		const whoseMove = document.querySelector<HTMLDivElement>(
+			'#game-meta #whose-move',
+		)!;
+		whoseMove.innerText = `${
+			response.whosNext === 'white' ? 'White' : 'Black'
+		} to play.`;
+		const playerColorDiv = document.querySelector<HTMLDivElement>(
+			'#game-meta #player-color',
+		)!;
+		playerColorDiv.innerText = `You play ${playerColor}.`;
 
 		board.set({
 			viewOnly: true,

@@ -46,8 +46,8 @@ body {
 }
 
 #game-meta {
-	/* display: none; */
-	display: flex;
+	display: none;
+    flex-direction: column;
 	justify-content: center;
 	padding: 0.5rem;
 	margin: 0.75rem 0.5rem;

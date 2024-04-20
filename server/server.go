@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"server/config"
 	"server/game"
 	handlers "server/handlers"
 
@@ -16,7 +17,12 @@ import (
 )
 
 func main() {
-	os.Setenv("DEVELOPMENT", "true")
+	config, err := config.GetConfig()
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	os.Setenv("DEVELOPMENT", fmt.Sprintf("%t", config.Development))
 	r := mux.NewRouter()
 
 	var upgrader = websocket.Upgrader{
@@ -24,7 +30,7 @@ func main() {
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
-			if strings.HasPrefix(origin, "http://10.0.0.73") {
+			if strings.HasPrefix(origin, config.BaseUrl) {
 				return true
 			}
 			if os.Getenv("DEVELOPMENT") == "true" && strings.HasPrefix(origin, "chrome-extension://") {
@@ -56,7 +62,7 @@ func main() {
 	r.PathPrefix("/").Handler(spa)
 	srv := &http.Server{
 		Handler:      r,
-		Addr:         "10.0.0.73:8000",
+		Addr:         config.BaseUrl + ":" + config.Port,
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}

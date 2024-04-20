@@ -57,15 +57,19 @@ function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
 
 function showCountdown(): Promise<void> {
 	return new Promise((resolve) => {
+		const countdownDisplay = document.querySelector<HTMLDivElement>(
+			'#countdown-container',
+		)!;
+		countdownDisplay.style.display = 'block';
 		let countdownInterval: number;
 		let i = 10;
 		countdownInterval = window.setInterval(function () {
 			if (i <= 0) {
 				window.clearInterval(countdownInterval);
+				countdownDisplay.style.display = 'none';
 				resolve();
 			} else {
-				// show countdown in DOM
-				console.log(i);
+				countdownDisplay.innerText = i.toString();
 				i--;
 			}
 		}, 1000);
@@ -78,12 +82,12 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 		playerColor = response.playerColor;
 		timeLeft = countdown = 30;
 
-        // show seconds
-        // show whose move it is
-        // show player's color
+		// show seconds
+		// show whose move it is
+		// show player's color
 
 		board.set({
-            viewOnly: true,
+			viewOnly: true,
 			fen: response.fen,
 			turnColor: response.whosNext,
 			orientation: playerColor,

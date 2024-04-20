@@ -49,9 +49,9 @@ body {
 	/* display: none; */
 	display: flex;
 	justify-content: center;
-    padding: 0.5rem;
-    margin: 0.75rem 0.5rem;
-    gap: 1rem;
+	padding: 0.5rem;
+	margin: 0.75rem 0.5rem;
+	gap: 1rem;
 }
 
 .is-black {
@@ -62,8 +62,21 @@ body {
 }
 
 #whose-move {
-    /* todo: change font color based on if it's the user's turn first (primary rather than warning or something) */
-    display: flex;
+	/* todo: change font color based on if it's the user's turn first (primary rather than warning or something) */
+	display: flex;
+}
+
+#countdown-container {
+    display: none;
+	background-color: transparent;
+	padding: 2rem;
+	font-size: 6rem;
+	position: absolute;
+	z-index: 5;
+	/* todo: fix margin */
+	margin: 130px 0 0 110px;
+	-webkit-text-stroke: 2px black;
+	color: white;
 }
 
 #board {
@@ -83,6 +96,7 @@ body {
 	position: absolute;
 	z-index: 5;
 	background-color: var(--bulma-body-background-color);
+	/* todo: fix margin */
 	margin: 110px 0 0 80px;
 	border: 2px solid #cccccc28;
 	border-radius: 0.5rem;

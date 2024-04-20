@@ -78,6 +78,10 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 		playerColor = response.playerColor;
 		timeLeft = countdown = 30;
 
+        // show seconds
+        // show whose move it is
+        // show player's color
+
 		board.set({
             viewOnly: true,
 			fen: response.fen,

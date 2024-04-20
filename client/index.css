@@ -45,6 +45,27 @@ body {
 	min-width: 60px;
 }
 
+#game-meta {
+	/* display: none; */
+	display: flex;
+	justify-content: center;
+    padding: 0.5rem;
+    margin: 0.75rem 0.5rem;
+    gap: 1rem;
+}
+
+.is-black {
+	background-color: var(--bulma-body-color);
+	color: var(--bulma-body-background-color);
+	padding: 2px;
+	border-radius: 2px;
+}
+
+#whose-move {
+    /* todo: change font color based on if it's the user's turn first (primary rather than warning or something) */
+    display: flex;
+}
+
 #board {
 	pointer-events: none;
 	width: 400px;
@@ -54,7 +75,7 @@ body {
 #connect-button-container {
 	display: flex;
 	justify-content: flex-end;
-    margin-top: 1rem;
+	margin-top: 1rem;
 }
 
 #game-status-modal {

@@ -15,6 +15,7 @@ type Message struct {
 }
 
 type Move struct {
+	// Timeout []byte
 	GameId string
 	Data   []byte
 }

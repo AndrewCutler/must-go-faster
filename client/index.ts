@@ -3,19 +3,25 @@ import { Config as ChessgroundConfig } from 'chessground/config';
 import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 import {
-	BaseResponse,
+	MoveResponse,
 	GameStartedResponse,
 	GameStatus,
-	Timer,
+	MoveRequest,
+	PlayerColor,
+	TimeoutRequest,
 	isGameStartedResponse,
+	isMoveResponse,
+	isTimeoutResponse,
+	TimeoutResponse,
 } from './models';
 
 let ws: WebSocket;
 let board: ChessgroundApi;
 let gameId: string;
-// let timer: Timer;
 let timeLeft: number;
-let interval: number;
+let countdown: number;
+let timerInterval: number;
+let playerColor: PlayerColor;
 
 // todo: stop using regions
 // region chess utils
@@ -35,7 +41,7 @@ function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
-		const message = { move, gameId };
+		const message: MoveRequest = { move, gameId };
 		ws.send(JSON.stringify(message));
 	}
 }
@@ -49,22 +55,54 @@ function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
 	return validMoves;
 }
 
-function onGameStarted(response: GameStartedResponse): void {
-	console.log('game started...', response);
+function showCountdown(): Promise<void> {
+	return new Promise((resolve) => {
+		let countdownInterval: number;
+		let i = 10;
+		countdownInterval = window.setInterval(function () {
+			if (i <= 0) {
+				window.clearInterval(countdownInterval);
+				resolve();
+			} else {
+				// show countdown in DOM
+				console.log(i);
+				i--;
+			}
+		}, 1000);
+	});
+}
+
+async function onGameStarted(response: GameStartedResponse): Promise<void> {
 	if (response.gameStarted) {
 		gameId = response.gameId;
-		// timer = new Timer(30.0); // '30.0s';
-        timeLeft = 30;
-		// todo: start countdown, set fen etc
-		showTime();
+		playerColor = response.playerColor;
+		timeLeft = countdown = 30;
+
 		board.set({
-			viewOnly: response.whosNext !== response.playerColor,
+            viewOnly: true,
 			fen: response.fen,
 			turnColor: response.whosNext,
-			orientation: response.playerColor,
+			orientation: playerColor,
 			movable: {
 				dests: toValidMoves(response.validMoves),
-				color: response.playerColor,
+				color: playerColor,
+				events: {
+					after: afterMove,
+				},
+			},
+		});
+
+		// todo: show position before countdown starts
+		await showCountdown();
+		setTimer();
+		board.set({
+			viewOnly: response.whosNext !== playerColor,
+			fen: response.fen,
+			turnColor: response.whosNext,
+			orientation: playerColor,
+			movable: {
+				dests: toValidMoves(response.validMoves),
+				color: playerColor,
 				events: {
 					after: afterMove,
 				},
@@ -73,25 +111,25 @@ function onGameStarted(response: GameStartedResponse): void {
 	}
 }
 
-function onMove(response: BaseResponse): void {
+function onMove(response: MoveResponse): void {
 	console.log('making move...');
 	console.log(response);
 	let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 	if (response.isCheckmated) {
-		gameStatus =
-			response.isCheckmated === response.playerColor ? 'lost' : 'won';
-		gameOver(gameStatus);
+		gameStatus = response.isCheckmated === playerColor ? 'lost' : 'won';
+		gameOver(gameStatus, 'checkmate');
+		countdown = 0;
+		return;
 	}
-	// timer.timeLeft = response.timeLeft;
+
 	timeLeft = response.timeLeft;
-	console.log({ timeLeft });
-	window.clearInterval(interval);
-	showTime();
+	setTimer();
+
 	board.set({
-		viewOnly: response.whosNext !== response.playerColor,
+		viewOnly: response.whosNext !== playerColor,
 		fen: response.fen,
 		turnColor: response.whosNext,
-		orientation: response.playerColor,
+		orientation: playerColor,
 		movable: {
 			dests: toValidMoves(response.validMoves),
 			color: response.whosNext,
@@ -101,15 +139,53 @@ function onMove(response: BaseResponse): void {
 		},
 	});
 }
+
+function onTimeout(response: TimeoutResponse): void {
+	let status: GameStatus = 'won';
+	if (response.loser === playerColor) {
+		status = 'lost';
+	}
+	gameOver(status, 'timeout');
+}
 //endregion
+
+// region ui utils
+function handleGameStarted(response: unknown): void {
+	if (isGameStartedResponse(response)) {
+		response as GameStartedResponse;
+		const connectButton =
+			document.querySelector<HTMLButtonElement>('#connect-button')!;
+		connectButton.classList.remove('is-loading');
+		const connectButtonContainer = document.querySelector<HTMLDivElement>(
+			'#connect-button-container',
+		)!;
+		connectButtonContainer.style.display = 'none';
+
+		onGameStarted(response);
+	}
+}
+
+function handleMove(response: unknown): void {
+	if (isMoveResponse(response)) {
+		onMove(response);
+	}
+}
+
+function handleTimeout(response: any): void {
+	if (isTimeoutResponse(response)) {
+		console.log('is timeout response', response);
+		onTimeout(response);
+	}
+}
+// endregion
 
 // region ui
 function joinGame(): void {
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
+		button.classList.add('is-loading');
 		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
 		ws.onopen = function (event) {
-			console.log('Opened', { event });
 			// TODO: eventually,
 			// when another player joins, start countdown
 			// once countdown finishes, allow action
@@ -118,12 +194,11 @@ function joinGame(): void {
 
 		ws.onmessage = function (event) {
 			try {
-				const response: BaseResponse = JSON.parse(event.data);
-				if (isGameStartedResponse(response)) {
-					onGameStarted(response as GameStartedResponse);
-				} else if ('fen' in response) {
-					onMove(response);
-				}
+				const response: unknown = JSON.parse(event.data);
+				console.log(response);
+				handleGameStarted(response);
+				handleMove(response);
+				handleTimeout(response);
 			} catch (e) {
 				console.error(e);
 			}
@@ -131,30 +206,49 @@ function joinGame(): void {
 	});
 }
 
-function gameOver(gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>): void {
-	// let's render a modal
+function gameOver(
+	gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
+	method: 'timeout' | 'checkmate' | 'resignation',
+): void {
+	// have to add draws
 	const modal = document.querySelector<HTMLDivElement>('#game-status-modal')!;
 	modal.style.display = 'block';
 	const modalHeader =
 		document.querySelector<HTMLDivElement>('#modal-header')!;
-	modalHeader.innerHTML = `<div style="display: flex; align-items: center; font-color: white;">You ${gameStatus}!</div>`;
-	const modalContent =
-		document.querySelector<HTMLDivElement>('#modal-content')!;
-	modalContent.innerHTML = 'Try again?';
+	modalHeader.innerText = `You ${gameStatus} via ${method}.`;
 }
 
-function showTime(): void {
+function sendTimeoutMessage() {
+	// send message to server to end game/find out the outcome
+	if (ws) {
+		const timeout: TimeoutRequest = {
+			gameId,
+			playerColor,
+			timeout: true,
+		};
+		ws.send(JSON.stringify(timeout));
+	} else {
+		console.error('ws is undefined.');
+	}
+}
+
+function setTimer(): void {
+	// clear previous interval
+	window.clearInterval(timerInterval);
+
 	const timerDiv = document.querySelector<HTMLDivElement>('#timer')!;
 	const start = new Date();
-	interval = window.setInterval(function () {
-		const diff = new Date().getTime() - start.getTime();
-		if (diff >= 30 * 1000) {
-			window.clearInterval(interval);
+	timerInterval = window.setInterval(function () {
+		if (countdown <= 0) {
+			window.clearInterval(timerInterval);
+			sendTimeoutMessage();
 			return;
 		}
-        const countdown = (timeLeft - (diff / 1_000)).toFixed(1);
+		const diff = new Date().getTime() - start.getTime();
+		countdown = timeLeft - diff / 1_000;
 
-		timerDiv.innerHTML = '<div>' + countdown + 's</div>';
+		timerDiv.innerHTML =
+			'<div>' + (countdown > 0 ? countdown : 0).toFixed(1) + 's</div>';
 	}, 10);
 }
 

@@ -77,10 +77,24 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 		gameId = response.gameId;
 		playerColor = response.playerColor;
 		timeLeft = countdown = 30;
-        
-        // todo: show position before countdown starts
+
+		board.set({
+            viewOnly: true,
+			fen: response.fen,
+			turnColor: response.whosNext,
+			orientation: playerColor,
+			movable: {
+				dests: toValidMoves(response.validMoves),
+				color: playerColor,
+				events: {
+					after: afterMove,
+				},
+			},
+		});
+
+		// todo: show position before countdown starts
 		await showCountdown();
-		showTime();
+		setTimer();
 		board.set({
 			viewOnly: response.whosNext !== playerColor,
 			fen: response.fen,
@@ -109,7 +123,7 @@ function onMove(response: MoveResponse): void {
 	}
 
 	timeLeft = response.timeLeft;
-	showTime();
+	setTimer();
 
 	board.set({
 		viewOnly: response.whosNext !== playerColor,
@@ -136,8 +150,9 @@ function onTimeout(response: TimeoutResponse): void {
 //endregion
 
 // region ui utils
-function handleGameStarted(response: any): void {
+function handleGameStarted(response: unknown): void {
 	if (isGameStartedResponse(response)) {
+		response as GameStartedResponse;
 		const connectButton =
 			document.querySelector<HTMLButtonElement>('#connect-button')!;
 		connectButton.classList.remove('is-loading');
@@ -146,11 +161,11 @@ function handleGameStarted(response: any): void {
 		)!;
 		connectButtonContainer.style.display = 'none';
 
-		onGameStarted(response as GameStartedResponse);
+		onGameStarted(response);
 	}
 }
 
-function handleMove(response: any): void {
+function handleMove(response: unknown): void {
 	if (isMoveResponse(response)) {
 		onMove(response);
 	}
@@ -179,7 +194,7 @@ function joinGame(): void {
 
 		ws.onmessage = function (event) {
 			try {
-				const response: any = JSON.parse(event.data);
+				const response: unknown = JSON.parse(event.data);
 				console.log(response);
 				handleGameStarted(response);
 				handleMove(response);
@@ -217,7 +232,7 @@ function sendTimeoutMessage() {
 	}
 }
 
-function showTime(): void {
+function setTimer(): void {
 	// clear previous interval
 	window.clearInterval(timerInterval);
 

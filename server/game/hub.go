@@ -104,21 +104,6 @@ func (h *Hub) Run() {
 				}
 
 				handleMove(message, game)
-				// if err := makeMove(string(message.Move.Data), game.Game); err != nil {
-				// 	log.Panicln(err)
-				// 	return
-				// }
-
-				// fmt.Println("Outcome: ", game.Game.Outcome())
-
-				// for _, player := range game.GetPlayers() {
-				// 	select {
-				// 	case player.Send <- moveMessage(game, player.Color):
-				// 	default:
-				// 		close(player.Send)
-				// 		// delete(game, player) // todo
-				// 	}
-				// }
 			default:
 				return
 			}
@@ -244,16 +229,10 @@ func handleTimeout(message Message, game *GameMeta) bool {
 		fmt.Println(err)
 		return true
 	}
-	fmt.Println(timeout, timeout.Timeout)
 
 	if timeout.Timeout {
-		if game.whoseMoveIsIt() == timeout.PlayerColor {
-			fmt.Println("loser: ", game.whoseMoveIsIt())
-		}
-		m := timeoutMessage(game, "white", game.whoseMoveIsIt())
-
-		fmt.Println("is timeout!")
 		for _, player := range game.GetPlayers() {
+			m := timeoutMessage(game, player.Color, game.whoseMoveIsIt())
 			select {
 			case player.Send <- m:
 			default:
@@ -274,11 +253,8 @@ func handleMove(message Message, game *GameMeta) {
 		return
 	}
 
-	fmt.Println("Outcome: ", game.Game.Outcome())
-
 	for _, player := range game.GetPlayers() {
 		select {
-		// case player.Send <- moveMessage(game):
 		case player.Send <- moveMessage(game, player.Color):
 		default:
 			close(player.Send)

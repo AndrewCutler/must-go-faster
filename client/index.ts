@@ -13,6 +13,7 @@ import {
 	isMoveResponse,
 	isTimeoutResponse,
 	TimeoutResponse,
+	isAbandondedResponse,
 } from './models';
 
 let ws: WebSocket;
@@ -201,6 +202,13 @@ function handleTimeout(response: any): void {
 		onTimeout(response);
 	}
 }
+
+function handleAbandoned(response: any): void {
+	if (isAbandondedResponse(response)) {
+		console.log({ abandondedResponse: response });
+		// do stuff
+	}
+}
 // endregion
 
 // region ui
@@ -220,6 +228,7 @@ function joinGame(): void {
 				handleGameStarted(response);
 				handleMove(response);
 				handleTimeout(response);
+				handleAbandoned(response);
 			} catch (e) {
 				console.error(e);
 			}

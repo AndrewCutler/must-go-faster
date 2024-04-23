@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -73,8 +72,8 @@ func (h *Hub) Run() {
 				h.GamesInProgress[game.GameId] = game
 
 				fmt.Println("broadcasting game started to white...")
-				player.Send <- gameStartMessage(game, player.Color)
-				game.White.Send <- gameStartMessage(game, game.White.Color)
+				player.Send <- sendGameStartMessage(game, player.Color)
+				game.White.Send <- sendGameStartMessage(game, game.White.Color)
 			}
 		// todo: unregister
 		case message := <-h.Broadcast:
@@ -98,12 +97,12 @@ func (h *Hub) Run() {
 					return
 				}
 
-				timeout := handleTimeout(message, game)
+				timeout := handleTimeoutMessage(message, game)
 				if timeout {
 					return
 				}
 
-				handleMove(message, game)
+				handleMoveMessage(message, game)
 			case 2:
 				game, ok := h.GamesInProgress[message.Move.GameId]
 				if !ok {
@@ -113,7 +112,7 @@ func (h *Hub) Run() {
 					}
 				}
 
-				handleAbandoned(game)
+				handleAbandonedMessage(game)
 				delete(h.GamesInProgress, message.Move.GameId)
 			default:
 				log.Println("Broadcast default case reached.")
@@ -162,51 +161,4 @@ func getGameFEN() (string, error) {
 	}
 
 	return result, nil
-}
-
-func handleAbandoned(game *GameMeta) {
-	fmt.Println("handle abandoned")
-}
-
-func handleTimeout(message Message, game *GameMeta) bool {
-	type TimeoutRequest struct {
-		Timeout     bool   `json:"timeout"`
-		PlayerColor string `json:"playerColor"`
-	}
-	var timeout TimeoutRequest
-	err := json.Unmarshal(message.Move.Data, &timeout)
-	if err != nil {
-		fmt.Println(err)
-		return true
-	}
-
-	if timeout.Timeout {
-		for _, player := range game.GetPlayers() {
-			m := timeoutMessage(game, player.Color, game.whoseMoveIsIt())
-			select {
-			case player.Send <- m:
-			default:
-				close(player.Send)
-			}
-		}
-
-		return true
-	}
-
-	return false
-}
-
-func handleMove(message Message, game *GameMeta) {
-	if err := makeMove(string(message.Move.Data), game.Game); err != nil {
-		log.Panicln("Cannot make move: ", err)
-		return
-	}
-
-	for _, player := range game.GetPlayers() {
-		select {
-		case player.Send <- moveMessage(game, player.Color):
-		default:
-			close(player.Send)
-		}
-	}
 }

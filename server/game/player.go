@@ -14,34 +14,22 @@ type Player struct {
 	Color      string
 }
 
-func (p *Player) Read() {
+func (p *Player) ReadMessage() {
 	defer func() {
 		p.Connection.Close()
 	}()
 
 	for {
-		// // TextMessage denotes a text data message. The text message payload is
-		// // interpreted as UTF-8 encoded text data.
-		// TextMessage = 1
-
-		// // BinaryMessage denotes a binary data message.
-		// BinaryMessage = 2
-
-		// // CloseMessage denotes a close control message. The optional message
-		// // payload contains a numeric code and text. Use the FormatCloseMessage
-		// // function to format a close message payload.
-		// CloseMessage = 8
-
-		// // PingMessage denotes a ping control message. The optional message payload
-		// // is UTF-8 encoded text.
-		// PingMessage = 9
-
-		// // PongMessage denotes a pong control message. The optional message payload
-		// // is UTF-8 encoded text.
-		// PongMessage = 10
-		_ /* messageType */, content, err := p.Connection.ReadMessage()
+		// MessageType: 1, TextMessage
+		// MessageType: 2, GoingAwayMessage
+		_, content, err := p.Connection.ReadMessage()
+		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
+			p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId}, MessageType: 2}
+			// game is over, send game abandoned message to winner and remove from active games
+			return
+		}
 		if err != nil {
-			log.Println(err)
+			log.Println("Cannot read message: ", err)
 			return
 		}
 
@@ -49,27 +37,26 @@ func (p *Player) Read() {
 	}
 }
 
-func (p *Player) Write() {
+func (p *Player) WriteMessage() {
 	defer func() {
 		p.Connection.Close()
 	}()
 
 	for message := range p.Send {
-		// fmt.Printf("message in Send for player %s: %s\n\n", p.Color, string(message))
-
-		w, err := p.Connection.NextWriter(websocket.TextMessage)
+		writer, err := p.Connection.NextWriter(websocket.TextMessage)
 		if err != nil {
 			return
 		}
-		w.Write(message)
+		writer.Write(message)
 
 		n := len(p.Send)
 		for i := 0; i < n; i++ {
-			w.Write([]byte{'\n'})
-			w.Write(<-p.Send)
+			writer.Write([]byte{'\n'})
+			writer.Write(<-p.Send)
 		}
 
-		if err := w.Close(); err != nil {
+		if err := writer.Close(); err != nil {
+			log.Println("Failed to close writer: ", err)
 			return
 		}
 	}

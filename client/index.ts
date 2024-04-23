@@ -62,7 +62,7 @@ function showCountdown(): Promise<void> {
 		)!;
 		countdownDisplay.style.display = 'block';
 		let countdownInterval: number;
-		let i = 10;
+		let i = 5;
 		countdownInterval = window.setInterval(function () {
 			if (i <= 0) {
 				window.clearInterval(countdownInterval);
@@ -82,9 +82,6 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 		playerColor = response.playerColor;
 		timeLeft = countdown = 30;
 
-		// show seconds
-		// show whose move it is
-		// show player's color
 		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
 		gameMeta.style.display = 'flex';
 		const gameMetaIcon =
@@ -119,8 +116,8 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 			},
 		});
 
-		// todo: show position before countdown starts
 		await showCountdown();
+
 		setTimer();
 		board.set({
 			viewOnly: response.whosNext !== playerColor,
@@ -139,8 +136,6 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 }
 
 function onMove(response: MoveResponse): void {
-	console.log('making move...');
-	console.log(response);
 	let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 	if (response.isCheckmated) {
 		gameStatus = response.isCheckmated === playerColor ? 'lost' : 'won';
@@ -180,6 +175,7 @@ function onTimeout(response: TimeoutResponse): void {
 function handleGameStarted(response: unknown): void {
 	if (isGameStartedResponse(response)) {
 		response as GameStartedResponse;
+		console.log({ gameStartedResponse: response });
 		const connectButton =
 			document.querySelector<HTMLButtonElement>('#connect-button')!;
 		connectButton.classList.remove('is-loading');
@@ -194,13 +190,14 @@ function handleGameStarted(response: unknown): void {
 
 function handleMove(response: unknown): void {
 	if (isMoveResponse(response)) {
+		console.log({ moveResponse: response });
 		onMove(response);
 	}
 }
 
 function handleTimeout(response: any): void {
 	if (isTimeoutResponse(response)) {
-		console.log('is timeout response', response);
+		console.log({ timeoutResponse: response });
 		onTimeout(response);
 	}
 }
@@ -211,18 +208,15 @@ function joinGame(): void {
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
 		button.classList.add('is-loading');
+		// todo: grab from config
 		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
 		ws.onopen = function (event) {
-			// TODO: eventually,
-			// when another player joins, start countdown
-			// once countdown finishes, allow action
 			document.getElementById('board')!.style.pointerEvents = 'auto';
 		};
 
 		ws.onmessage = function (event) {
 			try {
 				const response: unknown = JSON.parse(event.data);
-				console.log(response);
 				handleGameStarted(response);
 				handleMove(response);
 				handleTimeout(response);

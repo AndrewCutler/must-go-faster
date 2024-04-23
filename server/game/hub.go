@@ -40,13 +40,13 @@ func (h *Hub) Run() {
 			if len(*h.GamesAwaitingOpponent) == 0 {
 				fen, err := getGameFEN()
 				if err != nil {
-					log.Println(err)
+					log.Println("Cannot get game fen: ", err)
 					return
 				}
 
 				f, err := chess.FEN(fen)
 				if err != nil {
-					log.Println(err)
+					log.Println("Cannot parse game fen: ", err)
 					return
 				}
 
@@ -104,7 +104,19 @@ func (h *Hub) Run() {
 				}
 
 				handleMove(message, game)
+			case 2:
+				game, ok := h.GamesInProgress[message.Move.GameId]
+				if !ok {
+					if len(*h.GamesAwaitingOpponent) == 0 {
+						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
+						return
+					}
+				}
+
+				handleAbandoned(game)
+				delete(h.GamesInProgress, message.Move.GameId)
 			default:
+				log.Println("Broadcast default case reached.")
 				return
 			}
 		}
@@ -152,70 +164,8 @@ func getGameFEN() (string, error) {
 	return result, nil
 }
 
-func gameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
-	data := map[string]interface{}{
-		"gameStarted": true,
-		"fen":         gameMeta.getFen(),
-		"gameId":      gameMeta.GameId,
-		"playerColor": playerColor, // is this necessary
-		"validMoves":  ValidMovesMap(gameMeta.Game),
-		"whosNext":    gameMeta.whoseMoveIsIt(),
-		"timeLeft":    gameMeta.getTimeRemaining(),
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
-		return []byte{}
-	}
-
-	return jsonData
-}
-
-func moveMessage(gameMeta *GameMeta, playerColor string) []byte {
-	isCheckmated := ""
-	switch gameMeta.Game.Outcome() {
-	case "0-1":
-		isCheckmated = "white"
-	case "1-0":
-		isCheckmated = "black"
-	}
-
-	data := map[string]interface{}{
-		"fen":          gameMeta.getFen(),
-		"gameId":       gameMeta.GameId,
-		"playerColor":  playerColor,
-		"validMoves":   ValidMovesMap(gameMeta.Game),
-		"whosNext":     gameMeta.whoseMoveIsIt(),
-		"isCheckmated": isCheckmated,
-		"timeLeft":     gameMeta.getTimeRemaining(),
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
-		return []byte{}
-	}
-
-	return jsonData
-}
-
-func timeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []byte {
-	data := map[string]interface{}{
-		"fen":         gameMeta.getFen(),
-		"gameId":      gameMeta.GameId,
-		"whosNext":    gameMeta.whoseMoveIsIt(),
-		"playerColor": playerColor,
-		"loser":       loser,
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
-		return []byte{}
-	}
-
-	return jsonData
+func handleAbandoned(game *GameMeta) {
+	fmt.Println("handle abandoned")
 }
 
 func handleTimeout(message Message, game *GameMeta) bool {
@@ -237,7 +187,6 @@ func handleTimeout(message Message, game *GameMeta) bool {
 			case player.Send <- m:
 			default:
 				close(player.Send)
-				// delete(game, player) // todo
 			}
 		}
 
@@ -249,7 +198,7 @@ func handleTimeout(message Message, game *GameMeta) bool {
 
 func handleMove(message Message, game *GameMeta) {
 	if err := makeMove(string(message.Move.Data), game.Game); err != nil {
-		log.Panicln(err)
+		log.Panicln("Cannot make move: ", err)
 		return
 	}
 
@@ -258,7 +207,6 @@ func handleMove(message Message, game *GameMeta) {
 		case player.Send <- moveMessage(game, player.Color):
 		default:
 			close(player.Send)
-			// delete(game, player) // todo
 		}
 	}
 }

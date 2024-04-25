@@ -311,9 +311,7 @@ function initializeBoard(): Promise<void> {
 
 window.onload = function () {
 	initializeBoard()
-		.then(function () {
-			return getConfig();
-		})
+		.then(getConfig)
         // todo: config model
 		.then(function (config: Response) {
 			console.log({ config });

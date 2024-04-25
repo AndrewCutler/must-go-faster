@@ -1,3 +1,4 @@
+import './index.css';
 import { Chessground } from 'chessground';
 import { Config as ChessgroundConfig } from 'chessground/config';
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -84,7 +85,7 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 		timeLeft = countdown = 30;
 
 		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
-		gameMeta.style.display = 'flex';
+		gameMeta.style.visibility = 'inherit';
 		const gameMetaIcon =
 			document.querySelector<HTMLElement>('#game-meta .icon i');
 		if (playerColor === 'black') {
@@ -212,7 +213,7 @@ function handleAbandoned(response: any): void {
 // endregion
 
 // region ui
-function joinGame(): void {
+function awaitGame(): void {
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
 		button.classList.add('is-loading');
@@ -284,24 +285,28 @@ function setTimer(): void {
 
 //endregion
 
-function initialize(): void {
-	const initialConfig: ChessgroundConfig = {
-		movable: {
-			free: false,
-			color: 'white',
-		},
-	};
-	board = Chessground(document.getElementById('board')!, initialConfig);
-	board.set({
-		movable: {
-			events: {
-				after: afterMove,
+function initialize(): Promise<void> {
+	return new Promise<void>(function (resolve) {
+		const initialConfig: ChessgroundConfig = {
+			movable: {
+				free: false,
+				color: 'white',
 			},
-		},
+		};
+		board = Chessground(document.getElementById('board')!, initialConfig);
+		board.set({
+			movable: {
+				events: {
+					after: afterMove,
+				},
+			},
+		});
+		resolve();
 	});
 }
 
 window.onload = function () {
-	initialize();
-	joinGame();
+	initialize().then(function () {
+		awaitGame();
+	});
 };

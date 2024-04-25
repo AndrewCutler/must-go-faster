@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -60,6 +61,17 @@ func main() {
 		player.Hub.Register <- player
 		go player.ReadMessage()
 		go player.WriteMessage()
+	})
+
+	r.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
+		response, err := json.Marshal(config)
+		if err != nil {
+			http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(response)
 	})
 
 	spa := handlers.SpaHandler{StaticPath: "../client", IndexPath: "index.html"}

@@ -285,7 +285,11 @@ function setTimer(): void {
 
 //endregion
 
-function initialize(): Promise<void> {
+function getConfig(): Promise<Response> {
+	return fetch('http://10.0.0.73:8000/config');
+}
+
+function initializeBoard(): Promise<void> {
 	return new Promise<void>(function (resolve) {
 		const initialConfig: ChessgroundConfig = {
 			movable: {
@@ -306,7 +310,13 @@ function initialize(): Promise<void> {
 }
 
 window.onload = function () {
-	initialize().then(function () {
-		awaitGame();
-	});
+	initializeBoard()
+		.then(function () {
+			return getConfig();
+		})
+        // todo: config model
+		.then(function (config: Response) {
+			console.log({ config });
+			awaitGame();
+		});
 };

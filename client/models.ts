@@ -67,3 +67,8 @@ export type TimeoutRequest = {
 	timeout: true;
 	playerColor: PlayerColor;
 } & WithGameId;
+
+export type Config = {
+	startingTime: number;
+	chainablePremove: boolean;
+};

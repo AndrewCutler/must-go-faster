@@ -15,6 +15,7 @@ import {
 	isTimeoutResponse,
 	TimeoutResponse,
 	isAbandondedResponse,
+    Config,
 } from './models';
 
 let ws: WebSocket;
@@ -24,6 +25,7 @@ let timeLeft: number;
 let countdown: number;
 let timerInterval: number;
 let playerColor: PlayerColor;
+let config: Config;
 
 // todo: stop using regions
 // region chess utils
@@ -82,7 +84,7 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 	if (response.gameStarted) {
 		gameId = response.gameId;
 		playerColor = response.playerColor;
-		timeLeft = countdown = 30;
+		timeLeft = countdown = config.startingTime;
 
 		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
 		gameMeta.style.visibility = 'inherit';
@@ -285,8 +287,11 @@ function setTimer(): void {
 
 //endregion
 
-function getConfig(): Promise<Response> {
-	return fetch('http://10.0.0.73:8000/config');
+// todo: config model
+function getConfig(): Promise<Config> {
+	return fetch('http://10.0.0.73:8000/config').then(function (r) {
+		return r.json();
+	});
 }
 
 function initializeBoard(): Promise<void> {
@@ -312,9 +317,9 @@ function initializeBoard(): Promise<void> {
 window.onload = function () {
 	initializeBoard()
 		.then(getConfig)
-        // todo: config model
-		.then(function (config: Response) {
-			console.log({ config });
+		.then(function (c) {
+			config = c;
 			awaitGame();
-		});
+		})
+		.catch(console.error);
 };

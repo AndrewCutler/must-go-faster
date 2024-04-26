@@ -89,7 +89,6 @@ func sendAbandondedMessage() []byte {
 
 // Receive
 func handleAbandonedMessage(game *GameMeta) {
-	fmt.Println("handle abandoned")
 	for _, player := range game.GetPlayers() {
 		select {
 		case player.Send <- sendAbandondedMessage():

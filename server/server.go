@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"server/config"
+	c "server/config"
 	"server/game"
 	handlers "server/handlers"
 
@@ -18,9 +18,13 @@ import (
 )
 
 func main() {
-	config, err := config.GetConfig()
+	config, err := c.GetConfig()
 	if err != nil {
 		log.Panicln("Cannot get config: ", err)
+	}
+	clientConfig, err := c.GetClientConfig()
+	if err != nil {
+		log.Panicln("Cannot get client config: ", err)
 	}
 
 	os.Setenv("DEVELOPMENT", fmt.Sprintf("%t", config.Development))
@@ -31,7 +35,6 @@ func main() {
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
-			fmt.Println(origin, config.BaseUrl, config)
 			if os.Getenv("DEVELOPMENT") == "true" && strings.HasPrefix(origin, "http://"+config.BaseUrl) {
 				return true
 			}
@@ -64,7 +67,7 @@ func main() {
 	})
 
 	r.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
-		response, err := json.Marshal(config)
+		response, err := json.Marshal(clientConfig)
 		if err != nil {
 			http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
 			return

@@ -13,20 +13,19 @@ import (
 
 type Hub struct {
 	GamesInProgress       map[string]*GameMeta
-	GamesAwaitingOpponent *[]*GameMeta
+	GamesAwaitingOpponent map[string]*GameMeta
 	Broadcast             chan Message
 	Register              chan *Player
 	Unregister            chan *Player
 }
 
 func NewHub() *Hub {
-	gao := make([]*GameMeta, 0)
 	return &Hub{
 		Broadcast:             make(chan Message),
 		Register:              make(chan *Player),
 		Unregister:            make(chan *Player),
 		GamesInProgress:       make(map[string]*GameMeta),
-		GamesAwaitingOpponent: &gao,
+		GamesAwaitingOpponent: make(map[string]*GameMeta),
 	}
 }
 
@@ -36,7 +35,7 @@ func (h *Hub) Run() {
 		case player := <-h.Register:
 			// todo: randomize colors
 			// if there are no games with only one player, make one
-			if len(*h.GamesAwaitingOpponent) == 0 {
+			if len(h.GamesAwaitingOpponent) == 0 {
 				fen, err := getGameFEN()
 				if err != nil {
 					log.Println("Cannot get game fen: ", err)
@@ -58,17 +57,22 @@ func (h *Hub) Run() {
 					White:  player,
 					GameId: gameId,
 				}
-				*h.GamesAwaitingOpponent = append(*h.GamesAwaitingOpponent, &gameMeta)
+				h.GamesAwaitingOpponent[gameId] = &gameMeta
 				fmt.Printf("Creating new pending game...\n")
 				// otherwise, pair up with pending game and move to in progress
 			} else {
 				// set game state to ready
-				game := (*h.GamesAwaitingOpponent)[0]
+				var game *GameMeta
+				for key := range h.GamesAwaitingOpponent {
+					game = h.GamesAwaitingOpponent[key]
+					break
+				}
 				game.Timer = time.Now()
 				game.Black = player
 				player.GameId = game.GameId
 				player.Color = "black"
-				*h.GamesAwaitingOpponent = make([]*GameMeta, 0)
+				delete(h.GamesAwaitingOpponent, game.GameId)
+				// h.GamesAwaitingOpponent = make(map[string]*GameMeta, 0)
 				h.GamesInProgress[game.GameId] = game
 
 				fmt.Println("broadcasting game started to white...")
@@ -83,7 +87,7 @@ func (h *Hub) Run() {
 			case 1:
 				game, ok := h.GamesInProgress[message.Move.GameId]
 				if !ok {
-					if len(*h.GamesAwaitingOpponent) == 0 {
+					if len(h.GamesAwaitingOpponent) == 0 {
 						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
 						return
 					}
@@ -106,14 +110,17 @@ func (h *Hub) Run() {
 			case 2:
 				game, ok := h.GamesInProgress[message.Move.GameId]
 				if !ok {
-					if len(*h.GamesAwaitingOpponent) == 0 {
+					if len(h.GamesAwaitingOpponent) == 0 {
 						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
 						return
 					}
 				}
 
-				handleAbandonedMessage(game)
+				if game != nil {
+					handleAbandonedMessage(game)
+				}
 				delete(h.GamesInProgress, message.Move.GameId)
+				delete(h.GamesAwaitingOpponent, message.Move.GameId)
 			default:
 				log.Println("Broadcast default case reached.")
 				return
@@ -146,12 +153,7 @@ func getGameFEN() (string, error) {
 		}
 
 		game := chess.NewGame(pgn)
-		fmt.Println(fileName)
-		fmt.Println(game.Position().String())
-		fmt.Println(game.Outcome())
-
 		moveLength := len(game.MoveHistory())
-		fmt.Println(moveLength)
 
 		// only use games of at least 20 full moves
 		if moveLength > 40 {

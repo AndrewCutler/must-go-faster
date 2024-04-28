@@ -12,7 +12,7 @@ type Config struct {
 }
 
 type ClientConfig struct {
-	StartingTime uint8 `json:"startingTime"`
+	StartingTime uint16 `json:"startingTime"`
 	// can premoves chain together and lose time for each one, or not chain but not use time?
 	ChainablePremove bool `json:"chainablePremove"`
 }

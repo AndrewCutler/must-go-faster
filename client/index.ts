@@ -37,9 +37,14 @@ function checkIsPromotion(to: cg.Key): cg.Key {
 	return to;
 }
 
-function afterMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
+function afterClientMove(
+	from: cg.Key,
+	to: cg.Key,
+	meta: cg.MoveMetadata,
+): void {
 	// handle promotion here; autopromote to queen for now
 	to = checkIsPromotion(to);
+	console.log({ from, to });
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
@@ -115,16 +120,17 @@ async function handleGameStartedResponse(
 				dests: toValidMoves(response.validMoves),
 				color: playerColor,
 				events: {
-					after: afterMove,
+					after: afterClientMove,
 				},
 			},
 			premovable: {
-				current: ['e2', 'ef'],
+				// current: ['e2', 'ef'],
 				enabled: true,
 				showDests: true,
 				events: {
 					set: function (o, d, meta) {
 						console.log({ o, d, meta });
+						console.log(board.state);
 					},
 				},
 			},
@@ -153,7 +159,7 @@ async function handleGameStartedResponse(
 				dests: toValidMoves(response.validMoves),
 				color: playerColor,
 				events: {
-					after: afterMove,
+					after: afterClientMove,
 				},
 			},
 			premovable: {
@@ -201,7 +207,7 @@ function handleMoveResponse(response: MoveResponse): void {
 			dests: toValidMoves(response.validMoves),
 			color: response.whosNext,
 			events: {
-				after: afterMove,
+				after: afterClientMove,
 			},
 		},
 		premovable: {
@@ -353,7 +359,7 @@ function initializeBoard(): Promise<void> {
 		board.set({
 			movable: {
 				events: {
-					after: afterMove,
+					after: afterClientMove,
 				},
 			},
 			premovable: {

@@ -3,5 +3,5 @@
 	"port": "8000",
 	"development": true,
 	"chainablePremove": true,
-	"startingTime": 30
+	"startingTime": 300
 }

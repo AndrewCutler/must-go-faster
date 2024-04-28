@@ -1,6 +1,5 @@
 import './index.css';
 import { Chessground } from 'chessground';
-import { Config as ChessgroundConfig } from 'chessground/config';
 import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 import {
@@ -15,7 +14,8 @@ import {
 	isTimeoutResponse,
 	TimeoutResponse,
 	isAbandondedResponse,
-    Config,
+	Config,
+	ChessgroundConfig,
 } from './models';
 
 let ws: WebSocket;
@@ -27,8 +27,6 @@ let timerInterval: number;
 let playerColor: PlayerColor;
 let config: Config;
 
-// todo: stop using regions
-// region chess utils
 function checkIsPromotion(to: cg.Key): cg.Key {
 	const movedPiece = board.state.pieces.get(to);
 	// any pawn move ending in 1 or 8, i.e. last rank
@@ -80,7 +78,9 @@ function showCountdown(): Promise<void> {
 	});
 }
 
-async function onGameStarted(response: GameStartedResponse): Promise<void> {
+async function handleGameStartedResponse(
+	response: GameStartedResponse,
+): Promise<void> {
 	if (response.gameStarted) {
 		gameId = response.gameId;
 		playerColor = response.playerColor;
@@ -107,7 +107,7 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 		playerColorDiv.innerText = `You play ${playerColor}.`;
 
 		board.set({
-			viewOnly: true,
+			// viewOnly: true,
 			fen: response.fen,
 			turnColor: response.whosNext,
 			orientation: playerColor,
@@ -118,13 +118,34 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 					after: afterMove,
 				},
 			},
-		});
+			premovable: {
+				current: ['e2', 'ef'],
+				enabled: true,
+				showDests: true,
+				events: {
+					set: function (o, d, meta) {
+						console.log({ o, d, meta });
+					},
+				},
+			},
+			predroppable: {
+				enabled: true,
+				events: {
+					set: function (role, key) {
+						console.log({ role, key });
+					},
+				},
+			},
+			draggable: {
+				enabled: true,
+			},
+		} as ChessgroundConfig);
 
 		await showCountdown();
 
 		setTimer();
 		board.set({
-			viewOnly: response.whosNext !== playerColor,
+			// viewOnly: response.whosNext !== playerColor,
 			fen: response.fen,
 			turnColor: response.whosNext,
 			orientation: playerColor,
@@ -135,11 +156,31 @@ async function onGameStarted(response: GameStartedResponse): Promise<void> {
 					after: afterMove,
 				},
 			},
+			premovable: {
+				enabled: true,
+				showDests: true,
+				events: {
+					set: function (o, d, meta) {
+						console.log({ o, d, meta });
+					},
+				},
+			},
+			predroppable: {
+				enabled: true,
+				events: {
+					set: function (role, key) {
+						console.log({ role, key });
+					},
+				},
+			},
+			draggable: {
+				enabled: true,
+			},
 		});
 	}
 }
 
-function onMove(response: MoveResponse): void {
+function handleMoveResponse(response: MoveResponse): void {
 	let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 	if (response.isCheckmated) {
 		gameStatus = response.isCheckmated === playerColor ? 'lost' : 'won';
@@ -152,7 +193,7 @@ function onMove(response: MoveResponse): void {
 	setTimer();
 
 	board.set({
-		viewOnly: response.whosNext !== playerColor,
+		// viewOnly: response.whosNext !== playerColor,
 		fen: response.fen,
 		turnColor: response.whosNext,
 		orientation: playerColor,
@@ -163,10 +204,30 @@ function onMove(response: MoveResponse): void {
 				after: afterMove,
 			},
 		},
+		premovable: {
+			enabled: true,
+			showDests: true,
+			events: {
+				set: function (o, d, meta) {
+					console.log({ o, d, meta });
+				},
+			},
+		},
+		predroppable: {
+			enabled: true,
+			events: {
+				set: function (role, key) {
+					console.log({ role, key });
+				},
+			},
+		},
+		draggable: {
+			enabled: true,
+		},
 	});
 }
 
-function onTimeout(response: TimeoutResponse): void {
+function handleTimeoutResponse(response: TimeoutResponse): void {
 	let status: GameStatus = 'won';
 	if (response.loser === playerColor) {
 		status = 'lost';
@@ -175,11 +236,10 @@ function onTimeout(response: TimeoutResponse): void {
 }
 //endregion
 
-// region ui utils
-function handleGameStarted(response: unknown): void {
+function handleResponse(response: unknown): void {
 	if (isGameStartedResponse(response)) {
-		response as GameStartedResponse;
 		console.log({ gameStartedResponse: response });
+
 		const connectButton =
 			document.querySelector<HTMLButtonElement>('#connect-button')!;
 		connectButton.classList.remove('is-loading');
@@ -188,33 +248,25 @@ function handleGameStarted(response: unknown): void {
 		)!;
 		connectButtonContainer.style.display = 'none';
 
-		onGameStarted(response);
+		handleGameStartedResponse(response);
 	}
-}
 
-function handleMove(response: unknown): void {
 	if (isMoveResponse(response)) {
 		console.log({ moveResponse: response });
-		onMove(response);
+		handleMoveResponse(response);
 	}
-}
 
-function handleTimeout(response: any): void {
 	if (isTimeoutResponse(response)) {
 		console.log({ timeoutResponse: response });
-		onTimeout(response);
+		handleTimeoutResponse(response);
 	}
-}
 
-function handleAbandoned(response: any): void {
 	if (isAbandondedResponse(response)) {
 		console.log({ abandondedResponse: response });
-		// do stuff
+		// handleAbandonedResponse
 	}
 }
-// endregion
 
-// region ui
 function awaitGame(): void {
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
@@ -228,10 +280,7 @@ function awaitGame(): void {
 		ws.onmessage = function (event) {
 			try {
 				const response: unknown = JSON.parse(event.data);
-				handleGameStarted(response);
-				handleMove(response);
-				handleTimeout(response);
-				handleAbandoned(response);
+				handleResponse(response);
 			} catch (e) {
 				console.error(e);
 			}
@@ -285,8 +334,6 @@ function setTimer(): void {
 	}, 10);
 }
 
-//endregion
-
 // todo: config model
 function getConfig(): Promise<Config> {
 	return fetch('http://10.0.0.73:8000/config').then(function (r) {
@@ -308,6 +355,26 @@ function initializeBoard(): Promise<void> {
 				events: {
 					after: afterMove,
 				},
+			},
+			premovable: {
+				enabled: true,
+				showDests: true,
+				events: {
+					set: function (o, d, meta) {
+						console.log({ o, d, meta });
+					},
+				},
+			},
+			predroppable: {
+				enabled: true,
+				events: {
+					set: function (role, key) {
+						console.log({ role, key });
+					},
+				},
+			},
+			draggable: {
+				enabled: true,
 			},
 		});
 		resolve();

@@ -1,4 +1,5 @@
 import * as cg from 'chessground/types.js';
+import { Config as CGConfig } from 'chessground/config';
 
 export type PlayerColor = 'white' | 'black';
 
@@ -72,3 +73,6 @@ export type Config = {
 	startingTime: number;
 	chainablePremove: boolean;
 };
+export interface ChessgroundConfig extends CGConfig {
+	premovable?: CGConfig['premovable'] & { current?: string[] };
+}

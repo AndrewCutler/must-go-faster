@@ -49,7 +49,7 @@ func main() {
 		},
 	}
 
-	hub := game.NewHub()
+	hub := game.NewHub(clientConfig)
 	go hub.Run()
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {

@@ -62,7 +62,7 @@ function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
 	return validMoves;
 }
 
-function showCountdown(): Promise<void> {
+function showCountdownToStartGame(): Promise<void> {
 	return new Promise((resolve) => {
 		const countdownDisplay = document.querySelector<HTMLDivElement>(
 			'#countdown-container',
@@ -147,7 +147,7 @@ async function handleGameStartedResponse(
 			},
 		} as ChessgroundConfig);
 
-		await showCountdown();
+		await showCountdownToStartGame();
 
 		setTimer();
 		board.set({
@@ -273,7 +273,8 @@ function handleResponse(response: unknown): void {
 	}
 }
 
-export function awaitGame(config: Config): void {
+export function awaitGame(c: Config): void {
+	config = c;
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
 		button.classList.add('is-loading');

@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	c "server/config"
+
 	"github.com/google/uuid"
 	"github.com/notnil/chess"
 )
@@ -17,15 +19,17 @@ type Hub struct {
 	Broadcast             chan Message
 	Register              chan *Player
 	Unregister            chan *Player
+	Config                *c.ClientConfig
 }
 
-func NewHub() *Hub {
+func NewHub(config *c.ClientConfig) *Hub {
 	return &Hub{
 		Broadcast:             make(chan Message),
 		Register:              make(chan *Player),
 		Unregister:            make(chan *Player),
 		GamesInProgress:       make(map[string]*GameMeta),
 		GamesAwaitingOpponent: make(map[string]*GameMeta),
+		Config:                config,
 	}
 }
 
@@ -76,8 +80,8 @@ func (h *Hub) Run() {
 				h.GamesInProgress[game.GameId] = game
 
 				fmt.Println("broadcasting game started to white...")
-				player.Send <- sendGameStartMessage(game, player.Color)
-				game.White.Send <- sendGameStartMessage(game, game.White.Color)
+				player.Send <- sendGameStartMessage(h.Config, game, player.Color)
+				game.White.Send <- sendGameStartMessage(h.Config, game, game.White.Color)
 			}
 		// todo: unregister
 		case message := <-h.Broadcast:
@@ -106,7 +110,7 @@ func (h *Hub) Run() {
 					return
 				}
 
-				handleMoveMessage(message, game)
+				handleMoveMessage(h.Config, message, game)
 			case 2:
 				game, ok := h.GamesInProgress[message.Move.GameId]
 				if !ok {

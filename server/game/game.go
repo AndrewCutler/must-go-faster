@@ -2,7 +2,9 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	c "server/config"
 	"strings"
 	"time"
 
@@ -54,8 +56,8 @@ func (g *GameMeta) whoseMoveIsIt() string {
 	return ""
 }
 
-func (g *GameMeta) getTimeRemaining() float64 {
-	gameTime, err := time.ParseDuration("30s")
+func (g *GameMeta) getTimeRemaining(config *c.ClientConfig) float64 {
+	gameTime, err := time.ParseDuration(fmt.Sprintf("%ds", config.StartingTime))
 	if err != nil {
 		log.Println("Unable to create duration of 30s")
 	} else {

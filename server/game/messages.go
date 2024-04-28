@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	c "server/config"
 )
 
 // Send
-func sendGameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
+func sendGameStartMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
 	data := map[string]interface{}{
 		"gameStarted": true,
 		"fen":         gameMeta.getFen(),
@@ -15,7 +16,7 @@ func sendGameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
 		"playerColor": playerColor, // is this necessary
 		"validMoves":  ValidMovesMap(gameMeta.Game),
 		"whosNext":    gameMeta.whoseMoveIsIt(),
-		"timeLeft":    gameMeta.getTimeRemaining(),
+		"timeLeft":    gameMeta.getTimeRemaining(config),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -27,7 +28,7 @@ func sendGameStartMessage(gameMeta *GameMeta, playerColor string) []byte {
 	return jsonData
 }
 
-func sendMoveMessage(gameMeta *GameMeta, playerColor string) []byte {
+func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
 	isCheckmated := ""
 	switch gameMeta.Game.Outcome() {
 	case "0-1":
@@ -43,7 +44,7 @@ func sendMoveMessage(gameMeta *GameMeta, playerColor string) []byte {
 		"validMoves":   ValidMovesMap(gameMeta.Game),
 		"whosNext":     gameMeta.whoseMoveIsIt(),
 		"isCheckmated": isCheckmated,
-		"timeLeft":     gameMeta.getTimeRemaining(),
+		"timeLeft":     gameMeta.getTimeRemaining(config),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -126,7 +127,7 @@ func handleTimeoutMessage(message Message, game *GameMeta) bool {
 	return false
 }
 
-func handleMoveMessage(message Message, game *GameMeta) {
+func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
 	if err := makeMove(string(message.Move.Data), game.Game); err != nil {
 		log.Panicln("Cannot make move: ", err)
 		return
@@ -134,7 +135,7 @@ func handleMoveMessage(message Message, game *GameMeta) {
 
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.Send <- sendMoveMessage(game, player.Color):
+		case player.Send <- sendMoveMessage(config, game, player.Color):
 		default:
 			close(player.Send)
 		}

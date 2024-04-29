@@ -45,6 +45,10 @@ function afterClientMove(
 	// handle promotion here; autopromote to queen for now
 	to = checkIsPromotion(to);
 	console.log({ from, to });
+	console.log(board.state);
+	// premove is set here
+	// when receiving move from opponent, check if premove is valid and if so, play it
+	board.move(from, to);
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
@@ -112,7 +116,7 @@ async function handleGameStartedResponse(
 		playerColorDiv.innerText = `You play ${playerColor}.`;
 
 		board.set({
-			// viewOnly: true,
+			viewOnly: true,
 			fen: response.fen,
 			turnColor: response.whosNext,
 			orientation: playerColor,
@@ -139,6 +143,7 @@ async function handleGameStartedResponse(
 				events: {
 					set: function (role, key) {
 						console.log({ role, key });
+						console.log(board.state);
 					},
 				},
 			},
@@ -149,9 +154,11 @@ async function handleGameStartedResponse(
 
 		await showCountdownToStartGame();
 
+		console.log(board.state);
+		// board.playPremove();
 		setTimer();
 		board.set({
-			// viewOnly: response.whosNext !== playerColor,
+			viewOnly: false,
 			fen: response.fen,
 			turnColor: response.whosNext,
 			orientation: playerColor,
@@ -197,9 +204,21 @@ function handleMoveResponse(response: MoveResponse): void {
 
 	timeLeft = response.timeLeft;
 	setTimer();
+	let fen;
+	if (board.state.premovable.current) {
+		console.log('premove: ', board.state.premovable.current);
+		board.set({
+			fen: response.fen,
+		});
+		board.playPremove();
+		fen = board.getFen();
+		console.log(fen);
+	}
+	console.log(board.state);
 
 	board.set({
 		// viewOnly: response.whosNext !== playerColor,
+		viewOnly: false,
 		fen: response.fen,
 		turnColor: response.whosNext,
 		orientation: playerColor,
@@ -215,7 +234,12 @@ function handleMoveResponse(response: MoveResponse): void {
 			showDests: true,
 			events: {
 				set: function (o, d, meta) {
-					console.log({ o, d, meta });
+					console.log('handleMoveResponse.premovable.set:', {
+						o,
+						d,
+						meta,
+					});
+					console.log(board.state);
 				},
 			},
 		},
@@ -223,7 +247,11 @@ function handleMoveResponse(response: MoveResponse): void {
 			enabled: true,
 			events: {
 				set: function (role, key) {
-					console.log({ role, key });
+					console.log('handleMoveResponse.predroppable.set:', {
+						role,
+						key,
+					});
+					console.log(board.state);
 				},
 			},
 		},
@@ -362,6 +390,7 @@ export function initializeBoard(): Promise<void> {
 				initialConfig,
 			);
 			board.set({
+				viewOnly: false,
 				movable: {
 					events: {
 						after: afterClientMove,
@@ -372,7 +401,11 @@ export function initializeBoard(): Promise<void> {
 					showDests: true,
 					events: {
 						set: function (o, d, meta) {
-							console.log({ o, d, meta });
+							console.log('initializeBoard.premovable.set:', {
+								o,
+								d,
+								meta,
+							});
 						},
 					},
 				},
@@ -380,7 +413,10 @@ export function initializeBoard(): Promise<void> {
 					enabled: true,
 					events: {
 						set: function (role, key) {
-							console.log({ role, key });
+							console.log('initializeBoard.predroppable.set:', {
+								role,
+								key,
+							});
 						},
 					},
 				},

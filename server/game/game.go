@@ -23,11 +23,12 @@ type Move struct {
 }
 
 type GameMeta struct {
-	Game   *chess.Game
-	White  *Player
-	Black  *Player
-	GameId string
-	Timer  time.Time
+	Game           *chess.Game
+	White          *Player
+	Black          *Player
+	GameId         string
+	Timer          time.Time
+	CurrentPremove string // todo: premove type
 }
 
 func (g *GameMeta) getFen() string {

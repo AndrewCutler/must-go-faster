@@ -73,6 +73,7 @@ export type Config = {
 	startingTime: number;
 	chainablePremove: boolean;
 };
+
 export interface ChessgroundConfig extends CGConfig {
 	premovable?: CGConfig['premovable'] & { current?: string[] };
 }

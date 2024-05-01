@@ -69,6 +69,10 @@ export type TimeoutRequest = {
 	playerColor: PlayerColor;
 } & WithGameId;
 
+export type PremoveRequest = {
+	premove: Move;
+} & WithGameId;
+
 export type Config = {
 	startingTime: number;
 	chainablePremove: boolean;

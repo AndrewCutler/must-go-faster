@@ -16,6 +16,8 @@ import {
 	isAbandondedResponse,
 	Config,
 	ChessgroundConfig,
+	PremoveRequest,
+	Move,
 } from './models';
 
 let ws: WebSocket;
@@ -44,10 +46,7 @@ function afterClientMove(
 ): void {
 	// handle promotion here; autopromote to queen for now
 	to = checkIsPromotion(to);
-	console.log({ from, to });
-	console.log(board.state);
 	// premove is set here
-	// when receiving move from opponent, check if premove is valid and if so, play it
 	board.move(from, to);
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
@@ -205,14 +204,21 @@ function handleMoveResponse(response: MoveResponse): void {
 	timeLeft = response.timeLeft;
 	setTimer();
 	let fen;
-	if (board.state.premovable.current) {
+	if (
+		board.state.premovable.current /* && premoveable.current.length === 2*/
+	) {
+		// send premove message which checks if premove is valid
+		// if so, play response on server and send updated fen
 		console.log('premove: ', board.state.premovable.current);
+		const [from, to] = board.state.premovable.current;
+		sendPremoveMessage({ from, to });
 		board.set({
 			fen: response.fen,
 		});
-		board.playPremove();
-		fen = board.getFen();
-		console.log(fen);
+		// board.playPremove();
+		// fen = board.getFen();
+		// console.log(fen);
+		// console.log(board.state.premovable);
 	}
 	console.log(board.state);
 
@@ -335,7 +341,7 @@ function gameOver(
 	modalHeader.innerText = `You ${gameStatus} via ${method}.`;
 }
 
-function sendTimeoutMessage() {
+function sendTimeoutMessage(): void {
 	// send message to server to end game/find out the outcome
 	if (ws) {
 		const timeout: TimeoutRequest = {
@@ -344,6 +350,16 @@ function sendTimeoutMessage() {
 			timeout: true,
 		};
 		ws.send(JSON.stringify(timeout));
+	}
+}
+
+function sendPremoveMessage(p: Move): void {
+	if (ws) {
+		const premove: PremoveRequest = {
+			gameId,
+			premove: p,
+		};
+		ws.send(JSON.stringify(premove));
 	} else {
 		console.error('ws is undefined.');
 	}

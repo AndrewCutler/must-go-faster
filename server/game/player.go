@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/gorilla/websocket"
@@ -33,7 +34,22 @@ func (p *Player) ReadMessage() {
 			return
 		}
 
-		p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId, Data: content}, MessageType: 1}
+		type moveType struct {
+			Type        string `json:"type"`
+			Move        Move   `json:"-"`
+			Timeout     string `json:"-"`
+			GameId      string `json:"-"`
+			PlayerColor string `json:"-"`
+			Premove     string `json:"-"`
+		}
+		var movetype moveType
+		if err := json.Unmarshal(content, &movetype); err != nil {
+			// todo: properly handle error
+			log.Println("Cannot unmarshal message content: ", string(content))
+			return
+		}
+
+		p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId, Data: content, Type: movetype.Type}, MessageType: 1}
 	}
 }
 

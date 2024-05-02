@@ -51,7 +51,7 @@ function afterClientMove(
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
-		const message: MoveRequest = { move, gameId };
+		const message: MoveRequest = { move, gameId, type: 'move' };
 		ws.send(JSON.stringify(message));
 	}
 }
@@ -345,6 +345,7 @@ function sendTimeoutMessage(): void {
 	// send message to server to end game/find out the outcome
 	if (ws) {
 		const timeout: TimeoutRequest = {
+			type: 'timeout',
 			gameId,
 			playerColor,
 			timeout: true,
@@ -356,6 +357,7 @@ function sendTimeoutMessage(): void {
 function sendPremoveMessage(p: Move): void {
 	if (ws) {
 		const premove: PremoveRequest = {
+			type: 'premove',
 			gameId,
 			premove: p,
 		};

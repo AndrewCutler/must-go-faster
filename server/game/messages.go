@@ -99,19 +99,24 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
-func handleTimeoutMessage(message Message, game *GameMeta) bool {
-	type TimeoutRequest struct {
-		Timeout     bool   `json:"timeout"`
-		PlayerColor string `json:"playerColor"`
-	}
-	var timeout TimeoutRequest
-	err := json.Unmarshal(message.Move.Data, &timeout)
+func handlePremoveMessage(message Message, game *GameMeta) {
+	isMove, err := parsePremove(string(message.Move.Data), game.Game)
 	if err != nil {
-		fmt.Println(err)
-		return true
+		log.Println("Cannot make premove: ", err)
+		return
+	}
+	if !isMove {
+		log.Println("Not a premove message. Continuing.")
+		return
 	}
 
-	if timeout.Timeout {
+	fmt.Println("premove: ", message)
+}
+
+func handleTimeoutMessage(message Message, game *GameMeta) {
+	isTimeout := parseTimeout(string(message.Move.Data), game.Game)
+
+	if isTimeout {
 		for _, player := range game.GetPlayers() {
 			m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
 			select {
@@ -120,16 +125,18 @@ func handleTimeoutMessage(message Message, game *GameMeta) bool {
 				close(player.Send)
 			}
 		}
-
-		return true
 	}
-
-	return false
 }
 
 func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
-	if err := makeMove(string(message.Move.Data), game.Game); err != nil {
-		log.Panicln("Cannot make move: ", err)
+	isMove, err := parseMove(string(message.Move.Data), game.Game)
+	if err != nil {
+
+		log.Println("Cannot make move: ", err)
+		return
+	}
+	if !isMove {
+		log.Println("Not a move message. Continuing.")
 		return
 	}
 

@@ -100,13 +100,9 @@ func handleAbandonedMessage(game *GameMeta) {
 }
 
 func handlePremoveMessage(message Message, game *GameMeta) {
-	isMove, err := parsePremove(string(message.Move.Data), game.Game)
+	err := parsePremove(string(message.Move.Data), game.Game)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)
-		return
-	}
-	if !isMove {
-		log.Println("Not a premove message. Continuing.")
 		return
 	}
 
@@ -114,29 +110,26 @@ func handlePremoveMessage(message Message, game *GameMeta) {
 }
 
 func handleTimeoutMessage(message Message, game *GameMeta) {
-	isTimeout := parseTimeout(string(message.Move.Data), game.Game)
+	err := parseTimeout(string(message.Move.Data), game.Game)
+	if err != nil {
+		fmt.Println("Failed to parse timeout move data")
+		return
+	}
 
-	if isTimeout {
-		for _, player := range game.GetPlayers() {
-			m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
-			select {
-			case player.Send <- m:
-			default:
-				close(player.Send)
-			}
+	for _, player := range game.GetPlayers() {
+		m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
+		select {
+		case player.Send <- m:
+		default:
+			close(player.Send)
 		}
 	}
 }
 
 func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
-	isMove, err := parseMove(string(message.Move.Data), game.Game)
+	err := parseMove(string(message.Move.Data), game.Game)
 	if err != nil {
-
 		log.Println("Cannot make move: ", err)
-		return
-	}
-	if !isMove {
-		log.Println("Not a move message. Continuing.")
 		return
 	}
 

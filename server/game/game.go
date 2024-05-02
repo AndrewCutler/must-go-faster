@@ -81,7 +81,7 @@ func ValidMovesMap(g *chess.Game) map[string][]string {
 	return result
 }
 
-func parseMove(m string, g *chess.Game) (bool, error) {
+func parseMove(m string, g *chess.Game) error {
 	type move struct {
 		Move struct {
 			From string `json:"from"`
@@ -92,18 +92,18 @@ func parseMove(m string, g *chess.Game) (bool, error) {
 	var result move
 
 	if err := json.Unmarshal([]byte(m), &result); err != nil {
-		return false, nil
+		return err
 	}
 
 	if err := g.MoveStr(result.Move.From + result.Move.To); err != nil {
-		return false, err
+		return err
 	}
 
 	log.Println("move: ", result)
-	return true, nil
+	return nil
 }
 
-func parsePremove(m string, g *chess.Game) (bool, error) {
+func parsePremove(m string, g *chess.Game) error {
 	type premove struct {
 		Premove struct {
 			From string `json:"from"`
@@ -114,18 +114,18 @@ func parsePremove(m string, g *chess.Game) (bool, error) {
 	var result premove
 
 	if err := json.Unmarshal([]byte(m), &result); err != nil {
-		return false, nil
+		return err
 	}
 
 	if err := g.MoveStr(result.Premove.From + result.Premove.To); err != nil {
-		return false, err
+		return err
 	}
 
 	log.Println("premove: ", result)
-	return true, nil
+	return nil
 }
 
-func parseTimeout(m string, g *chess.Game) bool {
+func parseTimeout(m string, g *chess.Game) error {
 	type timeout struct {
 		Timeout     bool   `json:"timeout"`
 		PlayerColor string `json:"playerColor"`
@@ -133,9 +133,9 @@ func parseTimeout(m string, g *chess.Game) bool {
 	var result timeout
 
 	if err := json.Unmarshal([]byte(m), &result); err != nil {
-		return false
+		return err
 	}
-	// timeout: {false }
+
 	log.Println("timeout: ", result)
-	return true
+	return nil
 }

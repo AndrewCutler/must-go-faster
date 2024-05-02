@@ -4,7 +4,7 @@ const path = require('path');
 module.exports = (env) => ({
 	entry: './index.ts', // Entry point of your application
 	watch: env.watch === 'true',
-	devtool: env.watch === 'true' ? 'eval' : '',
+	devtool: env.watch === 'true' ? 'eval' : 'source-map',
 	watchOptions: {
 		ignored: /node_modules/,
 	},

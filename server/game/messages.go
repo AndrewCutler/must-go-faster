@@ -105,7 +105,7 @@ func handlePremoveMessage(message Message, game *GameMeta) {
 		log.Println("Cannot make premove: ", err)
 		return
 	}
-
+	// play move on board and respond with udpated fail/illegal premove response
 	fmt.Println("premove: ", message)
 }
 

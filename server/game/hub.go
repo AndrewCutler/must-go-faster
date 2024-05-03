@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"time"
 
@@ -147,7 +146,9 @@ func getGameFEN() (string, error) {
 	var result string
 	var isGameAcceptable bool
 	for !isGameAcceptable {
-		fileName := files[rand.Intn(len(files))].Name()
+		// testing with same game every time
+		fileName := files[1].Name()
+		// fileName := files[rand.Intn(len(files))].Name()
 		file, err := os.Open(dir + "\\" + fileName)
 		if err != nil {
 			return "", err

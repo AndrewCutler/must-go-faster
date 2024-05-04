@@ -13,4 +13,4 @@
 2. Make game over modal presentable
 3. Increment
 4. Show material count
-5. premoves (right now they render but aren't handled properly)
+5. Fix timer; it doesn't stop when it's not the current player's move

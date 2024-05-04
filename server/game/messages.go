@@ -44,7 +44,7 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 		"validMoves":   ValidMovesMap(gameMeta.Game),
 		"whosNext":     gameMeta.whoseMoveIsIt(),
 		"isCheckmated": isCheckmated,
-		"timeLeft":     gameMeta.getTimeRemaining(config),
+		// "timeLeft":     gameMeta.getTimeRemaining(config),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -106,7 +106,13 @@ func handlePremoveMessage(message Message, game *GameMeta) {
 		return
 	}
 	// play move on board and respond with udpated fail/illegal premove response
-	fmt.Println("premove: ", message)
+	for _, player := range game.GetPlayers() {
+		select {
+		case player.Send <- sendMoveMessage(nil, game, player.Color):
+		default:
+			close(player.Send)
+		}
+	}
 }
 
 func handleTimeoutMessage(message Message, game *GameMeta) {

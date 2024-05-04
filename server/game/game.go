@@ -118,6 +118,7 @@ func parsePremove(m string, g *chess.Game) error {
 	}
 
 	if err := g.MoveStr(result.Premove.From + result.Premove.To); err != nil {
+		log.Println("premove error: ", err)
 		return err
 	}
 

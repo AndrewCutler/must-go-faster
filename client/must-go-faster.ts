@@ -189,12 +189,14 @@ function handleMoveResponse(response: MoveResponse): void {
 	) {
 		// send premove message which checks if premove is valid
 		// if so, play response on server and send updated fen
-		console.log('premove: ', board.state.premovable.current);
 		const [from, to] = board.state.premovable.current;
 		sendPremoveMessage({ from, to });
 		board.set({
-			fen: response.fen,
+            fen: response.fen,
 		});
+        board.playPremove();
+
+		return;
 	}
 
 	// todo: test here
@@ -330,10 +332,7 @@ function setTimer(): void {
 function initializeTestBoard(initialConfig: ChessgroundConfig): void {
 	const testBoardDiv = document.getElementById('test-board')!;
 	testBoardDiv.style.display = 'block';
-	const testBoard = Chessground(
-		testBoardDiv,
-		initialConfig,
-	);
+	const testBoard = Chessground(testBoardDiv, initialConfig);
 	testBoard.set({
 		viewOnly: false,
 		movable: {

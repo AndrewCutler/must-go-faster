@@ -105,7 +105,7 @@ func handlePremoveMessage(message Message, game *GameMeta) {
 		log.Println("Cannot make premove: ", err)
 		return
 	}
-	// play move on board and respond with udpated fail/illegal premove response
+	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range game.GetPlayers() {
 		select {
 		case player.Send <- sendMoveMessage(nil, game, player.Color):

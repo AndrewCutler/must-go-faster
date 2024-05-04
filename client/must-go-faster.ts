@@ -191,12 +191,7 @@ function handleMoveResponse(response: MoveResponse): void {
 		// if so, play response on server and send updated fen
 		const [from, to] = board.state.premovable.current;
 		sendPremoveMessage({ from, to });
-		board.set({
-            fen: response.fen,
-		});
-        board.playPremove();
-
-		return;
+		board.playPremove();
 	}
 
 	// todo: test here

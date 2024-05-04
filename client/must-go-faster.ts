@@ -54,25 +54,14 @@ function afterClientMove(
 		const message: MoveRequest = { move, gameId, type: 'move' };
 		ws.send(JSON.stringify(message));
 	}
-	// 5brk/1p3p1p/pqb2PpB/4P3/P3p3/1P4NP/6PK/2Rr1R2 w - - 0 31
 	console.log({ state: board.state });
 	board.set({
-		// viewOnly: false,
 		turnColor: playerColor === 'white' ? 'black' : 'white',
-		// lastMove: [move.from, move.to],
 		movable: {
 			color: playerColor,
 		},
 		premovable: {
-			// 	// current: ['e2', 'ef'],
 			enabled: true,
-			// 	showDests: true,
-			// 	events: {
-			// 		set: function (o, d, meta) {
-			// 			console.log({ o, d, meta });
-			// 			console.log(board.state);
-			// 		},
-			// 	},
 		},
 	});
 }
@@ -143,12 +132,8 @@ async function handleGameStartedResponse(
 			movable: {
 				dests: toValidMoves(response.validMoves),
 				color: playerColor,
-				// events: {
-				// 	after: afterClientMove,
-				// },
 			},
 			premovable: {
-				// current: ['e2', 'ef'],
 				enabled: true,
 				showDests: true,
 				events: {
@@ -185,7 +170,7 @@ function handleMoveResponse(response: MoveResponse): void {
 	timeLeft = response.timeLeft;
 	setTimer();
 	if (
-		board.state.premovable.current /* && premoveable.current.length === 2*/
+		board.state.premovable.current
 	) {
 		// send premove message which checks if premove is valid
 		// if so, play response on server and send updated fen
@@ -194,7 +179,6 @@ function handleMoveResponse(response: MoveResponse): void {
 		board.playPremove();
 	}
 
-	// todo: test here
 	board.set({
 		fen: response.fen,
 		turnColor: response.whosNext,
@@ -367,6 +351,7 @@ function initializeTestBoard(initialConfig: ChessgroundConfig): void {
 
 // todo: config model
 export function getConfig(): Promise<Config> {
+    // todo: pull from config
 	return fetch('http://10.0.0.73:8000/config').then(function (r) {
 		return r.json();
 	});

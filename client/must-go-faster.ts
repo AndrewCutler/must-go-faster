@@ -136,12 +136,6 @@ async function handleGameStartedResponse(
 			premovable: {
 				enabled: true,
 				showDests: true,
-				events: {
-					set: function (o, d, meta) {
-						console.log({ o, d, meta });
-						console.log(board.state);
-					},
-				},
 			},
 			draggable: {
 				enabled: true,
@@ -380,26 +374,9 @@ export function initializeBoard(): Promise<void> {
 				premovable: {
 					enabled: true,
 					showDests: true,
-					events: {
-						set: function (o, d, meta) {
-							console.log('initializeBoard.premovable.set:', {
-								o,
-								d,
-								meta,
-							});
-						},
-					},
 				},
 				predroppable: {
 					enabled: true,
-					events: {
-						set: function (role, key) {
-							console.log('initializeBoard.predroppable.set:', {
-								role,
-								key,
-							});
-						},
-					},
 				},
 				draggable: {
 					enabled: true,

@@ -197,15 +197,12 @@ function handleMoveResponse(response: MoveResponse): void {
 		});
 	}
 
-    // todo: test here
+	// todo: test here
 	board.set({
-		viewOnly: false,
 		fen: response.fen,
 		turnColor: response.whosNext,
-		orientation: playerColor,
 		movable: {
 			dests: toValidMoves(response.validMoves),
-			color: response.whosNext,
 		},
 	});
 }
@@ -330,6 +327,50 @@ function setTimer(): void {
 	}, 10);
 }
 
+function initializeTestBoard(initialConfig: ChessgroundConfig): void {
+	const testBoardDiv = document.getElementById('test-board')!;
+	testBoardDiv.style.display = 'block';
+	const testBoard = Chessground(
+		testBoardDiv,
+		initialConfig,
+	);
+	testBoard.set({
+		viewOnly: false,
+		movable: {
+			events: {
+				after: afterClientMove,
+			},
+		},
+		premovable: {
+			enabled: true,
+			showDests: true,
+			events: {
+				set: function (o, d, meta) {
+					console.log('initializeBoard.premovable.set:', {
+						o,
+						d,
+						meta,
+					});
+				},
+			},
+		},
+		predroppable: {
+			enabled: true,
+			events: {
+				set: function (role, key) {
+					console.log('initializeBoard.predroppable.set:', {
+						role,
+						key,
+					});
+				},
+			},
+		},
+		draggable: {
+			enabled: true,
+		},
+	});
+}
+
 // todo: config model
 export function getConfig(): Promise<Config> {
 	return fetch('http://10.0.0.73:8000/config').then(function (r) {
@@ -385,6 +426,8 @@ export function initializeBoard(): Promise<void> {
 					enabled: true,
 				},
 			});
+
+			// initializeTestBoard(initialConfig);
 			resolve();
 		} catch (error) {
 			console.error(error);

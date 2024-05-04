@@ -131,10 +131,20 @@ body {
 }
 
 #footer {
-    width: 100%;
+	width: 100%;
 	position: absolute;
 	bottom: 0;
 	display: flex;
 	justify-content: center;
-    padding-bottom: 0.25rem;
+	padding-bottom: 0.25rem;
+}
+
+#test-board {
+	z-index: 11;
+	margin-left: 40px;
+	display: none;
+	width: 400px;
+	height: 400px;
+	position: absolute;
+	border: 18px solid black;
 }

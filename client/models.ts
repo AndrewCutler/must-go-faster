@@ -56,18 +56,23 @@ export type Move = {
 	to: cg.Key;
 };
 
-type WithGameId = {
+type BaseRequest = {
 	gameId: string;
+	type: 'move' | 'premove' | 'timeout';
 };
 
 export type MoveRequest = {
 	move: Move;
-} & WithGameId;
+} & BaseRequest;
 
 export type TimeoutRequest = {
 	timeout: true;
 	playerColor: PlayerColor;
-} & WithGameId;
+} & BaseRequest;
+
+export type PremoveRequest = {
+	premove: Move;
+} & BaseRequest;
 
 export type Config = {
 	startingTime: number;

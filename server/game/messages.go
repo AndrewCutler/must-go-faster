@@ -44,7 +44,7 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 		"validMoves":   ValidMovesMap(gameMeta.Game),
 		"whosNext":     gameMeta.whoseMoveIsIt(),
 		"isCheckmated": isCheckmated,
-		"timeLeft":     gameMeta.getTimeRemaining(config),
+		// "timeLeft":     gameMeta.getTimeRemaining(config),
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -99,37 +99,43 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
-func handleTimeoutMessage(message Message, game *GameMeta) bool {
-	type TimeoutRequest struct {
-		Timeout     bool   `json:"timeout"`
-		PlayerColor string `json:"playerColor"`
-	}
-	var timeout TimeoutRequest
-	err := json.Unmarshal(message.Move.Data, &timeout)
+func handlePremoveMessage(message Message, game *GameMeta) {
+	err := parsePremove(string(message.Move.Data), game.Game)
 	if err != nil {
-		fmt.Println(err)
-		return true
+		log.Println("Cannot make premove: ", err)
+		return
 	}
-
-	if timeout.Timeout {
-		for _, player := range game.GetPlayers() {
-			m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
-			select {
-			case player.Send <- m:
-			default:
-				close(player.Send)
-			}
+	// play move on board and respond with updated fail/illegal premove response or updated fen
+	for _, player := range game.GetPlayers() {
+		select {
+		case player.Send <- sendMoveMessage(nil, game, player.Color):
+		default:
+			close(player.Send)
 		}
+	}
+}
 
-		return true
+func handleTimeoutMessage(message Message, game *GameMeta) {
+	err := parseTimeout(string(message.Move.Data), game.Game)
+	if err != nil {
+		fmt.Println("Failed to parse timeout move data")
+		return
 	}
 
-	return false
+	for _, player := range game.GetPlayers() {
+		m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
+		select {
+		case player.Send <- m:
+		default:
+			close(player.Send)
+		}
+	}
 }
 
 func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
-	if err := makeMove(string(message.Move.Data), game.Game); err != nil {
-		log.Panicln("Cannot make move: ", err)
+	err := parseMove(string(message.Move.Data), game.Game)
+	if err != nil {
+		log.Println("Cannot make move: ", err)
 		return
 	}
 

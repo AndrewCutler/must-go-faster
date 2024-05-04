@@ -16,6 +16,8 @@ import {
 	isAbandondedResponse,
 	Config,
 	ChessgroundConfig,
+	PremoveRequest,
+	Move,
 } from './models';
 
 let ws: WebSocket;
@@ -44,17 +46,24 @@ function afterClientMove(
 ): void {
 	// handle promotion here; autopromote to queen for now
 	to = checkIsPromotion(to);
-	console.log({ from, to });
-	console.log(board.state);
 	// premove is set here
-	// when receiving move from opponent, check if premove is valid and if so, play it
 	board.move(from, to);
 
 	const move: { from: cg.Key; to: cg.Key } = { from, to };
 	if (ws) {
-		const message: MoveRequest = { move, gameId };
+		const message: MoveRequest = { move, gameId, type: 'move' };
 		ws.send(JSON.stringify(message));
 	}
+	console.log({ state: board.state });
+	board.set({
+		turnColor: playerColor === 'white' ? 'black' : 'white',
+		movable: {
+			color: playerColor,
+		},
+		premovable: {
+			enabled: true,
+		},
+	});
 }
 
 function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
@@ -123,29 +132,10 @@ async function handleGameStartedResponse(
 			movable: {
 				dests: toValidMoves(response.validMoves),
 				color: playerColor,
-				events: {
-					after: afterClientMove,
-				},
 			},
 			premovable: {
-				// current: ['e2', 'ef'],
 				enabled: true,
 				showDests: true,
-				events: {
-					set: function (o, d, meta) {
-						console.log({ o, d, meta });
-						console.log(board.state);
-					},
-				},
-			},
-			predroppable: {
-				enabled: true,
-				events: {
-					set: function (role, key) {
-						console.log({ role, key });
-						console.log(board.state);
-					},
-				},
 			},
 			draggable: {
 				enabled: true,
@@ -155,40 +145,9 @@ async function handleGameStartedResponse(
 		await showCountdownToStartGame();
 
 		console.log(board.state);
-		// board.playPremove();
 		setTimer();
 		board.set({
 			viewOnly: false,
-			fen: response.fen,
-			turnColor: response.whosNext,
-			orientation: playerColor,
-			movable: {
-				dests: toValidMoves(response.validMoves),
-				color: playerColor,
-				events: {
-					after: afterClientMove,
-				},
-			},
-			premovable: {
-				enabled: true,
-				showDests: true,
-				events: {
-					set: function (o, d, meta) {
-						console.log({ o, d, meta });
-					},
-				},
-			},
-			predroppable: {
-				enabled: true,
-				events: {
-					set: function (role, key) {
-						console.log({ role, key });
-					},
-				},
-			},
-			draggable: {
-				enabled: true,
-			},
 		});
 	}
 }
@@ -204,59 +163,21 @@ function handleMoveResponse(response: MoveResponse): void {
 
 	timeLeft = response.timeLeft;
 	setTimer();
-	let fen;
-	if (board.state.premovable.current) {
-		console.log('premove: ', board.state.premovable.current);
-		board.set({
-			fen: response.fen,
-		});
+	if (
+		board.state.premovable.current
+	) {
+		// send premove message which checks if premove is valid
+		// if so, play response on server and send updated fen
+		const [from, to] = board.state.premovable.current;
+		sendPremoveMessage({ from, to });
 		board.playPremove();
-		fen = board.getFen();
-		console.log(fen);
 	}
-	console.log(board.state);
 
 	board.set({
-		// viewOnly: response.whosNext !== playerColor,
-		viewOnly: false,
 		fen: response.fen,
 		turnColor: response.whosNext,
-		orientation: playerColor,
 		movable: {
 			dests: toValidMoves(response.validMoves),
-			color: response.whosNext,
-			events: {
-				after: afterClientMove,
-			},
-		},
-		premovable: {
-			enabled: true,
-			showDests: true,
-			events: {
-				set: function (o, d, meta) {
-					console.log('handleMoveResponse.premovable.set:', {
-						o,
-						d,
-						meta,
-					});
-					console.log(board.state);
-				},
-			},
-		},
-		predroppable: {
-			enabled: true,
-			events: {
-				set: function (role, key) {
-					console.log('handleMoveResponse.predroppable.set:', {
-						role,
-						key,
-					});
-					console.log(board.state);
-				},
-			},
-		},
-		draggable: {
-			enabled: true,
 		},
 	});
 }
@@ -335,15 +256,27 @@ function gameOver(
 	modalHeader.innerText = `You ${gameStatus} via ${method}.`;
 }
 
-function sendTimeoutMessage() {
+function sendTimeoutMessage(): void {
 	// send message to server to end game/find out the outcome
 	if (ws) {
 		const timeout: TimeoutRequest = {
+			type: 'timeout',
 			gameId,
 			playerColor,
 			timeout: true,
 		};
 		ws.send(JSON.stringify(timeout));
+	}
+}
+
+function sendPremoveMessage(p: Move): void {
+	if (ws) {
+		const premove: PremoveRequest = {
+			type: 'premove',
+			gameId,
+			premove: p,
+		};
+		ws.send(JSON.stringify(premove));
 	} else {
 		console.error('ws is undefined.');
 	}
@@ -369,8 +302,50 @@ function setTimer(): void {
 	}, 10);
 }
 
+function initializeTestBoard(initialConfig: ChessgroundConfig): void {
+	const testBoardDiv = document.getElementById('test-board')!;
+	testBoardDiv.style.display = 'block';
+	const testBoard = Chessground(testBoardDiv, initialConfig);
+	testBoard.set({
+		viewOnly: false,
+		movable: {
+			events: {
+				after: afterClientMove,
+			},
+		},
+		premovable: {
+			enabled: true,
+			showDests: true,
+			events: {
+				set: function (o, d, meta) {
+					console.log('initializeBoard.premovable.set:', {
+						o,
+						d,
+						meta,
+					});
+				},
+			},
+		},
+		predroppable: {
+			enabled: true,
+			events: {
+				set: function (role, key) {
+					console.log('initializeBoard.predroppable.set:', {
+						role,
+						key,
+					});
+				},
+			},
+		},
+		draggable: {
+			enabled: true,
+		},
+	});
+}
+
 // todo: config model
 export function getConfig(): Promise<Config> {
+    // todo: pull from config
 	return fetch('http://10.0.0.73:8000/config').then(function (r) {
 		return r.json();
 	});
@@ -399,31 +374,16 @@ export function initializeBoard(): Promise<void> {
 				premovable: {
 					enabled: true,
 					showDests: true,
-					events: {
-						set: function (o, d, meta) {
-							console.log('initializeBoard.premovable.set:', {
-								o,
-								d,
-								meta,
-							});
-						},
-					},
 				},
 				predroppable: {
 					enabled: true,
-					events: {
-						set: function (role, key) {
-							console.log('initializeBoard.predroppable.set:', {
-								role,
-								key,
-							});
-						},
-					},
 				},
 				draggable: {
 					enabled: true,
 				},
 			});
+
+			// initializeTestBoard(initialConfig);
 			resolve();
 		} catch (error) {
 			console.error(error);

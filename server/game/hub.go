@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"time"
 
@@ -89,6 +88,7 @@ func (h *Hub) Run() {
 			case 0:
 				return
 			case 1:
+				// move this to "get game" func
 				game, ok := h.GamesInProgress[message.Move.GameId]
 				if !ok {
 					if len(h.GamesAwaitingOpponent) == 0 {
@@ -99,18 +99,19 @@ func (h *Hub) Run() {
 					log.Printf("Game awaiting opponent; gameId: %s\n", message.Move.GameId)
 					return
 				}
-
 				if game.GameId == "" {
 					log.Printf("Missing gameId.")
 					return
 				}
 
-				timeout := handleTimeoutMessage(message, game)
-				if timeout {
-					return
+				switch message.Move.Type {
+				case "move":
+					handleMoveMessage(h.Config, message, game)
+				case "premove":
+					handlePremoveMessage(message, game)
+				case "timeout":
+					handleTimeoutMessage(message, game)
 				}
-
-				handleMoveMessage(h.Config, message, game)
 			case 2:
 				game, ok := h.GamesInProgress[message.Move.GameId]
 				if !ok {
@@ -145,7 +146,9 @@ func getGameFEN() (string, error) {
 	var result string
 	var isGameAcceptable bool
 	for !isGameAcceptable {
-		fileName := files[rand.Intn(len(files))].Name()
+		// testing with same game every time
+		fileName := files[1].Name()
+		// fileName := files[rand.Intn(len(files))].Name()
 		file, err := os.Open(dir + "\\" + fileName)
 		if err != nil {
 			return "", err

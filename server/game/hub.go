@@ -122,6 +122,7 @@ func (h *Hub) Run() {
 				}
 
 				if game != nil {
+					fmt.Println("GAME ABANDONED")
 					handleAbandonedMessage(game)
 				}
 				delete(h.GamesInProgress, message.Move.GameId)

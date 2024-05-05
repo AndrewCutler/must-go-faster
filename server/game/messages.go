@@ -74,9 +74,9 @@ func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []
 	return jsonData
 }
 
-func sendAbandondedMessage() []byte {
+func sendAbandonedMessage() []byte {
 	data := map[string]interface{}{
-		"abandonded": true,
+		"abandoned": true,
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -92,7 +92,7 @@ func sendAbandondedMessage() []byte {
 func handleAbandonedMessage(game *GameMeta) {
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.Send <- sendAbandondedMessage():
+		case player.Send <- sendAbandonedMessage():
 		default:
 			close(player.Send)
 		}

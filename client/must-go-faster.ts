@@ -13,7 +13,7 @@ import {
 	isMoveResponse,
 	isTimeoutResponse,
 	TimeoutResponse,
-	isAbandondedResponse,
+	isAbandonedResponse,
 	Config,
 	ChessgroundConfig,
 	PremoveRequest,
@@ -163,9 +163,7 @@ function handleMoveResponse(response: MoveResponse): void {
 
 	timeLeft = response.timeLeft;
 	setTimer();
-	if (
-		board.state.premovable.current
-	) {
+	if (board.state.premovable.current) {
 		// send premove message which checks if premove is valid
 		// if so, play response on server and send updated fen
 		const [from, to] = board.state.premovable.current;
@@ -188,6 +186,15 @@ function handleTimeoutResponse(response: TimeoutResponse): void {
 		status = 'lost';
 	}
 	gameOver(status, 'timeout');
+}
+
+function handleAbandonedResponse(): void {
+	console.log('handle abandoned');
+	let status: GameStatus = 'won';
+	gameOver(status, 'abandonment');
+	if (ws) {
+		ws.close();
+	}
 }
 //endregion
 
@@ -216,9 +223,9 @@ function handleResponse(response: unknown): void {
 		handleTimeoutResponse(response);
 	}
 
-	if (isAbandondedResponse(response)) {
-		console.log({ abandondedResponse: response });
-		// handleAbandonedResponse
+	if (isAbandonedResponse(response)) {
+		console.log({ abandonedResponse: response });
+		handleAbandonedResponse();
 	}
 }
 
@@ -246,7 +253,7 @@ export function awaitGame(c: Config): void {
 
 function gameOver(
 	gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
-	method: 'timeout' | 'checkmate' | 'resignation',
+	method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 ): void {
 	// have to add draws
 	const modal = document.querySelector<HTMLDivElement>('#game-status-modal')!;
@@ -345,7 +352,7 @@ function initializeTestBoard(initialConfig: ChessgroundConfig): void {
 
 // todo: config model
 export function getConfig(): Promise<Config> {
-    // todo: pull from config
+	// todo: pull from config
 	return fetch('http://10.0.0.73:8000/config').then(function (r) {
 		return r.json();
 	});

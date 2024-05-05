@@ -26,8 +26,8 @@ export type TimeoutResponse = BaseResponse & {
 	loser: PlayerColor;
 };
 
-export type AbandondedResponse = {
-	abandonded: boolean;
+export type AbandonedResponse = {
+	abandoned: boolean;
 };
 
 export function isGameStartedResponse(
@@ -47,8 +47,8 @@ export function isTimeoutResponse(obj: any): obj is TimeoutResponse {
 	return obj.loser !== undefined;
 }
 
-export function isAbandondedResponse(obj: any): obj is AbandondedResponse {
-	return obj.abandonded !== undefined;
+export function isAbandonedResponse(obj: any): obj is AbandonedResponse {
+	return obj.abandoned !== undefined;
 }
 
 export type Move = {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	c "server/config"
 
@@ -70,7 +69,12 @@ func (h *Hub) Run() {
 					game = h.GamesAwaitingOpponent[key]
 					break
 				}
-				game.Timer = time.Now()
+				// todo: timer for both colors.
+				// should not start on Register,
+				// but on receipt of GameStarted message from client
+				// which indicates on-screen countdown finished
+				// and play has begun
+				// game.Timer = time.Now()
 				game.Black = player
 				player.GameId = game.GameId
 				player.Color = "black"
@@ -111,6 +115,10 @@ func (h *Hub) Run() {
 					handlePremoveMessage(message, game)
 				case "timeout":
 					handleTimeoutMessage(message, game)
+				case "gameStarted":
+					handleGameStartedMessage(message, game)
+				default:
+					log.Println("Unknown move type: ", message.Move.Type)
 				}
 			case 2:
 				game, ok := h.GamesInProgress[message.Move.GameId]

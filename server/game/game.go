@@ -18,17 +18,17 @@ type Message struct {
 }
 
 type Move struct {
-	Type   string // 'move' || 'premove' || 'timeout'
+	Type   string // 'move' || 'premove' || 'timeout' || 'gameStarted'
 	GameId string
 	Data   []byte
 }
 
 type GameMeta struct {
-	Game           *chess.Game
-	White          *Player
-	Black          *Player
-	GameId         string
-	Timer          time.Time
+	Game   *chess.Game
+	White  *Player
+	Black  *Player
+	GameId string
+	// Timer          time.Time
 	CurrentPremove string // todo: premove type
 }
 
@@ -58,15 +58,18 @@ func (g *GameMeta) whoseMoveIsIt() string {
 	return ""
 }
 
-func (g *GameMeta) getTimeRemaining(config *c.ClientConfig) float64 {
+// todo: separate timeLeft for each color
+func (g *GameMeta) getTimeLeft(config *c.ClientConfig) (float64, float64) {
 	gameTime, err := time.ParseDuration(fmt.Sprintf("%ds", config.StartingTime))
 	if err != nil {
 		log.Println("Unable to create duration of 30s")
 	} else {
-		return (gameTime - time.Since(g.Timer)).Seconds()
+		whiteTimeLeft := (gameTime - time.Since(g.White.Timer)).Seconds()
+		blackTimeLeft := (gameTime - time.Since(g.Black.Timer)).Seconds()
+		return whiteTimeLeft, blackTimeLeft
 	}
 
-	return 0
+	return 0, 0
 }
 
 func ValidMovesMap(g *chess.Game) map[string][]string {

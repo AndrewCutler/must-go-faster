@@ -18,13 +18,14 @@ import {
 	ChessgroundConfig,
 	PremoveRequest,
 	Move,
+	GameStartedRequest,
 } from './models';
 
 let ws: WebSocket;
 let board: ChessgroundApi;
 let gameId: string;
 let timeLeft: number;
-let countdown: number;
+let gameClock: number;
 let timerInterval: number;
 let playerColor: PlayerColor;
 let config: Config;
@@ -87,6 +88,13 @@ function showCountdownToStartGame(): Promise<void> {
 			if (i <= 0) {
 				window.clearInterval(countdownInterval);
 				countdownDisplay.style.display = 'none';
+				if (ws) {
+					const gameStartedRequest: GameStartedRequest = {
+						type: 'gameStarted',
+						gameId: gameId,
+					};
+					ws.send(JSON.stringify(gameStartedRequest));
+				}
 				resolve();
 			} else {
 				countdownDisplay.innerText = i.toString();
@@ -102,7 +110,7 @@ async function handleGameStartedResponse(
 	if (response.gameStarted) {
 		gameId = response.gameId;
 		playerColor = response.playerColor;
-		timeLeft = countdown = config.startingTime;
+		timeLeft = gameClock = config.startingTime;
 
 		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
 		gameMeta.style.visibility = 'inherit';
@@ -157,11 +165,14 @@ function handleMoveResponse(response: MoveResponse): void {
 	if (response.isCheckmated) {
 		gameStatus = response.isCheckmated === playerColor ? 'lost' : 'won';
 		gameOver(gameStatus, 'checkmate');
-		countdown = 0;
+		gameClock = 0;
 		return;
 	}
 
-	timeLeft = response.timeLeft;
+	timeLeft =
+		playerColor === 'white'
+			? response.whiteTimeLeft
+			: response.blackTimeLeft;
 	setTimer();
 	if (board.state.premovable.current) {
 		// send premove message which checks if premove is valid
@@ -296,16 +307,16 @@ function setTimer(): void {
 	const timerDiv = document.querySelector<HTMLDivElement>('#timer')!;
 	const start = new Date();
 	timerInterval = window.setInterval(function () {
-		if (countdown <= 0) {
+		if (gameClock <= 0) {
 			window.clearInterval(timerInterval);
 			sendTimeoutMessage();
 			return;
 		}
 		const diff = new Date().getTime() - start.getTime();
-		countdown = timeLeft - diff / 1_000;
+		gameClock = timeLeft - diff / 1_000;
 
 		timerDiv.innerHTML =
-			'<div>' + (countdown > 0 ? countdown : 0).toFixed(1) + 's</div>';
+			'<div>' + (gameClock > 0 ? gameClock : 0).toFixed(1) + 's</div>';
 	}, 10);
 }
 

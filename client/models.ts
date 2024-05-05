@@ -15,7 +15,9 @@ type BaseResponse = {
 export type MoveResponse = BaseResponse & {
 	validMoves: { [key: string]: string[] };
 	isCheckmated: PlayerColor | '';
-	timeLeft: number;
+	// timeLeft: number;
+	whiteTimeLeft: number;
+	blackTimeLeft: number;
 };
 
 export type GameStartedResponse = Omit<MoveResponse, 'isCheckmated'> & {
@@ -58,8 +60,10 @@ export type Move = {
 
 type BaseRequest = {
 	gameId: string;
-	type: 'move' | 'premove' | 'timeout';
+	type: 'move' | 'premove' | 'timeout' | 'gameStarted';
 };
+
+export type GameStartedRequest = BaseRequest;
 
 export type MoveRequest = {
 	move: Move;

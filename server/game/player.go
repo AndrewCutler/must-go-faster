@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -13,6 +14,7 @@ type Player struct {
 	Send       chan []byte
 	Hub        *Hub
 	Color      string
+	Timer      time.Time
 }
 
 func (p *Player) ReadMessage() {

@@ -9,14 +9,16 @@ import (
 
 // Send
 func sendGameStartMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
+	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
 	data := map[string]interface{}{
-		"gameStarted": true,
-		"fen":         gameMeta.getFen(),
-		"gameId":      gameMeta.GameId,
-		"playerColor": playerColor, // is this necessary
-		"validMoves":  ValidMovesMap(gameMeta.Game),
-		"whosNext":    gameMeta.whoseMoveIsIt(),
-		"timeLeft":    gameMeta.getTimeRemaining(config),
+		"gameStarted":   true,
+		"fen":           gameMeta.getFen(),
+		"gameId":        gameMeta.GameId,
+		"playerColor":   playerColor, // is this necessary
+		"validMoves":    ValidMovesMap(gameMeta.Game),
+		"whosNext":      gameMeta.whoseMoveIsIt(),
+		"whiteTmeLeft":  whiteTimeLeft,
+		"blackTimeLeft": blackTimeLeft,
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -113,6 +115,10 @@ func handlePremoveMessage(message Message, game *GameMeta) {
 			close(player.Send)
 		}
 	}
+}
+
+func handleGameStartedMessage(message Message, game *GameMeta) {
+	fmt.Println("game started")
 }
 
 func handleTimeoutMessage(message Message, game *GameMeta) {

@@ -116,7 +116,7 @@ func (h *Hub) Run() {
 				case "timeout":
 					handleTimeoutMessage(message, game)
 				case "gameStarted":
-					handleGameStartedMessage(message, game)
+					handleGameStartedMessage(h.Config, message, game)
 				default:
 					log.Println("Unknown move type: ", message.Move.Type)
 				}

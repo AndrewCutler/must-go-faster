@@ -20,6 +20,7 @@ import {
 	Move,
 	GameStartedRequest,
 } from './models';
+import { MyClass } from './class';
 
 let ws: WebSocket;
 let board: ChessgroundApi;
@@ -40,33 +41,6 @@ function checkIsPromotion(to: cg.Key): cg.Key {
 	return to;
 }
 
-function afterClientMove(
-	from: cg.Key,
-	to: cg.Key,
-	meta: cg.MoveMetadata,
-): void {
-	// handle promotion here; autopromote to queen for now
-	to = checkIsPromotion(to);
-	// premove is set here
-	board.move(from, to);
-
-	const move: { from: cg.Key; to: cg.Key } = { from, to };
-	if (ws) {
-		const message: MoveRequest = { move, gameId, type: 'move' };
-		ws.send(JSON.stringify(message));
-	}
-	console.log({ state: board.state });
-	board.set({
-		turnColor: playerColor === 'white' ? 'black' : 'white',
-		movable: {
-			color: playerColor,
-		},
-		premovable: {
-			enabled: true,
-		},
-	});
-}
-
 function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
 	const validMoves = new Map();
 	for (const [key, value] of Object.entries(moves)) {
@@ -74,6 +48,35 @@ function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
 	}
 
 	return validMoves;
+}
+
+// todo: pass instance of class
+function handleClientMove(val: MyClass) {
+	console.log(val);
+	return function (from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
+		// handle promotion here; autopromote to queen for now
+		to = checkIsPromotion(to);
+		// premove is set here
+		board.move(from, to);
+
+		const move: { from: cg.Key; to: cg.Key } = { from, to };
+		// if (ws) {
+		if (val.connection) {
+			const message: MoveRequest = { move, gameId, type: 'move' };
+			val.connection.send(JSON.stringify(message));
+			// ws.send(JSON.stringify(message));
+		}
+		console.log({ state: board.state });
+		board.set({
+			turnColor: playerColor === 'white' ? 'black' : 'white',
+			movable: {
+				color: playerColor,
+			},
+			premovable: {
+				enabled: true,
+			},
+		});
+	};
 }
 
 function showCountdownToStartGame(): Promise<void> {
@@ -221,36 +224,42 @@ function handleResponse(response: unknown): void {
 		)!;
 		connectButtonContainer.style.display = 'none';
 
+    // myClass.isGameStartedReponse(response).start();
 		handleGameStartedResponse(response);
 	}
 
+    // myClass.isMoveReponse(response).move();
 	if (isMoveResponse(response)) {
 		console.log({ moveResponse: response });
 		handleMoveResponse(response);
 	}
 
+    // myClass.isTimeoutReponse(response).timeout();
 	if (isTimeoutResponse(response)) {
 		console.log({ timeoutResponse: response });
 		handleTimeoutResponse(response);
 	}
 
+    // myClass.isAbandonedReponse(response).abandoned();
 	if (isAbandonedResponse(response)) {
 		console.log({ abandonedResponse: response });
 		handleAbandonedResponse();
 	}
 }
 
-export function awaitGame(c: Config): void {
+export function awaitGame(c: Config, myClass: MyClass): void {
 	config = c;
 	const button = document.querySelector('#connect-button')!;
 	button.addEventListener('click', function () {
 		button.classList.add('is-loading');
 		// todo: grab from config
+		// set MyClass.connection here
 		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
 		ws.onopen = function (event) {
 			document.getElementById('board')!.style.pointerEvents = 'auto';
 		};
 
+        // 
 		ws.onmessage = function (event) {
 			try {
 				const response: unknown = JSON.parse(event.data);
@@ -259,6 +268,7 @@ export function awaitGame(c: Config): void {
 				console.error(e);
 			}
 		};
+		myClass.connection = ws;
 	});
 }
 
@@ -321,6 +331,8 @@ function setTimer(): void {
 }
 
 function initializeTestBoard(initialConfig: ChessgroundConfig): void {
+	const myClass = new MyClass();
+
 	const testBoardDiv = document.getElementById('test-board')!;
 	testBoardDiv.style.display = 'block';
 	const testBoard = Chessground(testBoardDiv, initialConfig);
@@ -328,7 +340,8 @@ function initializeTestBoard(initialConfig: ChessgroundConfig): void {
 		viewOnly: false,
 		movable: {
 			events: {
-				after: afterClientMove,
+				// after: handleClientMove(myClass),
+				// after: afterClientMove,
 			},
 		},
 		premovable: {
@@ -362,16 +375,25 @@ function initializeTestBoard(initialConfig: ChessgroundConfig): void {
 }
 
 // todo: config model
-export function getConfig(): Promise<Config> {
+export function getConfig(
+	myClass: MyClass,
+): Promise<{ config: Config; myClass: MyClass }> {
 	// todo: pull from config
-	return fetch('http://10.0.0.73:8000/config').then(function (r) {
-		return r.json();
+	return fetch('http://10.0.0.73:8000/config').then(async function (r) {
+		try {
+			const config = await r.json();
+			return { config, myClass: myClass };
+		} catch (error) {
+			console.error(error);
+			return { config: undefined, myClass: myClass };
+		}
 	});
 }
 
-export function initializeBoard(): Promise<void> {
-	return new Promise<void>(function (resolve, reject) {
+export function initializeBoard(): Promise<MyClass> {
+	return new Promise<MyClass>(function (resolve, reject) {
 		try {
+			const myClass = new MyClass();
 			const initialConfig: ChessgroundConfig = {
 				movable: {
 					free: false,
@@ -386,7 +408,8 @@ export function initializeBoard(): Promise<void> {
 				viewOnly: false,
 				movable: {
 					events: {
-						after: afterClientMove,
+						after: handleClientMove(myClass),
+						// after: afterClientMove,
 					},
 				},
 				premovable: {
@@ -402,7 +425,7 @@ export function initializeBoard(): Promise<void> {
 			});
 
 			// initializeTestBoard(initialConfig);
-			resolve();
+			resolve(myClass);
 		} catch (error) {
 			console.error(error);
 			reject('Failed to initialize board.');

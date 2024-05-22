@@ -3,8 +3,11 @@ import {
 	Config,
 	GameStartedRequest,
 	GameStartedResponse,
+	GameStatus,
+	Move,
 	MoveResponse,
 	PlayerColor,
+	PremoveRequest,
 	TimeoutRequest,
 } from './models';
 import * as cg from 'chessground/types.js';
@@ -19,6 +22,7 @@ export class MyClass {
 	#config: Config | undefined;
 	#connection: WebSocket | undefined;
 	#board: any;
+	#response: any;
 
 	set connection(value: WebSocket) {
 		console.log('setting connection');
@@ -32,18 +36,64 @@ export class MyClass {
 
 	constructor() {}
 
-	isGameStartedResponse(obj: unknown): this {
-		this.#moveType = 'gameStarted';
+	handleResponse(obj: unknown): this {
+		this.#response = obj;
+		if ((obj as any).gameStarted !== undefined) {
+			this.#moveType = 'gameStarted';
+		}
+
+		if (
+			(obj as any).validMoves !== undefined &&
+			(obj as any).gameStarted === undefined
+		) {
+			this.#moveType = 'move';
+		}
+
+		if ((obj as any).loser !== undefined) {
+			this.#moveType = 'timeout';
+		}
+
+		if ((obj as any).abandoned !== undefined) {
+			this.#moveType = 'abandoned';
+		}
+
 		return this;
 	}
 
-	isMoveResponse(obj: unknown): this {
-		this.#moveType = 'move';
-		return this;
-	}
+	// isGameStartedResponse(obj: unknown): this {
+	// 	if ((obj as any).gameStarted !== undefined) {
+	// 		this.#moveType = 'gameStarted';
+	// 	}
+	// 	return this;
+	// }
 
-	async start(response: GameStartedResponse): Promise<void> {
-		if (response.gameStarted) {
+	// isMoveResponse(obj: unknown): this {
+	// 	if (
+	// 		(obj as any).validMoves !== undefined &&
+	// 		(obj as any).gameStarted === undefined
+	// 	) {
+	// 		this.#moveType = 'move';
+	// 	}
+	// 	return this;
+	// }
+
+	// isTimeoutResponse(obj: unknown): this {
+	// 	if ((obj as any).loser !== undefined) {
+	// 		this.#moveType = 'timeout';
+	// 	}
+	// 	return this;
+	// }
+
+	// isAbandonedResponse(obj: unknown): this {
+	// 	if ((obj as any).abandoned !== undefined) {
+	// 		this.#moveType = 'abandoned';
+	// 	}
+	// 	return this;
+	// }
+
+	async start(): Promise<void> {
+		if ((this.#moveType = 'gameStarted')) {
+			const response = this.#response as GameStartedResponse;
 			this.#gameId = response.gameId;
 			this.#playerColor = response.playerColor;
 			this.#timeLeft = this.#gameClock = this.#config?.startingTime;
@@ -93,6 +143,43 @@ export class MyClass {
 			this.setTimer();
 			this.#board.set({
 				viewOnly: false,
+			});
+		}
+	}
+
+	move(): void {
+		if (this.#moveType === 'move') {
+			const response = this.#response as MoveResponse;
+			let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
+			if (response.isCheckmated) {
+				gameStatus =
+					response.isCheckmated === this.#playerColor
+						? 'lost'
+						: 'won';
+				this.gameOver(gameStatus, 'checkmate');
+				this.#gameClock = 0;
+				return;
+			}
+
+			this.#timeLeft =
+				this.#playerColor === 'white'
+					? response.whiteTimeLeft
+					: response.blackTimeLeft;
+			this.setTimer();
+			if (this.#board.state.premovable.current) {
+				// send premove message which checks if premove is valid
+				// if so, play response on server and send updated fen
+				const [from, to] = this.#board.state.premovable.current;
+				this.sendPremoveMessage({ from, to });
+				this.#board.playPremove();
+			}
+
+			this.#board.set({
+				fen: response.fen,
+				turnColor: response.whosNext,
+				movable: {
+					dests: this.toValidMoves(response.validMoves),
+				},
 			});
 		}
 	}
@@ -171,5 +258,31 @@ export class MyClass {
 		}
 
 		return validMoves;
+	}
+
+	private gameOver(
+		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
+		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
+	): void {
+		// have to add draws
+		const modal =
+			document.querySelector<HTMLDivElement>('#game-status-modal')!;
+		modal.style.display = 'block';
+		const modalHeader =
+			document.querySelector<HTMLDivElement>('#modal-header')!;
+		modalHeader.innerText = `You ${gameStatus} via ${method}.`;
+	}
+
+	private sendPremoveMessage(p: Move): void {
+		if (this.#connection) {
+			const premove: PremoveRequest = {
+				type: 'premove',
+				gameId: this.#gameId!,
+				premove: p,
+			};
+			this.#connection.send(JSON.stringify(premove));
+		} else {
+			throw new Error('connection is undefined.');
+		}
 	}
 }

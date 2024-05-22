@@ -224,23 +224,23 @@ function handleResponse(response: unknown): void {
 		)!;
 		connectButtonContainer.style.display = 'none';
 
-    // myClass.isGameStartedReponse(response).start();
+    // myClass.handleResponse(response).start();
 		handleGameStartedResponse(response);
 	}
 
-    // myClass.isMoveReponse(response).move();
+    // myClass.handleResponse(response).move();
 	if (isMoveResponse(response)) {
 		console.log({ moveResponse: response });
 		handleMoveResponse(response);
 	}
 
-    // myClass.isTimeoutReponse(response).timeout();
+    // myClass.handleResponse(response).timeout();
 	if (isTimeoutResponse(response)) {
 		console.log({ timeoutResponse: response });
 		handleTimeoutResponse(response);
 	}
 
-    // myClass.isAbandonedReponse(response).abandoned();
+    // myClass.handleResponse(response).abandoned();
 	if (isAbandonedResponse(response)) {
 		console.log({ abandonedResponse: response });
 		handleAbandonedResponse();

@@ -49,6 +49,7 @@ export class MustGoFaster {
 	}
 
 	constructor() {
+		console.log('Initializing MustGoFaster.');
 		this.connect = this.connect.bind(this);
 		const initialConfig: ChessgroundConfig = {
 			movable: {
@@ -82,6 +83,7 @@ export class MustGoFaster {
 	}
 
 	connect(): void {
+		console.log('Connecting...');
 		const ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
 		ws.onopen = function (event) {
 			document.getElementById('board')!.style.pointerEvents = 'auto';
@@ -101,6 +103,8 @@ export class MustGoFaster {
 
 	private handleMessage(obj: unknown) {
 		this.#response = obj;
+
+		console.log('Handle message: ', { obj });
 		if (isGameStartedResponse(obj)) {
 			this.start();
 		}
@@ -120,6 +124,7 @@ export class MustGoFaster {
 
 	private async start(): Promise<void> {
 		// if ((this.#moveType = 'gameStarted')) {
+		console.log('start: ', { response: this.#response });
 		const response = this.#response as GameStartedResponse;
 		this.#gameId = response.gameId;
 		this.#playerColor = response.playerColor;
@@ -175,6 +180,7 @@ export class MustGoFaster {
 	private move(): void {
 		if (this.#moveType === 'move') {
 			const response = this.#response as MoveResponse;
+			console.log('move: ', { move: response });
 			let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 			if (response.isCheckmated) {
 				gameStatus =
@@ -218,7 +224,6 @@ export class MustGoFaster {
 	}
 
 	private abandoned(): void {
-		console.log('handle abandoned');
 		let status: GameStatus = 'won';
 		this.gameOver(status, 'abandonment');
 		if (this.#connection) {
@@ -307,6 +312,7 @@ export class MustGoFaster {
 		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 	): void {
+		console.log('gameOver: ', { gameStatus, method });
 		// have to add draws
 		const modal =
 			document.querySelector<HTMLDivElement>('#game-status-modal')!;
@@ -317,6 +323,7 @@ export class MustGoFaster {
 	}
 
 	private sendPremoveMessage(p: Move): void {
+		console.log('sendPremoveMessage: ', { premove: p });
 		if (this.#connection) {
 			const premove: PremoveRequest = {
 				type: 'premove',
@@ -336,6 +343,7 @@ export class MustGoFaster {
 			to: cg.Key,
 			meta: cg.MoveMetadata,
 		): void {
+			console.log('Handle move: ', { from, to });
 			// handle promotion here; autopromote to queen for now
 			to = self.checkIsPromotion(to);
 			// premove is set here

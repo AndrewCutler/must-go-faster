@@ -1,3 +1,4 @@
+import { Chessground } from 'chessground';
 import {
 	ChessgroundConfig,
 	Config,
@@ -5,11 +6,18 @@ import {
 	GameStartedResponse,
 	GameStatus,
 	Move,
+	MoveRequest,
 	MoveResponse,
 	PlayerColor,
 	PremoveRequest,
 	TimeoutRequest,
+	isAbandonedResponse,
+	isGameStartedResponse,
+	isMoveResponse,
+	isTimeoutResponse,
 } from './models';
+
+import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 
 export class MyClass {
@@ -21,133 +29,150 @@ export class MyClass {
 	#timerInterval: number | undefined;
 	#config: Config | undefined;
 	#connection: WebSocket | undefined;
-	#board: any;
+	#board: ChessgroundApi | undefined;
 	#response: any;
-
-	set connection(value: WebSocket) {
-		console.log('setting connection');
-		if (!value) throw new Error('MyClass.connection cannot be undefined.');
-		this.#connection = value;
-	}
 
 	get connection(): WebSocket | undefined {
 		return this.#connection;
 	}
 
-	constructor() {}
-
-	handleResponse(obj: unknown): this {
-		this.#response = obj;
-		if ((obj as any).gameStarted !== undefined) {
-			this.#moveType = 'gameStarted';
-		}
-
-		if (
-			(obj as any).validMoves !== undefined &&
-			(obj as any).gameStarted === undefined
-		) {
-			this.#moveType = 'move';
-		}
-
-		if ((obj as any).loser !== undefined) {
-			this.#moveType = 'timeout';
-		}
-
-		if ((obj as any).abandoned !== undefined) {
-			this.#moveType = 'abandoned';
-		}
-
-		return this;
+	set config(value: Config) {
+		this.#config = value;
 	}
 
-	// isGameStartedResponse(obj: unknown): this {
-	// 	if ((obj as any).gameStarted !== undefined) {
-	// 		this.#moveType = 'gameStarted';
-	// 	}
-	// 	return this;
-	// }
+	set board(value: ChessgroundApi) {
+		this.#board = value;
+	}
 
-	// isMoveResponse(obj: unknown): this {
-	// 	if (
-	// 		(obj as any).validMoves !== undefined &&
-	// 		(obj as any).gameStarted === undefined
-	// 	) {
-	// 		this.#moveType = 'move';
-	// 	}
-	// 	return this;
-	// }
+	get playerColor(): PlayerColor | undefined {
+		return this.#playerColor;
+	}
 
-	// isTimeoutResponse(obj: unknown): this {
-	// 	if ((obj as any).loser !== undefined) {
-	// 		this.#moveType = 'timeout';
-	// 	}
-	// 	return this;
-	// }
+	constructor() {
+		this.connect = this.connect.bind(this);
+		const initialConfig: ChessgroundConfig = {
+			movable: {
+				free: false,
+				color: 'white',
+			},
+		};
+		this.#board = Chessground(
+			document.getElementById('board')!,
+			initialConfig,
+		);
+		this.#board.set({
+			viewOnly: false,
+			movable: {
+				events: {
+					after: this.handleClientMove(),
+					// after: afterClientMove,
+				},
+			},
+			premovable: {
+				enabled: true,
+				showDests: true,
+			},
+			predroppable: {
+				enabled: true,
+			},
+			draggable: {
+				enabled: true,
+			},
+		});
+	}
 
-	// isAbandonedResponse(obj: unknown): this {
-	// 	if ((obj as any).abandoned !== undefined) {
-	// 		this.#moveType = 'abandoned';
-	// 	}
-	// 	return this;
-	// }
+	connect(): void {
+		const ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
+		ws.onopen = function (event) {
+			document.getElementById('board')!.style.pointerEvents = 'auto';
+		};
 
-	async start(): Promise<void> {
-		if ((this.#moveType = 'gameStarted')) {
-			const response = this.#response as GameStartedResponse;
-			this.#gameId = response.gameId;
-			this.#playerColor = response.playerColor;
-			this.#timeLeft = this.#gameClock = this.#config?.startingTime;
-
-			const gameMeta =
-				document.querySelector<HTMLDivElement>('#game-meta')!;
-			gameMeta.style.visibility = 'inherit';
-			const gameMetaIcon =
-				document.querySelector<HTMLElement>('#game-meta .icon i');
-			if (this.#playerColor === 'black') {
-				gameMetaIcon?.classList.add('is-black');
-			} else {
-				gameMetaIcon?.classList.remove('is-black');
+		const self = this;
+		ws.onmessage = function (event) {
+			try {
+				const response: unknown = JSON.parse(event.data);
+				self.handleMessage(response);
+			} catch (e) {
+				console.error(e);
 			}
-			const whoseMove = document.querySelector<HTMLDivElement>(
-				'#game-meta #whose-move',
-			)!;
-			whoseMove.innerText = `${
-				response.whosNext === 'white' ? 'White' : 'Black'
-			} to play.`;
-			const playerColorDiv = document.querySelector<HTMLDivElement>(
-				'#game-meta #player-color',
-			)!;
-			playerColorDiv.innerText = `You play ${this.#playerColor}.`;
+		};
+		this.#connection = ws;
+	}
 
-			this.#board.set({
-				viewOnly: true,
-				fen: response.fen,
-				turnColor: response.whosNext,
-				orientation: this.#playerColor,
-				movable: {
-					dests: this.toValidMoves(response.validMoves),
-					color: this.#playerColor,
-				},
-				premovable: {
-					enabled: true,
-					showDests: true,
-				},
-				draggable: {
-					enabled: true,
-				},
-			} as ChessgroundConfig);
+	private handleMessage(obj: unknown) {
+		this.#response = obj;
+		if (isGameStartedResponse(obj)) {
+			this.start();
+		}
 
-			await this.showCountdownToStartGame();
+		if (isMoveResponse(obj)) {
+			this.move();
+		}
 
-			console.log(this.#board.state);
-			this.setTimer();
-			this.#board.set({
-				viewOnly: false,
-			});
+		if (isTimeoutResponse(obj)) {
+			this.timeout();
+		}
+
+		if (isAbandonedResponse(obj)) {
+			this.abandoned();
 		}
 	}
 
-	move(): void {
+	private async start(): Promise<void> {
+		// if ((this.#moveType = 'gameStarted')) {
+		const response = this.#response as GameStartedResponse;
+		this.#gameId = response.gameId;
+		this.#playerColor = response.playerColor;
+		this.#timeLeft = this.#gameClock = this.#config?.startingTime;
+
+		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
+		gameMeta.style.visibility = 'inherit';
+		const gameMetaIcon =
+			document.querySelector<HTMLElement>('#game-meta .icon i');
+		if (this.#playerColor === 'black') {
+			gameMetaIcon?.classList.add('is-black');
+		} else {
+			gameMetaIcon?.classList.remove('is-black');
+		}
+		const whoseMove = document.querySelector<HTMLDivElement>(
+			'#game-meta #whose-move',
+		)!;
+		whoseMove.innerText = `${
+			response.whosNext === 'white' ? 'White' : 'Black'
+		} to play.`;
+		const playerColorDiv = document.querySelector<HTMLDivElement>(
+			'#game-meta #player-color',
+		)!;
+		playerColorDiv.innerText = `You play ${this.#playerColor}.`;
+
+		this.#board!.set({
+			viewOnly: true,
+			fen: response.fen,
+			turnColor: response.whosNext,
+			orientation: this.#playerColor,
+			movable: {
+				dests: this.toValidMoves(response.validMoves),
+				color: this.#playerColor,
+			},
+			premovable: {
+				enabled: true,
+				showDests: true,
+			},
+			draggable: {
+				enabled: true,
+			},
+		} as ChessgroundConfig);
+
+		await this.showCountdownToStartGame();
+
+		console.log(this.#board!.state);
+		this.setTimer();
+		this.#board!.set({
+			viewOnly: false,
+		});
+	}
+
+	private move(): void {
 		if (this.#moveType === 'move') {
 			const response = this.#response as MoveResponse;
 			let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
@@ -166,15 +191,15 @@ export class MyClass {
 					? response.whiteTimeLeft
 					: response.blackTimeLeft;
 			this.setTimer();
-			if (this.#board.state.premovable.current) {
+			if (this.#board!.state.premovable.current) {
 				// send premove message which checks if premove is valid
 				// if so, play response on server and send updated fen
-				const [from, to] = this.#board.state.premovable.current;
+				const [from, to] = this.#board!.state.premovable.current;
 				this.sendPremoveMessage({ from, to });
-				this.#board.playPremove();
+				this.#board!.playPremove();
 			}
 
-			this.#board.set({
+			this.#board!.set({
 				fen: response.fen,
 				turnColor: response.whosNext,
 				movable: {
@@ -184,7 +209,25 @@ export class MyClass {
 		}
 	}
 
-	async showCountdownToStartGame(): Promise<void> {
+	private timeout(): void {
+		let status: GameStatus = 'won';
+		if (this.#response.loser === this.#playerColor) {
+			status = 'lost';
+		}
+		this.gameOver(status, 'timeout');
+	}
+
+	private abandoned(): void {
+		console.log('handle abandoned');
+		let status: GameStatus = 'won';
+		this.gameOver(status, 'abandonment');
+		if (this.#connection) {
+			this.#connection.close();
+		}
+		// wipe out all game-specific data in class
+	}
+
+	private async showCountdownToStartGame(): Promise<void> {
 		return new Promise((resolve) => {
 			const countdownDisplay = document.querySelector<HTMLDivElement>(
 				'#countdown-container',
@@ -215,7 +258,7 @@ export class MyClass {
 		});
 	}
 
-	setTimer(): void {
+	private setTimer(): void {
 		// clear previous interval
 		window.clearInterval(this.#timerInterval);
 
@@ -284,5 +327,51 @@ export class MyClass {
 		} else {
 			throw new Error('connection is undefined.');
 		}
+	}
+
+	private handleClientMove() {
+		const self = this;
+		return function (
+			from: cg.Key,
+			to: cg.Key,
+			meta: cg.MoveMetadata,
+		): void {
+			// handle promotion here; autopromote to queen for now
+			to = self.checkIsPromotion(to);
+			// premove is set here
+			self.#board!.move(from, to);
+
+			const move: { from: cg.Key; to: cg.Key } = { from, to };
+			// if (ws) {
+			if (self.#connection) {
+				const message: MoveRequest = {
+					move,
+					gameId: self.#gameId!,
+					type: 'move',
+				};
+				self.#connection.send(JSON.stringify(message));
+				// ws.send(JSON.stringify(message));
+			}
+			console.log({ state: self.#board!.state });
+			self.#board!.set({
+				turnColor: self.#playerColor === 'white' ? 'black' : 'white',
+				movable: {
+					color: self.#playerColor,
+				},
+				premovable: {
+					enabled: true,
+				},
+			});
+		};
+	}
+
+	private checkIsPromotion(to: cg.Key): cg.Key {
+		const movedPiece = this.#board!.state.pieces.get(to);
+		// any pawn move ending in 1 or 8, i.e. last rank
+		if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
+			to += 'q';
+		}
+
+		return to;
 	}
 }

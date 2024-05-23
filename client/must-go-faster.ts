@@ -1,122 +1,303 @@
-import './index.css';
 import { Chessground } from 'chessground';
-import { Api as ChessgroundApi } from 'chessground/api';
-import * as cg from 'chessground/types.js';
 import {
-	MoveResponse,
+	ChessgroundConfig,
+	Config,
+	GameStartedRequest,
 	GameStartedResponse,
 	GameStatus,
+	Move,
 	MoveRequest,
+	MoveResponse,
 	PlayerColor,
+	PremoveRequest,
 	TimeoutRequest,
+	isAbandonedResponse,
+	isGameJoinedResponse,
 	isGameStartedResponse,
 	isMoveResponse,
 	isTimeoutResponse,
-	TimeoutResponse,
-	isAbandonedResponse,
-	Config,
-	ChessgroundConfig,
-	PremoveRequest,
-	Move,
-	GameStartedRequest,
 } from './models';
 
-let ws: WebSocket;
-let board: ChessgroundApi;
-let gameId: string;
-let timeLeft: number;
-let gameClock: number;
-let timerInterval: number;
-let playerColor: PlayerColor;
-let config: Config;
+import { Api as ChessgroundApi } from 'chessground/api';
+import * as cg from 'chessground/types.js';
 
-function checkIsPromotion(to: cg.Key): cg.Key {
-	const movedPiece = board.state.pieces.get(to);
-	// any pawn move ending in 1 or 8, i.e. last rank
-	if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
-		to += 'q';
+export class MustGoFaster {
+	#moveType: 'gameStarted' | 'abandoned' | 'timeout' | 'move' | undefined;
+	#gameId: string | undefined;
+	#playerColor: PlayerColor | undefined;
+	#timeLeft: number | undefined;
+	#gameClock: number | undefined;
+	#timerInterval: number | undefined;
+	#config: Config | undefined;
+	#connection: WebSocket | undefined;
+	#board: ChessgroundApi | undefined;
+	#response: any;
+
+	get connection(): WebSocket | undefined {
+		return this.#connection;
 	}
 
-	return to;
-}
-
-function afterClientMove(
-	from: cg.Key,
-	to: cg.Key,
-	meta: cg.MoveMetadata,
-): void {
-	// handle promotion here; autopromote to queen for now
-	to = checkIsPromotion(to);
-	// premove is set here
-	board.move(from, to);
-
-	const move: { from: cg.Key; to: cg.Key } = { from, to };
-	if (ws) {
-		const message: MoveRequest = { move, gameId, type: 'move' };
-		ws.send(JSON.stringify(message));
-	}
-	console.log({ state: board.state });
-	board.set({
-		turnColor: playerColor === 'white' ? 'black' : 'white',
-		movable: {
-			color: playerColor,
-		},
-		premovable: {
-			enabled: true,
-		},
-	});
-}
-
-function toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
-	const validMoves = new Map();
-	for (const [key, value] of Object.entries(moves)) {
-		validMoves.set(key, value);
+	set config(value: Config) {
+		this.#config = value;
 	}
 
-	return validMoves;
-}
+	set board(value: ChessgroundApi) {
+		this.#board = value;
+	}
 
-function showCountdownToStartGame(): Promise<void> {
-	return new Promise((resolve) => {
-		const countdownDisplay = document.querySelector<HTMLDivElement>(
-			'#countdown-container',
-		)!;
-		countdownDisplay.style.display = 'block';
-		let countdownInterval: number;
-		let i = 5;
-		countdownInterval = window.setInterval(function () {
-			if (i <= 0) {
-				window.clearInterval(countdownInterval);
-				countdownDisplay.style.display = 'none';
-				if (ws) {
-					const gameStartedRequest: GameStartedRequest = {
-						type: 'gameStarted',
-						gameId: gameId,
-					};
-					ws.send(JSON.stringify(gameStartedRequest));
-				}
-				resolve();
-			} else {
-				countdownDisplay.innerText = i.toString();
-				i--;
+	get playerColor(): PlayerColor | undefined {
+		return this.#playerColor;
+	}
+
+	constructor() {
+		console.log('Initializing MustGoFaster.');
+		this.connect = this.connect.bind(this);
+		const initialConfig: ChessgroundConfig = {
+			movable: {
+				free: false,
+				color: 'white',
+			},
+		};
+		this.#board = Chessground(
+			document.getElementById('board')!,
+			initialConfig,
+		);
+		this.#board.set({
+			viewOnly: false,
+			movable: {
+				events: {
+					after: this.handleClientMove(),
+					// after: afterClientMove,
+				},
+			},
+			premovable: {
+				enabled: true,
+				showDests: true,
+			},
+			predroppable: {
+				enabled: true,
+			},
+			draggable: {
+				enabled: true,
+			},
+		});
+	}
+
+	connect(): void {
+		console.log('Connecting...');
+		const ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
+		ws.onopen = function (event) {
+			document.getElementById('board')!.style.pointerEvents = 'auto';
+		};
+
+		const self = this;
+		ws.onmessage = function (event) {
+			try {
+				const response: unknown = JSON.parse(event.data);
+				self.handleMessage(response);
+			} catch (e) {
+				console.error(e);
 			}
-		}, 1000);
-	});
-}
+		};
+		this.#connection = ws;
+	}
 
-async function handleGameStartedResponse(
-	response: GameStartedResponse,
-): Promise<void> {
-	if (response.gameStarted) {
-		gameId = response.gameId;
-		playerColor = response.playerColor;
-		timeLeft = gameClock = config.startingTime;
+	private async handleMessage(obj: unknown) {
+		this.#response = obj;
+
+		console.log('Handle message: ', { obj });
+		if (isGameJoinedResponse(obj)) {
+			await this.start();
+		}
+
+		if (isGameStartedResponse(obj)) {
+			// move to function
+			this.setTimer();
+			this.#board!.set({
+				viewOnly: false,
+			});
+		}
+
+		if (isMoveResponse(obj)) {
+			this.move();
+		}
+
+		if (isTimeoutResponse(obj)) {
+			this.timeout();
+		}
+
+		if (isAbandonedResponse(obj)) {
+			this.abandoned();
+		}
+	}
+
+	private async start(): Promise<void> {
+		console.log('start: ', { response: this.#response });
+		const response = this.#response as GameStartedResponse;
+		this.setupBoard(response);
+		console.log(this.#board!.state);
+
+		await this.showCountdownToStartGame();
+
+		// this.setTimer();
+		// this.#board!.set({
+		// 	viewOnly: false,
+		// });
+	}
+
+	private move(): void {
+		if (this.#moveType === 'move') {
+			const response = this.#response as MoveResponse;
+			console.log('move: ', { move: response });
+			let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
+			if (response.isCheckmated) {
+				gameStatus =
+					response.isCheckmated === this.#playerColor
+						? 'lost'
+						: 'won';
+				this.gameOver(gameStatus, 'checkmate');
+				this.#gameClock = 0;
+				return;
+			}
+
+			this.#timeLeft =
+				this.#playerColor === 'white'
+					? response.whiteTimeLeft
+					: response.blackTimeLeft;
+			this.setTimer();
+			if (this.#board!.state.premovable.current) {
+				// send premove message which checks if premove is valid
+				// if so, play response on server and send updated fen
+				const [from, to] = this.#board!.state.premovable.current;
+				this.sendPremoveMessage({ from, to });
+				this.#board!.playPremove();
+			}
+
+			this.#board!.set({
+				fen: response.fen,
+				turnColor: response.whosNext,
+				movable: {
+					dests: this.toValidMoves(response.validMoves),
+				},
+			});
+		}
+	}
+
+	private timeout(): void {
+		let status: GameStatus = 'won';
+		if (this.#response.loser === this.#playerColor) {
+			status = 'lost';
+		}
+		this.gameOver(status, 'timeout');
+	}
+
+	private abandoned(): void {
+		let status: GameStatus = 'won';
+		this.gameOver(status, 'abandonment');
+		if (this.#connection) {
+			this.#connection.close();
+		}
+		// wipe out all game-specific data in class
+	}
+
+	private async showCountdownToStartGame(): Promise<void> {
+		return new Promise((resolve) => {
+			const countdownDisplay = document.querySelector<HTMLDivElement>(
+				'#countdown-container',
+			)!;
+			countdownDisplay.style.display = 'block';
+			let countdownInterval: number;
+			let i = 5;
+			const self = this;
+			countdownInterval = window.setInterval(function () {
+				if (i <= 0) {
+					window.clearInterval(countdownInterval);
+					countdownDisplay.style.display = 'none';
+					if (self.#connection) {
+						const gameStartedRequest: GameStartedRequest = {
+							type: 'gameStarted',
+							gameId: self.#gameId!,
+						};
+						self.sendMessage(JSON.stringify(gameStartedRequest));
+					}
+					resolve();
+				} else {
+					countdownDisplay.innerText = i.toString();
+					i--;
+				}
+			}, 1000);
+		});
+	}
+
+	private setTimer(): void {
+		// clear previous interval
+		window.clearInterval(this.#timerInterval);
+
+		const timerDiv = document.querySelector<HTMLDivElement>('#timer')!;
+		const start = new Date();
+		const self = this;
+		this.#timerInterval = window.setInterval(function () {
+			if (!self.#timeLeft) {
+				console.log('no time left');
+				return;
+			}
+			if ((self.#gameClock ?? 0) <= 0) {
+				window.clearInterval(self.#timerInterval);
+				// send message to server to end game/find out the outcome
+				if (self.connection) {
+					const timeout: TimeoutRequest = {
+						type: 'timeout',
+						gameId: self.#gameId!,
+						playerColor: self.#playerColor!,
+						timeout: true,
+					};
+					self.sendMessage(JSON.stringify(timeout));
+				}
+				return;
+			}
+			const diff = new Date().getTime() - start.getTime();
+			self.#gameClock = self.#timeLeft - diff / 1_000;
+
+			timerDiv.innerHTML =
+				'<div>' +
+				(self.#gameClock > 0 ? self.#gameClock : 0).toFixed(1) +
+				's</div>';
+		}, 10);
+	}
+
+	private toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
+		const validMoves = new Map();
+		for (const [key, value] of Object.entries(moves)) {
+			validMoves.set(key, value);
+		}
+
+		return validMoves;
+	}
+
+	private gameOver(
+		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
+		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
+	): void {
+		console.log('gameOver: ', { gameStatus, method });
+		// have to add draws
+		const modal =
+			document.querySelector<HTMLDivElement>('#game-status-modal')!;
+		modal.style.display = 'block';
+		const modalHeader =
+			document.querySelector<HTMLDivElement>('#modal-header')!;
+		modalHeader.innerText = `You ${gameStatus} via ${method}.`;
+	}
+
+	private setupBoard(response: GameStartedResponse) {
+		this.#gameId = response.gameId;
+		this.#playerColor = response.playerColor;
+		this.#timeLeft = this.#gameClock = this.#config?.startingTime;
 
 		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
 		gameMeta.style.visibility = 'inherit';
 		const gameMetaIcon =
 			document.querySelector<HTMLElement>('#game-meta .icon i');
-		if (playerColor === 'black') {
+		if (this.#playerColor === 'black') {
 			gameMetaIcon?.classList.add('is-black');
 		} else {
 			gameMetaIcon?.classList.remove('is-black');
@@ -130,16 +311,16 @@ async function handleGameStartedResponse(
 		const playerColorDiv = document.querySelector<HTMLDivElement>(
 			'#game-meta #player-color',
 		)!;
-		playerColorDiv.innerText = `You play ${playerColor}.`;
+		playerColorDiv.innerText = `You play ${this.#playerColor}.`;
 
-		board.set({
+		this.#board!.set({
 			viewOnly: true,
 			fen: response.fen,
 			turnColor: response.whosNext,
-			orientation: playerColor,
+			orientation: this.#playerColor,
 			movable: {
-				dests: toValidMoves(response.validMoves),
-				color: playerColor,
+				dests: this.toValidMoves(response.validMoves),
+				color: this.#playerColor,
 			},
 			premovable: {
 				enabled: true,
@@ -149,263 +330,77 @@ async function handleGameStartedResponse(
 				enabled: true,
 			},
 		} as ChessgroundConfig);
-
-		await showCountdownToStartGame();
-
-		console.log(board.state);
-		setTimer();
-		board.set({
-			viewOnly: false,
-		});
-	}
-}
-
-function handleMoveResponse(response: MoveResponse): void {
-	let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
-	if (response.isCheckmated) {
-		gameStatus = response.isCheckmated === playerColor ? 'lost' : 'won';
-		gameOver(gameStatus, 'checkmate');
-		gameClock = 0;
-		return;
 	}
 
-	timeLeft =
-		playerColor === 'white'
-			? response.whiteTimeLeft
-			: response.blackTimeLeft;
-	setTimer();
-	if (board.state.premovable.current) {
-		// send premove message which checks if premove is valid
-		// if so, play response on server and send updated fen
-		const [from, to] = board.state.premovable.current;
-		sendPremoveMessage({ from, to });
-		board.playPremove();
-	}
-
-	board.set({
-		fen: response.fen,
-		turnColor: response.whosNext,
-		movable: {
-			dests: toValidMoves(response.validMoves),
-		},
-	});
-}
-
-function handleTimeoutResponse(response: TimeoutResponse): void {
-	let status: GameStatus = 'won';
-	if (response.loser === playerColor) {
-		status = 'lost';
-	}
-	gameOver(status, 'timeout');
-}
-
-function handleAbandonedResponse(): void {
-	console.log('handle abandoned');
-	let status: GameStatus = 'won';
-	gameOver(status, 'abandonment');
-	if (ws) {
-		ws.close();
-	}
-}
-//endregion
-
-function handleResponse(response: unknown): void {
-	if (isGameStartedResponse(response)) {
-		console.log({ gameStartedResponse: response });
-
-		const connectButton =
-			document.querySelector<HTMLButtonElement>('#connect-button')!;
-		connectButton.classList.remove('is-loading');
-		const connectButtonContainer = document.querySelector<HTMLDivElement>(
-			'#connect-button-container',
-		)!;
-		connectButtonContainer.style.display = 'none';
-
-		handleGameStartedResponse(response);
-	}
-
-	if (isMoveResponse(response)) {
-		console.log({ moveResponse: response });
-		handleMoveResponse(response);
-	}
-
-	if (isTimeoutResponse(response)) {
-		console.log({ timeoutResponse: response });
-		handleTimeoutResponse(response);
-	}
-
-	if (isAbandonedResponse(response)) {
-		console.log({ abandonedResponse: response });
-		handleAbandonedResponse();
-	}
-}
-
-export function awaitGame(c: Config): void {
-	config = c;
-	const button = document.querySelector('#connect-button')!;
-	button.addEventListener('click', function () {
-		button.classList.add('is-loading');
-		// todo: grab from config
-		ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
-		ws.onopen = function (event) {
-			document.getElementById('board')!.style.pointerEvents = 'auto';
-		};
-
-		ws.onmessage = function (event) {
-			try {
-				const response: unknown = JSON.parse(event.data);
-				handleResponse(response);
-			} catch (e) {
-				console.error(e);
-			}
-		};
-	});
-}
-
-function gameOver(
-	gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
-	method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
-): void {
-	// have to add draws
-	const modal = document.querySelector<HTMLDivElement>('#game-status-modal')!;
-	modal.style.display = 'block';
-	const modalHeader =
-		document.querySelector<HTMLDivElement>('#modal-header')!;
-	modalHeader.innerText = `You ${gameStatus} via ${method}.`;
-}
-
-function sendTimeoutMessage(): void {
-	// send message to server to end game/find out the outcome
-	if (ws) {
-		const timeout: TimeoutRequest = {
-			type: 'timeout',
-			gameId,
-			playerColor,
-			timeout: true,
-		};
-		ws.send(JSON.stringify(timeout));
-	}
-}
-
-function sendPremoveMessage(p: Move): void {
-	if (ws) {
-		const premove: PremoveRequest = {
-			type: 'premove',
-			gameId,
-			premove: p,
-		};
-		ws.send(JSON.stringify(premove));
-	} else {
-		console.error('ws is undefined.');
-	}
-}
-
-function setTimer(): void {
-	// clear previous interval
-	window.clearInterval(timerInterval);
-
-	const timerDiv = document.querySelector<HTMLDivElement>('#timer')!;
-	const start = new Date();
-	timerInterval = window.setInterval(function () {
-		if (gameClock <= 0) {
-			window.clearInterval(timerInterval);
-			sendTimeoutMessage();
-			return;
-		}
-		const diff = new Date().getTime() - start.getTime();
-		gameClock = timeLeft - diff / 1_000;
-
-		timerDiv.innerHTML =
-			'<div>' + (gameClock > 0 ? gameClock : 0).toFixed(1) + 's</div>';
-	}, 10);
-}
-
-function initializeTestBoard(initialConfig: ChessgroundConfig): void {
-	const testBoardDiv = document.getElementById('test-board')!;
-	testBoardDiv.style.display = 'block';
-	const testBoard = Chessground(testBoardDiv, initialConfig);
-	testBoard.set({
-		viewOnly: false,
-		movable: {
-			events: {
-				after: afterClientMove,
-			},
-		},
-		premovable: {
-			enabled: true,
-			showDests: true,
-			events: {
-				set: function (o, d, meta) {
-					console.log('initializeBoard.premovable.set:', {
-						o,
-						d,
-						meta,
-					});
-				},
-			},
-		},
-		predroppable: {
-			enabled: true,
-			events: {
-				set: function (role, key) {
-					console.log('initializeBoard.predroppable.set:', {
-						role,
-						key,
-					});
-				},
-			},
-		},
-		draggable: {
-			enabled: true,
-		},
-	});
-}
-
-// todo: config model
-export function getConfig(): Promise<Config> {
-	// todo: pull from config
-	return fetch('http://10.0.0.73:8000/config').then(function (r) {
-		return r.json();
-	});
-}
-
-export function initializeBoard(): Promise<void> {
-	return new Promise<void>(function (resolve, reject) {
-		try {
-			const initialConfig: ChessgroundConfig = {
-				movable: {
-					free: false,
-					color: 'white',
-				},
+	private sendPremoveMessage(p: Move): void {
+		console.log('sendPremoveMessage: ', { premove: p });
+		if (this.#connection) {
+			const premove: PremoveRequest = {
+				type: 'premove',
+				gameId: this.#gameId!,
+				premove: p,
 			};
-			board = Chessground(
-				document.getElementById('board')!,
-				initialConfig,
-			);
-			board.set({
-				viewOnly: false,
+			this.sendMessage(JSON.stringify(premove));
+		} else {
+			throw new Error('connection is undefined.');
+		}
+	}
+
+	private handleClientMove() {
+		const self = this;
+		return function (
+			from: cg.Key,
+			to: cg.Key,
+			meta: cg.MoveMetadata,
+		): void {
+			console.log('Handle move: ', { from, to });
+			// handle promotion here; autopromote to queen for now
+			to = self.checkIsPromotion(to);
+			// premove is set here
+			self.#board!.move(from, to);
+
+			const move: { from: cg.Key; to: cg.Key } = { from, to };
+			// if (ws) {
+			if (self.#connection) {
+				const message: MoveRequest = {
+					move,
+					gameId: self.#gameId!,
+					type: 'move',
+				};
+				self.sendMessage(JSON.stringify(message));
+				// ws.send(JSON.stringify(message));
+			}
+			console.log({ state: self.#board!.state });
+			self.#board!.set({
+				turnColor: self.#playerColor === 'white' ? 'black' : 'white',
 				movable: {
-					events: {
-						after: afterClientMove,
-					},
+					color: self.#playerColor,
 				},
 				premovable: {
 					enabled: true,
-					showDests: true,
-				},
-				predroppable: {
-					enabled: true,
-				},
-				draggable: {
-					enabled: true,
 				},
 			});
+		};
+	}
 
-			// initializeTestBoard(initialConfig);
-			resolve();
-		} catch (error) {
-			console.error(error);
-			reject('Failed to initialize board.');
+	private checkIsPromotion(to: cg.Key): cg.Key {
+		const movedPiece = this.#board!.state.pieces.get(to);
+		// any pawn move ending in 1 or 8, i.e. last rank
+		if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
+			to += 'q';
 		}
-	});
+
+		return to;
+	}
+
+	private sendMessage(
+		message: string | ArrayBufferLike | Blob | ArrayBufferView,
+	): void {
+		if (!this.#connection) {
+			console.error('Attempted send() on closed connection.');
+			return;
+		}
+
+		this.#connection.send(message);
+	}
 }

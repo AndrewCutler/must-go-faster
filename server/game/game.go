@@ -23,6 +23,21 @@ type Move struct {
 	Data   []byte
 }
 
+type Timer struct {
+	WhosNext     string // 'white' || 'black'
+	LastMoveTime time.Time
+}
+
+func (t *Timer) GetTimeLeft(lastMoveTime time.Time, config *c.ClientConfig) {
+	gameTime, err := time.ParseDuration(fmt.Sprintf("%ds", config.StartingTime))
+	if err != nil {
+		log.Println("Unable to create duration of 30s")
+	} else {
+		x := (gameTime - time.Since(lastMoveTime)).Seconds()
+		fmt.Println(x)
+	}
+}
+
 type GameMeta struct {
 	Game   *chess.Game
 	White  *Player
@@ -30,6 +45,7 @@ type GameMeta struct {
 	GameId string
 	// Timer          time.Time
 	CurrentPremove string // todo: premove type
+	LastMoveTime   time.Time
 }
 
 func (g *GameMeta) getFen() string {
@@ -63,13 +79,12 @@ func (g *GameMeta) getTimeLeft(config *c.ClientConfig) (float64, float64) {
 	gameTime, err := time.ParseDuration(fmt.Sprintf("%ds", config.StartingTime))
 	if err != nil {
 		log.Println("Unable to create duration of 30s")
+		return 0, 0
 	} else {
 		whiteTimeLeft := (gameTime - time.Since(g.White.Timer)).Seconds()
 		blackTimeLeft := (gameTime - time.Since(g.Black.Timer)).Seconds()
 		return whiteTimeLeft, blackTimeLeft
 	}
-
-	return 0, 0
 }
 
 func ValidMovesMap(g *chess.Game) map[string][]string {

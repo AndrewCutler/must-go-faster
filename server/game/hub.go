@@ -83,8 +83,8 @@ func (h *Hub) Run() {
 				h.GamesInProgress[game.GameId] = game
 
 				fmt.Println("broadcasting game started to white...")
-				player.Send <- sendGameStartMessage(h.Config, game, player.Color)
-				game.White.Send <- sendGameStartMessage(h.Config, game, game.White.Color)
+				player.Send <- sendGameJoinedMessage(h.Config, game, player.Color)
+				game.White.Send <- sendGameJoinedMessage(h.Config, game, game.White.Color)
 			}
 		// todo: unregister
 		case message := <-h.Broadcast:
@@ -116,7 +116,7 @@ func (h *Hub) Run() {
 				case "timeout":
 					handleTimeoutMessage(message, game)
 				case "gameStarted":
-					handleGameStartedMessage(message, game)
+					handleGameStartedMessage(h.Config, message, game)
 				default:
 					log.Println("Unknown move type: ", message.Move.Type)
 				}

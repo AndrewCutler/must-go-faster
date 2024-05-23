@@ -5,10 +5,39 @@ import (
 	"fmt"
 	"log"
 	c "server/config"
+	"time"
 )
 
 // Send
-func sendGameStartMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
+func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
+	// todo: logic for time left is a disaster
+	// set previous time for whosNext to time.Now()
+	gameMeta.LastMoveTime = time.Now()
+	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
+	data := map[string]interface{}{
+		"gameJoined":    true,
+		"fen":           gameMeta.getFen(),
+		"gameId":        gameMeta.GameId,
+		"playerColor":   playerColor, // is this necessary
+		"validMoves":    ValidMovesMap(gameMeta.Game),
+		"whosNext":      gameMeta.whoseMoveIsIt(),
+		"whiteTimeLeft": whiteTimeLeft,
+		"blackTimeLeft": blackTimeLeft,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
+}
+
+func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
+	// todo: logic for time left is a disaster
+	// set previous time for whosNext to time.Now()
+	gameMeta.LastMoveTime = time.Now()
 	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
 	data := map[string]interface{}{
 		"gameStarted":   true,
@@ -17,7 +46,7 @@ func sendGameStartMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColo
 		"playerColor":   playerColor, // is this necessary
 		"validMoves":    ValidMovesMap(gameMeta.Game),
 		"whosNext":      gameMeta.whoseMoveIsIt(),
-		"whiteTmeLeft":  whiteTimeLeft,
+		"whiteTimeLeft": whiteTimeLeft,
 		"blackTimeLeft": blackTimeLeft,
 	}
 
@@ -117,8 +146,16 @@ func handlePremoveMessage(message Message, game *GameMeta) {
 	}
 }
 
-func handleGameStartedMessage(message Message, game *GameMeta) {
+func handleGameStartedMessage(config *c.ClientConfig, message Message, game *GameMeta) {
 	fmt.Println("game started")
+	for _, player := range game.GetPlayers() {
+		m := sendGameStartedMessage(config, game, player.Color)
+		select {
+		case player.Send <- m:
+		default:
+			close(player.Send)
+		}
+	}
 }
 
 func handleTimeoutMessage(message Message, game *GameMeta) {

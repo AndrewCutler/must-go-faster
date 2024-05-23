@@ -20,6 +20,10 @@ export type MoveResponse = BaseResponse & {
 	blackTimeLeft: number;
 };
 
+export type GameJoinedResponse = Omit<MoveResponse, 'isCheckmated'> & {
+	gameJoined: boolean;
+};
+
 export type GameStartedResponse = Omit<MoveResponse, 'isCheckmated'> & {
 	gameStarted: boolean;
 };
@@ -31,6 +35,10 @@ export type TimeoutResponse = BaseResponse & {
 export type AbandonedResponse = {
 	abandoned: boolean;
 };
+
+export function isGameJoinedResponse(obj: unknown): obj is GameJoinedResponse {
+	return (obj as any).gameJoined !== undefined;
+}
 
 export function isGameStartedResponse(
 	obj: unknown,

@@ -12,6 +12,7 @@ import {
 	PremoveRequest,
 	TimeoutRequest,
 	isAbandonedResponse,
+	isGameJoinedResponse,
 	isGameStartedResponse,
 	isMoveResponse,
 	isTimeoutResponse,
@@ -101,12 +102,20 @@ export class MustGoFaster {
 		this.#connection = ws;
 	}
 
-	private handleMessage(obj: unknown) {
+	private async handleMessage(obj: unknown) {
 		this.#response = obj;
 
 		console.log('Handle message: ', { obj });
+		if (isGameJoinedResponse(obj)) {
+			await this.start();
+		}
+
 		if (isGameStartedResponse(obj)) {
-			this.start();
+			// move to function
+			this.setTimer();
+			this.#board!.set({
+				viewOnly: false,
+			});
 		}
 
 		if (isMoveResponse(obj)) {
@@ -123,58 +132,17 @@ export class MustGoFaster {
 	}
 
 	private async start(): Promise<void> {
-		// if ((this.#moveType = 'gameStarted')) {
 		console.log('start: ', { response: this.#response });
 		const response = this.#response as GameStartedResponse;
-		this.#gameId = response.gameId;
-		this.#playerColor = response.playerColor;
-		this.#timeLeft = this.#gameClock = this.#config?.startingTime;
-
-		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
-		gameMeta.style.visibility = 'inherit';
-		const gameMetaIcon =
-			document.querySelector<HTMLElement>('#game-meta .icon i');
-		if (this.#playerColor === 'black') {
-			gameMetaIcon?.classList.add('is-black');
-		} else {
-			gameMetaIcon?.classList.remove('is-black');
-		}
-		const whoseMove = document.querySelector<HTMLDivElement>(
-			'#game-meta #whose-move',
-		)!;
-		whoseMove.innerText = `${
-			response.whosNext === 'white' ? 'White' : 'Black'
-		} to play.`;
-		const playerColorDiv = document.querySelector<HTMLDivElement>(
-			'#game-meta #player-color',
-		)!;
-		playerColorDiv.innerText = `You play ${this.#playerColor}.`;
-
-		this.#board!.set({
-			viewOnly: true,
-			fen: response.fen,
-			turnColor: response.whosNext,
-			orientation: this.#playerColor,
-			movable: {
-				dests: this.toValidMoves(response.validMoves),
-				color: this.#playerColor,
-			},
-			premovable: {
-				enabled: true,
-				showDests: true,
-			},
-			draggable: {
-				enabled: true,
-			},
-		} as ChessgroundConfig);
+		this.setupBoard(response);
+		console.log(this.#board!.state);
 
 		await this.showCountdownToStartGame();
 
-		console.log(this.#board!.state);
-		this.setTimer();
-		this.#board!.set({
-			viewOnly: false,
-		});
+		// this.setTimer();
+		// this.#board!.set({
+		// 	viewOnly: false,
+		// });
 	}
 
 	private move(): void {
@@ -250,9 +218,7 @@ export class MustGoFaster {
 							type: 'gameStarted',
 							gameId: self.#gameId!,
 						};
-						self.#connection.send(
-							JSON.stringify(gameStartedRequest),
-						);
+						self.sendMessage(JSON.stringify(gameStartedRequest));
 					}
 					resolve();
 				} else {
@@ -285,7 +251,7 @@ export class MustGoFaster {
 						playerColor: self.#playerColor!,
 						timeout: true,
 					};
-					self.connection.send(JSON.stringify(timeout));
+					self.sendMessage(JSON.stringify(timeout));
 				}
 				return;
 			}
@@ -322,6 +288,50 @@ export class MustGoFaster {
 		modalHeader.innerText = `You ${gameStatus} via ${method}.`;
 	}
 
+	private setupBoard(response: GameStartedResponse) {
+		this.#gameId = response.gameId;
+		this.#playerColor = response.playerColor;
+		this.#timeLeft = this.#gameClock = this.#config?.startingTime;
+
+		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
+		gameMeta.style.visibility = 'inherit';
+		const gameMetaIcon =
+			document.querySelector<HTMLElement>('#game-meta .icon i');
+		if (this.#playerColor === 'black') {
+			gameMetaIcon?.classList.add('is-black');
+		} else {
+			gameMetaIcon?.classList.remove('is-black');
+		}
+		const whoseMove = document.querySelector<HTMLDivElement>(
+			'#game-meta #whose-move',
+		)!;
+		whoseMove.innerText = `${
+			response.whosNext === 'white' ? 'White' : 'Black'
+		} to play.`;
+		const playerColorDiv = document.querySelector<HTMLDivElement>(
+			'#game-meta #player-color',
+		)!;
+		playerColorDiv.innerText = `You play ${this.#playerColor}.`;
+
+		this.#board!.set({
+			viewOnly: true,
+			fen: response.fen,
+			turnColor: response.whosNext,
+			orientation: this.#playerColor,
+			movable: {
+				dests: this.toValidMoves(response.validMoves),
+				color: this.#playerColor,
+			},
+			premovable: {
+				enabled: true,
+				showDests: true,
+			},
+			draggable: {
+				enabled: true,
+			},
+		} as ChessgroundConfig);
+	}
+
 	private sendPremoveMessage(p: Move): void {
 		console.log('sendPremoveMessage: ', { premove: p });
 		if (this.#connection) {
@@ -330,7 +340,7 @@ export class MustGoFaster {
 				gameId: this.#gameId!,
 				premove: p,
 			};
-			this.#connection.send(JSON.stringify(premove));
+			this.sendMessage(JSON.stringify(premove));
 		} else {
 			throw new Error('connection is undefined.');
 		}
@@ -357,7 +367,7 @@ export class MustGoFaster {
 					gameId: self.#gameId!,
 					type: 'move',
 				};
-				self.#connection.send(JSON.stringify(message));
+				self.sendMessage(JSON.stringify(message));
 				// ws.send(JSON.stringify(message));
 			}
 			console.log({ state: self.#board!.state });
@@ -381,5 +391,16 @@ export class MustGoFaster {
 		}
 
 		return to;
+	}
+
+	private sendMessage(
+		message: string | ArrayBufferLike | Blob | ArrayBufferView,
+	): void {
+		if (!this.#connection) {
+			console.error('Attempted send() on closed connection.');
+			return;
+		}
+
+		this.#connection.send(message);
 	}
 }

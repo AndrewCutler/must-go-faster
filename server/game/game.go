@@ -11,12 +11,6 @@ import (
 	"github.com/notnil/chess"
 )
 
-type Message struct {
-	Premove     Move
-	Move        Move
-	MessageType int
-}
-
 type Move struct {
 	Type   string // 'move' || 'premove' || 'timeout' || 'gameStarted'
 	GameId string

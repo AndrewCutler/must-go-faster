@@ -27,7 +27,7 @@ func (p *Player) ReadMessage() {
 		// MessageType: 2, GoingAwayMessage
 		_, content, err := p.Connection.ReadMessage()
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId}, MessageType: 2}
+			p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId}, Type: 2}
 			// game is over, send game abandoned message to winner and remove from active games
 			return
 		}
@@ -51,7 +51,7 @@ func (p *Player) ReadMessage() {
 			return
 		}
 
-		p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId, Data: content, Type: movetype.Type}, MessageType: 1}
+		p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId, Data: content, Type: movetype.Type}, Type: 1}
 	}
 }
 

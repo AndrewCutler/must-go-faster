@@ -88,7 +88,7 @@ func (h *Hub) Run() {
 			}
 		// todo: unregister
 		case message := <-h.Broadcast:
-			switch message.MessageType {
+			switch message.Type {
 			case 0:
 				return
 			case 1:

@@ -8,24 +8,53 @@ import (
 	"time"
 )
 
+type Message struct {
+	Payload interface{} `json:"payload"`
+	Type    int         `json:"type"`
+}
+
+type GameJoinedPayload struct {
+	GameJoined    bool                `json:"gameJoined"`
+	Fen           string              `json:"fen"`
+	GameId        string              `json:"gameId"`
+	PlayerColor   string              `json:"playerColor"`
+	ValidMoves    map[string][]string `json:"validMoves"`
+	WhosNext      string              `json:"whosNext"`
+	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	BlackTimeLeft float64             `json:"blackTimeLeft"`
+}
+
 // Send
 func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
 	// todo: logic for time left is a disaster
 	// set previous time for whosNext to time.Now()
 	gameMeta.LastMoveTime = time.Now()
 	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
-	data := map[string]interface{}{
-		"gameJoined":    true,
-		"fen":           gameMeta.getFen(),
-		"gameId":        gameMeta.GameId,
-		"playerColor":   playerColor, // is this necessary
-		"validMoves":    ValidMovesMap(gameMeta.Game),
-		"whosNext":      gameMeta.whoseMoveIsIt(),
-		"whiteTimeLeft": whiteTimeLeft,
-		"blackTimeLeft": blackTimeLeft,
+	message := Message{
+		Type: 1,
+		Payload: GameJoinedPayload{
+			GameJoined:    true,
+			Fen:           gameMeta.getFen(),
+			GameId:        gameMeta.GameId,
+			PlayerColor:   playerColor, // is this necessary
+			ValidMoves:    ValidMovesMap(gameMeta.Game),
+			WhosNext:      gameMeta.whoseMoveIsIt(),
+			WhiteTimeLeft: whiteTimeLeft,
+			BlackTimeLeft: blackTimeLeft,
+		},
 	}
+	// data := map[string]interface{}{
+	// 	"gameJoined":    true,
+	// 	"fen":           gameMeta.getFen(),
+	// 	"gameId":        gameMeta.GameId,
+	// 	"playerColor":   playerColor, // is this necessary
+	// 	"validMoves":    ValidMovesMap(gameMeta.Game),
+	// 	"whosNext":      gameMeta.whoseMoveIsIt(),
+	// 	"whiteTimeLeft": whiteTimeLeft,
+	// 	"blackTimeLeft": blackTimeLeft,
+	// }
 
-	jsonData, err := json.Marshal(data)
+	jsonData, err := json.Marshal(message)
 	if err != nil {
 		fmt.Println("Error converting message to JSON: ", err)
 		return []byte{}
@@ -34,29 +63,64 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 	return jsonData
 }
 
+type GameStartedPayload struct {
+	GameStarted   bool                `json:"gameStarted"`
+	Fen           string              `json:"fen"`
+	GameId        string              `json:"gameId"`
+	PlayerColor   string              `json:"playerColor"`
+	ValidMoves    map[string][]string `json:"validMoves"`
+	WhosNext      string              `json:"whosNext"`
+	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	BlackTimeLeft float64             `json:"blackTimeLeft"`
+}
+
 func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
 	// todo: logic for time left is a disaster
 	// set previous time for whosNext to time.Now()
 	gameMeta.LastMoveTime = time.Now()
 	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
-	data := map[string]interface{}{
-		"gameStarted":   true,
-		"fen":           gameMeta.getFen(),
-		"gameId":        gameMeta.GameId,
-		"playerColor":   playerColor, // is this necessary
-		"validMoves":    ValidMovesMap(gameMeta.Game),
-		"whosNext":      gameMeta.whoseMoveIsIt(),
-		"whiteTimeLeft": whiteTimeLeft,
-		"blackTimeLeft": blackTimeLeft,
+	message := Message{
+		Type: 1,
+		Payload: GameStartedPayload{
+			GameStarted:   true,
+			Fen:           gameMeta.getFen(),
+			GameId:        gameMeta.GameId,
+			PlayerColor:   playerColor, // is this necessary
+			ValidMoves:    ValidMovesMap(gameMeta.Game),
+			WhosNext:      gameMeta.whoseMoveIsIt(),
+			WhiteTimeLeft: whiteTimeLeft,
+			BlackTimeLeft: blackTimeLeft,
+		},
 	}
+	// data := map[string]interface{}{
+	// 	"gameStarted":   true,
+	// 	"fen":           gameMeta.getFen(),
+	// 	"gameId":        gameMeta.GameId,
+	// 	"playerColor":   playerColor, // is this necessary
+	// 	"validMoves":    ValidMovesMap(gameMeta.Game),
+	// 	"whosNext":      gameMeta.whoseMoveIsIt(),
+	// 	"whiteTimeLeft": whiteTimeLeft,
+	// 	"blackTimeLeft": blackTimeLeft,
+	// }
 
-	jsonData, err := json.Marshal(data)
+	jsonData, err := json.Marshal(message)
 	if err != nil {
 		fmt.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
 	return jsonData
+}
+
+type MovePayload struct {
+	Fen          string              `json:"fen"`
+	GameId       string              `json:"gameId"`
+	PlayerColor  string              `json:"playerColor"`
+	ValidMoves   map[string][]string `json:"validMoves"`
+	WhosNext     string              `json:"whosNext"`
+	IsCheckmated string              `json:"isCheckmated"`
+	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	// BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
 func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
@@ -68,35 +132,72 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 		isCheckmated = "black"
 	}
 
-	data := map[string]interface{}{
-		"fen":          gameMeta.getFen(),
-		"gameId":       gameMeta.GameId,
-		"playerColor":  playerColor,
-		"validMoves":   ValidMovesMap(gameMeta.Game),
-		"whosNext":     gameMeta.whoseMoveIsIt(),
-		"isCheckmated": isCheckmated,
-		// "timeLeft":     gameMeta.getTimeRemaining(config),
-	}
+	message := Message{
+		Type: 1,
+		Payload: MovePayload{
+			Fen:          gameMeta.getFen(),
+			GameId:       gameMeta.GameId,
+			PlayerColor:  playerColor,
+			ValidMoves:   ValidMovesMap(gameMeta.Game),
+			WhosNext:     gameMeta.whoseMoveIsIt(),
+			IsCheckmated: isCheckmated,
+			// "timeLeft":     gameMeta.getTimeRemaining(config),
 
-	jsonData, err := json.Marshal(data)
+		},
+	}
+	// data := map[string]interface{}{
+	// 	"fen":          gameMeta.getFen(),
+	// 	"gameId":       gameMeta.GameId,
+	// 	"playerColor":  playerColor,
+	// 	"validMoves":   ValidMovesMap(gameMeta.Game),
+	// 	"whosNext":     gameMeta.whoseMoveIsIt(),
+	// 	"isCheckmated": isCheckmated,
+	// 	// "timeLeft":     gameMeta.getTimeRemaining(config),
+	// }
+
+	jsonData, err := json.Marshal(message)
 	if err != nil {
 		fmt.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
 	return jsonData
+}
+
+type TimeoutPayload struct {
+	Fen         string              `json:"fen"`
+	GameId      string              `json:"gameId"`
+	PlayerColor string              `json:"playerColor"`
+	ValidMoves  map[string][]string `json:"validMoves"`
+	WhosNext    string              `json:"whosNext"`
+	Loser       string              `json:"loser"`
+	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	// BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
 func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []byte {
-	data := map[string]interface{}{
-		"fen":         gameMeta.getFen(),
-		"gameId":      gameMeta.GameId,
-		"whosNext":    gameMeta.whoseMoveIsIt(),
-		"playerColor": playerColor,
-		"loser":       loser,
-	}
+	message := Message{
+		Type: 1,
+		Payload: TimeoutPayload{
+			Fen:         gameMeta.getFen(),
+			GameId:      gameMeta.GameId,
+			PlayerColor: playerColor,
+			ValidMoves:  ValidMovesMap(gameMeta.Game),
+			WhosNext:    gameMeta.whoseMoveIsIt(),
+			Loser:       loser,
+			// "timeLeft":     gameMeta.getTimeRemaining(config),
 
-	jsonData, err := json.Marshal(data)
+		},
+	}
+	// data := map[string]interface{}{
+	// 	"fen":         gameMeta.getFen(),
+	// 	"gameId":      gameMeta.GameId,
+	// 	"whosNext":    gameMeta.whoseMoveIsIt(),
+	// 	"playerColor": playerColor,
+	// 	"loser":       loser,
+	// }
+
+	jsonData, err := json.Marshal(message)
 	if err != nil {
 		fmt.Println("Error converting message to JSON: ", err)
 		return []byte{}
@@ -105,12 +206,19 @@ func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []
 	return jsonData
 }
 
+type AbandonedPayload struct {
+	Abandoned bool `json:"abandoned"`
+}
+
 func sendAbandonedMessage() []byte {
-	data := map[string]interface{}{
-		"abandoned": true,
+	message := Message{
+		Type: 1,
+		Payload: AbandonedPayload{
+			Abandoned: true,
+		},
 	}
 
-	jsonData, err := json.Marshal(data)
+	jsonData, err := json.Marshal(message)
 	if err != nil {
 		fmt.Println("Error converting message to JSON: ", err)
 		return []byte{}

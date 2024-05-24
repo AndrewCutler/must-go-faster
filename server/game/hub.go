@@ -82,7 +82,7 @@ func (h *Hub) Run() {
 				// h.GamesAwaitingOpponent = make(map[string]*GameMeta, 0)
 				h.GamesInProgress[game.GameId] = game
 
-				fmt.Println("broadcasting game started to white...")
+				fmt.Println("broadcasting game joined to white...")
 				player.Send <- sendGameJoinedMessage(h.Config, game, player.Color)
 				game.White.Send <- sendGameJoinedMessage(h.Config, game, game.White.Color)
 			}

@@ -50,7 +50,7 @@ func MessageTypeFromString(s string) (MessageType, error) {
 		return AbandonedType, nil
 	}
 
-	return -1, errors.New("Invalid message type.")
+	return -1, errors.New("invalid message type")
 }
 
 type BroadcastMessage struct {
@@ -67,7 +67,6 @@ type SendMessage struct {
 }
 
 type GameJoinedPayload struct {
-	GameJoined    bool                `json:"gameJoined"`
 	Fen           string              `json:"fen"`
 	ValidMoves    map[string][]string `json:"validMoves"`
 	WhosNext      string              `json:"whosNext"`
@@ -76,7 +75,6 @@ type GameJoinedPayload struct {
 }
 
 type GameStartedPayload struct {
-	GameStarted   bool                `json:"gameStarted"`
 	Fen           string              `json:"fen"`
 	ValidMoves    map[string][]string `json:"validMoves"`
 	WhosNext      string              `json:"whosNext"`
@@ -85,19 +83,23 @@ type GameStartedPayload struct {
 }
 
 type MovePayload struct {
-	Fen          string              `json:"fen"`
-	ValidMoves   map[string][]string `json:"validMoves"`
-	WhosNext     string              `json:"whosNext"`
-	IsCheckmated string              `json:"isCheckmated"`
+	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	BlackTimeLeft float64             `json:"blackTimeLeft"`
+	Fen           string              `json:"fen"`
+	ValidMoves    map[string][]string `json:"validMoves"`
+	WhosNext      string              `json:"whosNext"`
+	IsCheckmated  string              `json:"isCheckmated"`
 	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
 	// BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
 type TimeoutPayload struct {
-	Fen        string              `json:"fen"`
-	ValidMoves map[string][]string `json:"validMoves"`
-	WhosNext   string              `json:"whosNext"`
-	Loser      string              `json:"loser"`
+	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	BlackTimeLeft float64             `json:"blackTimeLeft"`
+	Fen           string              `json:"fen"`
+	ValidMoves    map[string][]string `json:"validMoves"`
+	WhosNext      string              `json:"whosNext"`
+	Loser         string              `json:"loser"`
 	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
 	// BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
@@ -117,7 +119,6 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
 		Payload: GameJoinedPayload{
-			GameJoined:    true,
 			Fen:           gameMeta.getFen(),
 			ValidMoves:    ValidMovesMap(gameMeta.Game),
 			WhosNext:      gameMeta.whoseMoveIsIt(),
@@ -155,7 +156,6 @@ func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCo
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
 		Payload: GameStartedPayload{
-			GameStarted:   true,
 			Fen:           gameMeta.getFen(),
 			ValidMoves:    ValidMovesMap(gameMeta.Game),
 			WhosNext:      gameMeta.whoseMoveIsIt(),

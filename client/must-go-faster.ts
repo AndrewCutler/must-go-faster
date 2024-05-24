@@ -2,20 +2,19 @@ import { Chessground } from 'chessground';
 import {
 	ChessgroundConfig,
 	Config,
+	GameJoinedPayload,
 	GameStartedRequest,
 	GameStartedResponse,
 	GameStatus,
+	Message,
 	Move,
+	MovePayload,
 	MoveRequest,
 	MoveResponse,
 	PlayerColor,
 	PremoveRequest,
+	TimeoutPayload,
 	TimeoutRequest,
-	isAbandonedResponse,
-	isGameJoinedResponse,
-	isGameStartedResponse,
-	isMoveResponse,
-	isTimeoutResponse,
 } from './models';
 
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -31,7 +30,7 @@ export class MustGoFaster {
 	#config: Config | undefined;
 	#connection: WebSocket | undefined;
 	#board: ChessgroundApi | undefined;
-	#response: any;
+	#message: Message | undefined;
 
 	get connection(): WebSocket | undefined {
 		return this.#connection;
@@ -93,7 +92,7 @@ export class MustGoFaster {
 		const self = this;
 		ws.onmessage = function (event) {
 			try {
-				const response: unknown = JSON.parse(event.data);
+				const response: Message = JSON.parse(event.data);
 				self.handleMessage(response);
 			} catch (e) {
 				console.error(e);
@@ -102,38 +101,43 @@ export class MustGoFaster {
 		this.#connection = ws;
 	}
 
-	private async handleMessage(obj: unknown) {
-		this.#response = obj;
+	private async handleMessage(message: Message) {
+		this.#message = message;
 
-		console.log('Handle message: ', { obj });
-		if (isGameJoinedResponse(obj)) {
-			await this.start();
+		console.log('Handle message: ', { message });
+		switch (message.type) {
+			case 'GameJoinedType':
+				await this.start();
+				break;
 		}
+		// if (isGameJoinedResponse(message)) {
+		// 	await this.start();
+		// }
 
-		if (isGameStartedResponse(obj)) {
-			// move to function
-			this.setTimer();
-			this.#board!.set({
-				viewOnly: false,
-			});
-		}
+		// if (isGameStartedResponse(message)) {
+		// 	// move to function
+		// 	this.setTimer();
+		// 	this.#board!.set({
+		// 		viewOnly: false,
+		// 	});
+		// }
 
-		if (isMoveResponse(obj)) {
-			this.move();
-		}
+		// if (isMoveResponse(message)) {
+		// 	this.move();
+		// }
 
-		if (isTimeoutResponse(obj)) {
-			this.timeout();
-		}
+		// if (isTimeoutResponse(message)) {
+		// 	this.timeout();
+		// }
 
-		if (isAbandonedResponse(obj)) {
-			this.abandoned();
-		}
+		// if (isAbandonedResponse(message)) {
+		// 	this.abandoned();
+		// }
 	}
 
 	private async start(): Promise<void> {
-		console.log('start: ', { response: this.#response });
-		const response = this.#response as GameStartedResponse;
+		console.log('start: ', { response: this.#message });
+		const response = this.#message as GameStartedResponse;
 		this.setupBoard(response);
 		console.log(this.#board!.state);
 
@@ -147,14 +151,12 @@ export class MustGoFaster {
 
 	private move(): void {
 		if (this.#moveType === 'move') {
-			const response = this.#response as MoveResponse;
-			console.log('move: ', { move: response });
+			const payload = this.#message!.payload as MovePayload;
+			console.log('move: ', { move: this.#message });
 			let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
-			if (response.isCheckmated) {
+			if (payload.isCheckmated) {
 				gameStatus =
-					response.isCheckmated === this.#playerColor
-						? 'lost'
-						: 'won';
+					payload.isCheckmated === this.#playerColor ? 'lost' : 'won';
 				this.gameOver(gameStatus, 'checkmate');
 				this.#gameClock = 0;
 				return;
@@ -162,8 +164,8 @@ export class MustGoFaster {
 
 			this.#timeLeft =
 				this.#playerColor === 'white'
-					? response.whiteTimeLeft
-					: response.blackTimeLeft;
+					? payload.whiteTimeLeft
+					: payload.blackTimeLeft;
 			this.setTimer();
 			if (this.#board!.state.premovable.current) {
 				// send premove message which checks if premove is valid
@@ -174,10 +176,10 @@ export class MustGoFaster {
 			}
 
 			this.#board!.set({
-				fen: response.fen,
-				turnColor: response.whosNext,
+				fen: payload.fen,
+				turnColor: payload.whosNext,
 				movable: {
-					dests: this.toValidMoves(response.validMoves),
+					dests: this.toValidMoves(payload.validMoves),
 				},
 			});
 		}
@@ -185,7 +187,10 @@ export class MustGoFaster {
 
 	private timeout(): void {
 		let status: GameStatus = 'won';
-		if (this.#response.loser === this.#playerColor) {
+		if (
+			(this.#message?.payload as TimeoutPayload).loser ===
+			this.#playerColor
+		) {
 			status = 'lost';
 		}
 		this.gameOver(status, 'timeout');
@@ -288,10 +293,12 @@ export class MustGoFaster {
 		modalHeader.innerText = `You ${gameStatus} via ${method}.`;
 	}
 
-	private setupBoard(response: GameStartedResponse) {
-		this.#gameId = response.gameId;
-		this.#playerColor = response.playerColor;
+	private setupBoard(message: Message) {
+		this.#gameId = message.gameId;
+		this.#playerColor = message.playerColor;
 		this.#timeLeft = this.#gameClock = this.#config?.startingTime;
+
+		const payload = message.payload as GameJoinedPayload;
 
 		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
 		gameMeta.style.visibility = 'inherit';
@@ -306,7 +313,7 @@ export class MustGoFaster {
 			'#game-meta #whose-move',
 		)!;
 		whoseMove.innerText = `${
-			response.whosNext === 'white' ? 'White' : 'Black'
+			payload.whosNext === 'white' ? 'White' : 'Black'
 		} to play.`;
 		const playerColorDiv = document.querySelector<HTMLDivElement>(
 			'#game-meta #player-color',
@@ -315,11 +322,11 @@ export class MustGoFaster {
 
 		this.#board!.set({
 			viewOnly: true,
-			fen: response.fen,
-			turnColor: response.whosNext,
+			fen: payload.fen,
+			turnColor: payload.whosNext,
 			orientation: this.#playerColor,
 			movable: {
-				dests: this.toValidMoves(response.validMoves),
+				dests: this.toValidMoves(payload.validMoves),
 				color: this.#playerColor,
 			},
 			premovable: {

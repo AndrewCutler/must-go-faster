@@ -276,9 +276,9 @@ func sendAbandonedMessage() []byte {
 func handleAbandonedMessage(game *GameMeta) {
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.Send <- sendAbandonedMessage():
+		case player.SendChan <- sendAbandonedMessage():
 		default:
-			close(player.Send)
+			close(player.SendChan)
 		}
 	}
 }
@@ -293,9 +293,9 @@ func handlePremoveMessage(message SendMessage, game *GameMeta) {
 	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.Send <- sendMoveMessage(nil, game, player.Color):
+		case player.SendChan <- sendMoveMessage(nil, game, player.Color):
 		default:
-			close(player.Send)
+			close(player.SendChan)
 		}
 	}
 }
@@ -306,9 +306,9 @@ func handleGameStartedMessage(config *c.ClientConfig, message BroadcastMessage, 
 	for _, player := range game.GetPlayers() {
 		m := sendGameStartedMessage(config, game, player.Color)
 		select {
-		case player.Send <- m:
+		case player.SendChan <- m:
 		default:
-			close(player.Send)
+			close(player.SendChan)
 		}
 	}
 }
@@ -325,9 +325,9 @@ func handleTimeoutMessage(message BroadcastMessage, game *GameMeta) {
 	for _, player := range game.GetPlayers() {
 		m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
 		select {
-		case player.Send <- m:
+		case player.SendChan <- m:
 		default:
-			close(player.Send)
+			close(player.SendChan)
 		}
 	}
 }
@@ -343,9 +343,9 @@ func handleMoveMessage(config *c.ClientConfig, message BroadcastMessage, game *G
 
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.Send <- sendMoveMessage(config, game, player.Color):
+		case player.SendChan <- sendMoveMessage(config, game, player.Color):
 		default:
-			close(player.Send)
+			close(player.SendChan)
 		}
 	}
 }

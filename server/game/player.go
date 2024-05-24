@@ -11,7 +11,7 @@ import (
 type Player struct {
 	GameId     string
 	Connection *websocket.Conn
-	Send       chan []byte
+	SendChan   chan []byte
 	Hub        *Hub
 	Color      string
 	Timer      time.Time
@@ -27,7 +27,7 @@ func (p *Player) ReadMessage() {
 		// MessageType: 2, GoingAwayMessage
 		_, content, err := p.Connection.ReadMessage()
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			p.Hub.Broadcast <- BroadcastMessage{GameId: p.GameId, Type: AbandonedType}
+			p.Hub.BroadcastChan <- BroadcastMessage{GameId: p.GameId, Type: AbandonedType}
 			// game is over, send game abandoned message to winner and remove from active games
 			return
 		}
@@ -55,7 +55,7 @@ func (p *Player) ReadMessage() {
 		if err != nil {
 			log.Panic(err)
 		}
-		p.Hub.Broadcast <- BroadcastMessage{GameId: p.GameId, Payload: content, Type: movetypeString}
+		p.Hub.BroadcastChan <- BroadcastMessage{GameId: p.GameId, Payload: content, Type: movetypeString}
 	}
 }
 
@@ -64,17 +64,17 @@ func (p *Player) WriteMessage() {
 		p.Connection.Close()
 	}()
 
-	for message := range p.Send {
+	for message := range p.SendChan {
 		writer, err := p.Connection.NextWriter(websocket.TextMessage)
 		if err != nil {
 			return
 		}
 		writer.Write(message)
 
-		n := len(p.Send)
+		n := len(p.SendChan)
 		for i := 0; i < n; i++ {
 			writer.Write([]byte{'\n'})
-			writer.Write(<-p.Send)
+			writer.Write(<-p.SendChan)
 		}
 
 		if err := writer.Close(); err != nil {

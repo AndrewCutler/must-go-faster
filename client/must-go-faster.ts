@@ -10,7 +10,6 @@ import {
 	Move,
 	MovePayload,
 	MoveRequest,
-	MoveResponse,
 	PlayerColor,
 	PremoveRequest,
 	TimeoutPayload,

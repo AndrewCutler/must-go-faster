@@ -14,7 +14,7 @@ import (
 type Hub struct {
 	GamesInProgress       map[string]*GameMeta
 	GamesAwaitingOpponent map[string]*GameMeta
-	Broadcast             chan Message
+	Broadcast             chan BroadcastMessage
 	Register              chan *Player
 	Unregister            chan *Player
 	Config                *c.ClientConfig
@@ -22,7 +22,7 @@ type Hub struct {
 
 func NewHub(config *c.ClientConfig) *Hub {
 	return &Hub{
-		Broadcast:             make(chan Message),
+		Broadcast:             make(chan BroadcastMessage),
 		Register:              make(chan *Player),
 		Unregister:            make(chan *Player),
 		GamesInProgress:       make(map[string]*GameMeta),
@@ -89,54 +89,55 @@ func (h *Hub) Run() {
 		// todo: unregister
 		case message := <-h.Broadcast:
 			switch message.Type {
-			case 0:
-				return
-			case 1:
-				// move this to "get game" func
-				game, ok := h.GamesInProgress[message.Move.GameId]
-				if !ok {
-					if len(h.GamesAwaitingOpponent) == 0 {
-						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
-						return
-					}
+			// case
+			// case 0:
+			// 	return
+			// case 1:
+			// 	// move this to "get game" func
+			// 	game, ok := h.GamesInProgress[message.GameId]
+			// 	if !ok {
+			// 		if len(h.GamesAwaitingOpponent) == 0 {
+			// 			log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+			// 			return
+			// 		}
 
-					log.Printf("Game awaiting opponent; gameId: %s\n", message.Move.GameId)
-					return
-				}
-				if game.GameId == "" {
-					log.Printf("Missing gameId.")
-					return
-				}
+			// 		log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
+			// 		return
+			// 	}
+			// 	if game.GameId == "" {
+			// 		log.Printf("Missing gameId.")
+			// 		return
+			// 	}
 
-				switch message.Move.Type {
-				case "move":
-					handleMoveMessage(h.Config, message, game)
-				case "premove":
-					handlePremoveMessage(message, game)
-				case "timeout":
-					handleTimeoutMessage(message, game)
-				case "gameStarted":
-					handleGameStartedMessage(h.Config, message, game)
-				default:
-					log.Println("Unknown move type: ", message.Move.Type)
-				}
-			case 2:
-				game, ok := h.GamesInProgress[message.Move.GameId]
-				if !ok {
-					if len(h.GamesAwaitingOpponent) == 0 {
-						log.Printf("Invalid gameId; no pending games: %s\n", message.Move.GameId)
-						return
-					}
-				}
+			// 	switch message.Type {
+			// 	case "move":
+			// 		handleMoveMessage(h.Config, message, game)
+			// 	case "premove":
+			// 		handlePremoveMessage(message, game)
+			// 	case "timeout":
+			// 		handleTimeoutMessage(message, game)
+			// 	case "gameStarted":
+			// 		handleGameStartedMessage(h.Config, message, game)
+			// 	default:
+			// 		log.Println("Unknown move type: ", message.Type)
+			// 	}
+			// case 2:
+			// 	game, ok := h.GamesInProgress[message.GameId]
+			// 	if !ok {
+			// 		if len(h.GamesAwaitingOpponent) == 0 {
+			// 			log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+			// 			return
+			// 		}
+			// 	}
 
-				if game != nil {
-					fmt.Println("GAME ABANDONED")
-					handleAbandonedMessage(game)
-				}
-				delete(h.GamesInProgress, message.Move.GameId)
-				delete(h.GamesAwaitingOpponent, message.Move.GameId)
+			// 	if game != nil {
+			// 		fmt.Println("GAME ABANDONED")
+			// 		handleAbandonedMessage(game)
+			// 	}
+			// 	delete(h.GamesInProgress, message.GameId)
+			// 	delete(h.GamesAwaitingOpponent, message.GameId)
 			default:
-				log.Println("Broadcast default case reached.")
+				log.Println(message)
 				return
 			}
 		}

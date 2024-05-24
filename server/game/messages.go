@@ -2,26 +2,108 @@ package game
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	c "server/config"
 	"time"
 )
 
-type Message struct {
-	Payload interface{} `json:"payload"`
-	Type    int         `json:"type"`
+type MessageType int
+
+const (
+	GameJoinedType = MessageType(iota)
+	GameStartedType
+	MoveType
+	TimeoutType
+	AbandonedType
+)
+
+func (m MessageType) String() string {
+	switch m {
+	case GameJoinedType:
+		return "GameJoinedType"
+	case GameStartedType:
+		return "GameStartedType"
+	case MoveType:
+		return "MoveType"
+	case TimeoutType:
+		return "TimeoutType"
+	case AbandonedType:
+		return "AbandonedType"
+	default:
+		return ""
+	}
+}
+
+func MessageTypeFromString(s string) (MessageType, error) {
+	switch s {
+	case "gameJoined":
+		return GameJoinedType, nil
+	case "gameStarted":
+		return GameStartedType, nil
+	case "move":
+		return MoveType, nil
+	case "timeout":
+		return TimeoutType, nil
+	case "abandoned":
+		return AbandonedType, nil
+	}
+
+	return -1, errors.New("Invalid message type.")
+}
+
+type BroadcastMessage struct {
+	Payload []byte      `json:"payload"`
+	Type    MessageType `json:"type"`
+	GameId  string      `json:"gameId"`
+}
+
+type SendMessage struct {
+	Payload     interface{} `json:"payload"`
+	Type        string      `json:"type"`
+	GameId      string      `json:"gameId"`
+	PlayerColor string      `json:"playerColor"`
 }
 
 type GameJoinedPayload struct {
 	GameJoined    bool                `json:"gameJoined"`
 	Fen           string              `json:"fen"`
-	GameId        string              `json:"gameId"`
-	PlayerColor   string              `json:"playerColor"`
 	ValidMoves    map[string][]string `json:"validMoves"`
 	WhosNext      string              `json:"whosNext"`
 	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
 	BlackTimeLeft float64             `json:"blackTimeLeft"`
+}
+
+type GameStartedPayload struct {
+	GameStarted   bool                `json:"gameStarted"`
+	Fen           string              `json:"fen"`
+	ValidMoves    map[string][]string `json:"validMoves"`
+	WhosNext      string              `json:"whosNext"`
+	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	BlackTimeLeft float64             `json:"blackTimeLeft"`
+}
+
+type MovePayload struct {
+	Fen          string              `json:"fen"`
+	ValidMoves   map[string][]string `json:"validMoves"`
+	WhosNext     string              `json:"whosNext"`
+	IsCheckmated string              `json:"isCheckmated"`
+	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	// BlackTimeLeft float64             `json:"blackTimeLeft"`
+}
+
+type TimeoutPayload struct {
+	Fen        string              `json:"fen"`
+	ValidMoves map[string][]string `json:"validMoves"`
+	WhosNext   string              `json:"whosNext"`
+	Loser      string              `json:"loser"`
+	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+	// BlackTimeLeft float64             `json:"blackTimeLeft"`
+}
+
+type AbandonedPayload struct {
+	Abandoned bool `json:"abandoned"`
 }
 
 // Send
@@ -30,13 +112,13 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 	// set previous time for whosNext to time.Now()
 	gameMeta.LastMoveTime = time.Now()
 	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
-	message := Message{
-		Type: 1,
+	message := SendMessage{
+		Type:        GameJoinedType.String(),
+		GameId:      gameMeta.GameId,
+		PlayerColor: playerColor,
 		Payload: GameJoinedPayload{
 			GameJoined:    true,
 			Fen:           gameMeta.getFen(),
-			GameId:        gameMeta.GameId,
-			PlayerColor:   playerColor, // is this necessary
 			ValidMoves:    ValidMovesMap(gameMeta.Game),
 			WhosNext:      gameMeta.whoseMoveIsIt(),
 			WhiteTimeLeft: whiteTimeLeft,
@@ -63,29 +145,18 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 	return jsonData
 }
 
-type GameStartedPayload struct {
-	GameStarted   bool                `json:"gameStarted"`
-	Fen           string              `json:"fen"`
-	GameId        string              `json:"gameId"`
-	PlayerColor   string              `json:"playerColor"`
-	ValidMoves    map[string][]string `json:"validMoves"`
-	WhosNext      string              `json:"whosNext"`
-	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-	BlackTimeLeft float64             `json:"blackTimeLeft"`
-}
-
 func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
 	// todo: logic for time left is a disaster
 	// set previous time for whosNext to time.Now()
 	gameMeta.LastMoveTime = time.Now()
 	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
-	message := Message{
-		Type: 1,
+	message := SendMessage{
+		Type:        GameStartedType.String(),
+		GameId:      gameMeta.GameId,
+		PlayerColor: playerColor,
 		Payload: GameStartedPayload{
 			GameStarted:   true,
 			Fen:           gameMeta.getFen(),
-			GameId:        gameMeta.GameId,
-			PlayerColor:   playerColor, // is this necessary
 			ValidMoves:    ValidMovesMap(gameMeta.Game),
 			WhosNext:      gameMeta.whoseMoveIsIt(),
 			WhiteTimeLeft: whiteTimeLeft,
@@ -112,17 +183,6 @@ func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCo
 	return jsonData
 }
 
-type MovePayload struct {
-	Fen          string              `json:"fen"`
-	GameId       string              `json:"gameId"`
-	PlayerColor  string              `json:"playerColor"`
-	ValidMoves   map[string][]string `json:"validMoves"`
-	WhosNext     string              `json:"whosNext"`
-	IsCheckmated string              `json:"isCheckmated"`
-	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-	// BlackTimeLeft float64             `json:"blackTimeLeft"`
-}
-
 func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
 	isCheckmated := ""
 	switch gameMeta.Game.Outcome() {
@@ -132,12 +192,12 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 		isCheckmated = "black"
 	}
 
-	message := Message{
-		Type: 1,
+	message := SendMessage{
+		Type:        MoveType.String(),
+		GameId:      gameMeta.GameId,
+		PlayerColor: playerColor,
 		Payload: MovePayload{
 			Fen:          gameMeta.getFen(),
-			GameId:       gameMeta.GameId,
-			PlayerColor:  playerColor,
 			ValidMoves:   ValidMovesMap(gameMeta.Game),
 			WhosNext:     gameMeta.whoseMoveIsIt(),
 			IsCheckmated: isCheckmated,
@@ -164,27 +224,16 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 	return jsonData
 }
 
-type TimeoutPayload struct {
-	Fen         string              `json:"fen"`
-	GameId      string              `json:"gameId"`
-	PlayerColor string              `json:"playerColor"`
-	ValidMoves  map[string][]string `json:"validMoves"`
-	WhosNext    string              `json:"whosNext"`
-	Loser       string              `json:"loser"`
-	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-	// BlackTimeLeft float64             `json:"blackTimeLeft"`
-}
-
 func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []byte {
-	message := Message{
-		Type: 1,
+	message := SendMessage{
+		Type:        TimeoutType.String(),
+		GameId:      gameMeta.GameId,
+		PlayerColor: playerColor,
 		Payload: TimeoutPayload{
-			Fen:         gameMeta.getFen(),
-			GameId:      gameMeta.GameId,
-			PlayerColor: playerColor,
-			ValidMoves:  ValidMovesMap(gameMeta.Game),
-			WhosNext:    gameMeta.whoseMoveIsIt(),
-			Loser:       loser,
+			Fen:        gameMeta.getFen(),
+			ValidMoves: ValidMovesMap(gameMeta.Game),
+			WhosNext:   gameMeta.whoseMoveIsIt(),
+			Loser:      loser,
 			// "timeLeft":     gameMeta.getTimeRemaining(config),
 
 		},
@@ -206,13 +255,9 @@ func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []
 	return jsonData
 }
 
-type AbandonedPayload struct {
-	Abandoned bool `json:"abandoned"`
-}
-
 func sendAbandonedMessage() []byte {
-	message := Message{
-		Type: 1,
+	message := SendMessage{
+		Type: AbandonedType.String(),
 		Payload: AbandonedPayload{
 			Abandoned: true,
 		},
@@ -238,8 +283,9 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
-func handlePremoveMessage(message Message, game *GameMeta) {
-	err := parsePremove(string(message.Move.Data), game.Game)
+func handlePremoveMessage(message SendMessage, game *GameMeta) {
+	err := parsePremove("", game.Game)
+	// err := parsePremove(string(message.Move.Data), game.Game)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)
 		return
@@ -254,7 +300,7 @@ func handlePremoveMessage(message Message, game *GameMeta) {
 	}
 }
 
-func handleGameStartedMessage(config *c.ClientConfig, message Message, game *GameMeta) {
+func handleGameStartedMessage(config *c.ClientConfig, message SendMessage, game *GameMeta) {
 	fmt.Println("game started")
 	for _, player := range game.GetPlayers() {
 		m := sendGameStartedMessage(config, game, player.Color)
@@ -266,8 +312,9 @@ func handleGameStartedMessage(config *c.ClientConfig, message Message, game *Gam
 	}
 }
 
-func handleTimeoutMessage(message Message, game *GameMeta) {
-	err := parseTimeout(string(message.Move.Data), game.Game)
+func handleTimeoutMessage(message SendMessage, game *GameMeta) {
+	err := parseTimeout("", game.Game)
+	// err := parseTimeout(string(message.Move.Data), game.Game)
 	if err != nil {
 		fmt.Println("Failed to parse timeout move data")
 		return
@@ -283,8 +330,9 @@ func handleTimeoutMessage(message Message, game *GameMeta) {
 	}
 }
 
-func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
-	err := parseMove(string(message.Move.Data), game.Game)
+func handleMoveMessage(config *c.ClientConfig, message SendMessage, game *GameMeta) {
+	// err := parseMove(string(message.Move.Data), game.Game)
+	err := parseMove("", game.Game)
 	if err != nil {
 		log.Println("Cannot make move: ", err)
 		return

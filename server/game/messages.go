@@ -300,7 +300,8 @@ func handlePremoveMessage(message SendMessage, game *GameMeta) {
 	}
 }
 
-func handleGameStartedMessage(config *c.ClientConfig, message SendMessage, game *GameMeta) {
+// is message necessary?
+func handleGameStartedMessage(config *c.ClientConfig, message BroadcastMessage, game *GameMeta) {
 	fmt.Println("game started")
 	for _, player := range game.GetPlayers() {
 		m := sendGameStartedMessage(config, game, player.Color)
@@ -312,7 +313,8 @@ func handleGameStartedMessage(config *c.ClientConfig, message SendMessage, game 
 	}
 }
 
-func handleTimeoutMessage(message SendMessage, game *GameMeta) {
+// is message necessary?
+func handleTimeoutMessage(message BroadcastMessage, game *GameMeta) {
 	err := parseTimeout("", game.Game)
 	// err := parseTimeout(string(message.Move.Data), game.Game)
 	if err != nil {
@@ -330,7 +332,8 @@ func handleTimeoutMessage(message SendMessage, game *GameMeta) {
 	}
 }
 
-func handleMoveMessage(config *c.ClientConfig, message SendMessage, game *GameMeta) {
+// is message necessary?
+func handleMoveMessage(config *c.ClientConfig, message BroadcastMessage, game *GameMeta) {
 	// err := parseMove(string(message.Move.Data), game.Game)
 	err := parseMove("", game.Game)
 	if err != nil {

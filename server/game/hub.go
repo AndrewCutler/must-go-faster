@@ -89,6 +89,73 @@ func (h *Hub) Run() {
 		// todo: unregister
 		case message := <-h.Broadcast:
 			switch message.Type {
+			case GameJoinedType:
+				fmt.Println("Game joined")
+				return
+			case GameStartedType:
+				game, ok := h.GamesInProgress[message.GameId]
+				if !ok {
+					if len(h.GamesAwaitingOpponent) == 0 {
+						log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+						return
+					}
+
+					log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
+					return
+				}
+				if game.GameId == "" {
+					log.Printf("Missing gameId.")
+					return
+				}
+				handleGameStartedMessage(h.Config, message, game)
+			case MoveType:
+				game, ok := h.GamesInProgress[message.GameId]
+				if !ok {
+					if len(h.GamesAwaitingOpponent) == 0 {
+						log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+						return
+					}
+
+					log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
+					return
+				}
+				if game.GameId == "" {
+					log.Printf("Missing gameId.")
+					return
+				}
+				handleMoveMessage(h.Config, message, game)
+			case TimeoutType:
+				game, ok := h.GamesInProgress[message.GameId]
+				if !ok {
+					if len(h.GamesAwaitingOpponent) == 0 {
+						log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+						return
+					}
+
+					log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
+					return
+				}
+				if game.GameId == "" {
+					log.Printf("Missing gameId.")
+					return
+				}
+				handleTimeoutMessage(message, game)
+			case AbandonedType:
+				game, ok := h.GamesInProgress[message.GameId]
+				if !ok {
+					if len(h.GamesAwaitingOpponent) == 0 {
+						log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+						return
+					}
+
+					log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
+					return
+				}
+				if game.GameId == "" {
+					log.Printf("Missing gameId.")
+					return
+				}
+				handleAbandonedMessage(game)
 			// case
 			// case 0:
 			// 	return

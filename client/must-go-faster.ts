@@ -109,30 +109,24 @@ export class MustGoFaster {
 			case 'GameJoinedType':
 				await this.start();
 				break;
+			case 'GameStartedType':
+				// move to function
+				this.setTimer();
+				this.#board!.set({
+					viewOnly: false,
+				});
+
+				break;
+			case 'MoveType':
+				this.move();
+				break;
+			case 'TimeoutType':
+				this.timeout();
+				break;
+			case 'AbandonedType':
+				this.abandoned();
+				break;
 		}
-		// if (isGameJoinedResponse(message)) {
-		// 	await this.start();
-		// }
-
-		// if (isGameStartedResponse(message)) {
-		// 	// move to function
-		// 	this.setTimer();
-		// 	this.#board!.set({
-		// 		viewOnly: false,
-		// 	});
-		// }
-
-		// if (isMoveResponse(message)) {
-		// 	this.move();
-		// }
-
-		// if (isTimeoutResponse(message)) {
-		// 	this.timeout();
-		// }
-
-		// if (isAbandonedResponse(message)) {
-		// 	this.abandoned();
-		// }
 	}
 
 	private async start(): Promise<void> {

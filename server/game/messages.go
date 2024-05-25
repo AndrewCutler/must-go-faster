@@ -2,7 +2,6 @@ package game
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	c "server/config"
@@ -38,19 +37,19 @@ func (m MessageType) String() string {
 
 func MessageTypeFromString(s string) (MessageType, error) {
 	switch s {
-	case "gameJoined":
+	case "GameJoinedType":
 		return GameJoinedType, nil
-	case "gameStarted":
+	case "GameStartedType":
 		return GameStartedType, nil
-	case "move":
+	case "MoveType":
 		return MoveType, nil
-	case "timeout":
+	case "TimeoutType":
 		return TimeoutType, nil
-	case "abandoned":
+	case "AbandonedType":
 		return AbandonedType, nil
 	}
 
-	return -1, errors.New("invalid message type")
+	return -1, fmt.Errorf("invalid message type: %s", s)
 }
 
 type BroadcastMessage struct {

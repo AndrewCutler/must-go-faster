@@ -14,7 +14,7 @@ import (
 type Hub struct {
 	GamesInProgress       map[string]*GameMeta
 	GamesAwaitingOpponent map[string]*GameMeta
-	BroadcastChan         chan BroadcastMessage
+	BroadcastChan         chan MessageToServer
 	RegisterChan          chan *Player
 	UnregisterChan        chan *Player
 	Config                *c.ClientConfig
@@ -22,7 +22,7 @@ type Hub struct {
 
 func NewHub(config *c.ClientConfig) *Hub {
 	return &Hub{
-		BroadcastChan:         make(chan BroadcastMessage),
+		BroadcastChan:         make(chan MessageToServer),
 		RegisterChan:          make(chan *Player),
 		UnregisterChan:        make(chan *Player),
 		GamesInProgress:       make(map[string]*GameMeta),
@@ -97,12 +97,11 @@ func (h *Hub) onRegister(player *Player) {
 	}
 }
 
-func (h *Hub) onMessage(message BroadcastMessage) {
+func (h *Hub) onMessage(message MessageToServer) {
 	switch message.Type {
-	case GameJoinedType:
-		fmt.Println("Game joined")
+	case GameJoinedFromServerType.String():
 		return
-	case GameStartedType:
+	case GameStartedFromServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
 			if len(h.GamesAwaitingOpponent) == 0 {
@@ -117,8 +116,9 @@ func (h *Hub) onMessage(message BroadcastMessage) {
 			log.Printf("Missing gameId.")
 			return
 		}
+
 		handleGameStartedMessage(h.Config, game)
-	case MoveType:
+	case MoveFromServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
 			if len(h.GamesAwaitingOpponent) == 0 {
@@ -133,8 +133,9 @@ func (h *Hub) onMessage(message BroadcastMessage) {
 			log.Printf("Missing gameId.")
 			return
 		}
-		handleMoveMessage(h.Config, game)
-	case TimeoutType:
+
+		handleMoveMessage(h.Config, message, game)
+	case TimeoutFromServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
 			if len(h.GamesAwaitingOpponent) == 0 {
@@ -149,8 +150,9 @@ func (h *Hub) onMessage(message BroadcastMessage) {
 			log.Printf("Missing gameId.")
 			return
 		}
+
 		handleTimeoutMessage(game)
-	case AbandonedType:
+	case AbandonedFromServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
 			if len(h.GamesAwaitingOpponent) == 0 {
@@ -165,6 +167,7 @@ func (h *Hub) onMessage(message BroadcastMessage) {
 			log.Printf("Missing gameId.")
 			return
 		}
+
 		handleAbandonedMessage(game)
 	// case
 	// case 0:

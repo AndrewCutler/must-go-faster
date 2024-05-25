@@ -27,7 +27,7 @@ func (p *Player) ReadMessage() {
 		// MessageType: 2, GoingAwayMessage
 		_, content, err := p.Connection.ReadMessage()
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			p.Hub.BroadcastChan <- BroadcastMessage{GameId: p.GameId, Type: AbandonedType}
+			p.Hub.BroadcastChan <- MessageToServer{GameId: p.GameId, Type: AbandonedFromServerType.String()}
 			// game is over, send game abandoned message to winner and remove from active games
 			return
 		}
@@ -36,26 +36,27 @@ func (p *Player) ReadMessage() {
 			return
 		}
 
-		type moveType struct {
+		type MoveFromServerType struct {
 			Type        string `json:"type"`
-			Move        Move   `json:"-"`
-			Timeout     string `json:"-"`
 			GameId      string `json:"-"`
 			PlayerColor string `json:"-"`
-			Premove     string `json:"-"`
+			Payload     string `json:"-"`
 		}
-		var movetype moveType
-		if err := json.Unmarshal(content, &movetype); err != nil {
+		var MoveFromServerType MoveFromServerType
+		// var m BroadcastMessage
+		if err := json.Unmarshal(content, &MoveFromServerType); err != nil {
 			// todo: properly handle error
 			log.Println("Cannot unmarshal message content: ", string(content))
 			return
 		}
 
-		movetypeString, err := MessageTypeFromString(movetype.Type)
+		// MoveFromServerTypeString, err := MessageTypeFromString(m.Type)
 		if err != nil {
 			log.Panic(err)
 		}
-		p.Hub.BroadcastChan <- BroadcastMessage{GameId: p.GameId, Payload: content, Type: movetypeString}
+		// todo: conditionally unmarshal content here, based on message type
+		payload := deserialize(string(content), MoveFromServerType.Type)
+		p.Hub.BroadcastChan <- MessageToServer{GameId: p.GameId, Payload: payload, Type: MoveFromServerType.Type}
 	}
 }
 
@@ -82,4 +83,25 @@ func (p *Player) WriteMessage() {
 			return
 		}
 	}
+}
+
+func deserialize(content string, messageType string) interface{} {
+	switch messageType {
+	case "MoveFromServerType":
+		var result MoveToServer
+		if err := json.Unmarshal([]byte(content), &result); err != nil {
+			log.Println("cannot deserialize: ", content)
+			return err
+		}
+		return result
+	case "TimeoutFromServerType":
+		var result TimeoutToServer
+		if err := json.Unmarshal([]byte(content), &result); err != nil {
+			log.Println("cannot deserialize: ", content)
+			return err
+		}
+		return result
+	}
+
+	return nil
 }

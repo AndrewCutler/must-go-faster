@@ -11,25 +11,30 @@ import (
 type MessageType int
 
 const (
-	GameJoinedType = MessageType(iota)
-	GameStartedType
-	MoveType
-	TimeoutType
-	AbandonedType
+	GameJoinedFromServerType = MessageType(iota)
+	GameStartedFromServerType
+	MoveFromServerType
+	TimeoutFromServerType
+	AbandonedFromServerType
+	GameJoinedToServerType
+	GameStartedToServerType
+	MoveToServerType
+	TimeoutToServerType
+	AbandonedToServerType
 )
 
 func (m MessageType) String() string {
 	switch m {
-	case GameJoinedType:
-		return "GameJoinedType"
-	case GameStartedType:
-		return "GameStartedType"
-	case MoveType:
-		return "MoveType"
-	case TimeoutType:
-		return "TimeoutType"
-	case AbandonedType:
-		return "AbandonedType"
+	case GameJoinedFromServerType:
+		return "GameJoinedFromServerType"
+	case GameStartedFromServerType:
+		return "GameStartedFromServerType"
+	case MoveFromServerType:
+		return "MoveFromServerType"
+	case TimeoutFromServerType:
+		return "TimeoutFromServerType"
+	case AbandonedFromServerType:
+		return "AbandonedFromServerType"
 	default:
 		return ""
 	}
@@ -37,35 +42,36 @@ func (m MessageType) String() string {
 
 func MessageTypeFromString(s string) (MessageType, error) {
 	switch s {
-	case "GameJoinedType":
-		return GameJoinedType, nil
-	case "GameStartedType":
-		return GameStartedType, nil
-	case "MoveType":
-		return MoveType, nil
-	case "TimeoutType":
-		return TimeoutType, nil
-	case "AbandonedType":
-		return AbandonedType, nil
+	case "GameJoinedFromServerType":
+		return GameJoinedFromServerType, nil
+	case "GameStartedFromServerType":
+		return GameStartedFromServerType, nil
+	case "MoveFromServerType":
+		return MoveFromServerType, nil
+	case "TimeoutFromServerType":
+		return TimeoutFromServerType, nil
+	case "AbandonedFromServerType":
+		return AbandonedFromServerType, nil
 	}
 
 	return -1, fmt.Errorf("invalid message type: %s", s)
 }
 
-type BroadcastMessage struct {
-	Payload []byte      `json:"payload"`
-	Type    MessageType `json:"type"`
-	GameId  string      `json:"gameId"`
+type MessageToServer struct {
+	Payload     interface{} `json:"payload"`
+	PlayerColor string      `json:"playerColor"`
+	Type        string      `json:"type"`
+	GameId      string      `json:"gameId"`
 }
 
-type SendMessage struct {
+type MessageFromServer struct {
 	Payload     interface{} `json:"payload"`
 	Type        string      `json:"type"`
 	GameId      string      `json:"gameId"`
 	PlayerColor string      `json:"playerColor"`
 }
 
-type GameJoinedPayload struct {
+type GameJoinedFromServer struct {
 	Fen           string              `json:"fen"`
 	ValidMoves    map[string][]string `json:"validMoves"`
 	WhosNext      string              `json:"whosNext"`
@@ -73,7 +79,7 @@ type GameJoinedPayload struct {
 	BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
-type GameStartedPayload struct {
+type GameStartedFromServer struct {
 	Fen           string              `json:"fen"`
 	ValidMoves    map[string][]string `json:"validMoves"`
 	WhosNext      string              `json:"whosNext"`
@@ -81,7 +87,7 @@ type GameStartedPayload struct {
 	BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
-type MovePayload struct {
+type MoveFromServer struct {
 	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
 	BlackTimeLeft float64             `json:"blackTimeLeft"`
 	Fen           string              `json:"fen"`
@@ -92,7 +98,7 @@ type MovePayload struct {
 	// BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
-type TimeoutPayload struct {
+type TimeoutFromServer struct {
 	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
 	BlackTimeLeft float64             `json:"blackTimeLeft"`
 	Fen           string              `json:"fen"`
@@ -103,8 +109,20 @@ type TimeoutPayload struct {
 	// BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
-type AbandonedPayload struct {
+type AbandonedFromServer struct {
 	Abandoned bool `json:"abandoned"`
+}
+
+type MoveToServer struct {
+	Move Move `json:"move"`
+}
+
+type TimeoutToServer struct {
+	Timeout bool `json:"timeout"`
+}
+
+type PremoveToServer struct {
+	Premove Move `json:"move"`
 }
 
 // Send
@@ -113,11 +131,11 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 	// set previous time for whosNext to time.Now()
 	gameMeta.LastMoveTime = time.Now()
 	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
-	message := SendMessage{
-		Type:        GameJoinedType.String(),
+	message := MessageFromServer{
+		Type:        GameJoinedFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
-		Payload: GameJoinedPayload{
+		Payload: GameJoinedFromServer{
 			Fen:           gameMeta.getFen(),
 			ValidMoves:    ValidMovesMap(gameMeta.Game),
 			WhosNext:      gameMeta.whoseMoveIsIt(),
@@ -150,11 +168,11 @@ func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCo
 	// set previous time for whosNext to time.Now()
 	gameMeta.LastMoveTime = time.Now()
 	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
-	message := SendMessage{
-		Type:        GameStartedType.String(),
+	message := MessageFromServer{
+		Type:        GameStartedFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
-		Payload: GameStartedPayload{
+		Payload: GameStartedFromServer{
 			Fen:           gameMeta.getFen(),
 			ValidMoves:    ValidMovesMap(gameMeta.Game),
 			WhosNext:      gameMeta.whoseMoveIsIt(),
@@ -191,11 +209,11 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 		isCheckmated = "black"
 	}
 
-	message := SendMessage{
-		Type:        MoveType.String(),
+	message := MessageFromServer{
+		Type:        MoveFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
-		Payload: MovePayload{
+		Payload: MoveFromServer{
 			Fen:          gameMeta.getFen(),
 			ValidMoves:   ValidMovesMap(gameMeta.Game),
 			WhosNext:     gameMeta.whoseMoveIsIt(),
@@ -224,11 +242,11 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 }
 
 func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []byte {
-	message := SendMessage{
-		Type:        TimeoutType.String(),
+	message := MessageFromServer{
+		Type:        TimeoutFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
-		Payload: TimeoutPayload{
+		Payload: TimeoutFromServer{
 			Fen:        gameMeta.getFen(),
 			ValidMoves: ValidMovesMap(gameMeta.Game),
 			WhosNext:   gameMeta.whoseMoveIsIt(),
@@ -255,9 +273,9 @@ func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []
 }
 
 func sendAbandonedMessage() []byte {
-	message := SendMessage{
-		Type: AbandonedType.String(),
-		Payload: AbandonedPayload{
+	message := MessageFromServer{
+		Type: AbandonedFromServerType.String(),
+		Payload: AbandonedFromServer{
 			Abandoned: true,
 		},
 	}
@@ -282,7 +300,7 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
-func handlePremoveMessage(message SendMessage, game *GameMeta) {
+func handlePremoveMessage(message MessageFromServer, game *GameMeta) {
 	err := parsePremove("", game.Game)
 	// err := parsePremove(string(message.Move.Data), game.Game)
 	if err != nil {
@@ -330,9 +348,11 @@ func handleTimeoutMessage(game *GameMeta) {
 	}
 }
 
-func handleMoveMessage(config *c.ClientConfig, game *GameMeta) {
-	// err := parseMove(string(message.Move.Data), game.Game)
-	err := parseMove("", game.Game)
+func handleMoveMessage(config *c.ClientConfig, message MessageToServer, game *GameMeta) {
+	// fmt.Println("payload: ", string(message.Payload))
+	payload := message.Payload.(MoveToServer)
+	err := parseMove(payload, game.Game)
+	// err := parseMove(string(message.Payload), game.Game)
 	if err != nil {
 		log.Println("Cannot make move: ", err)
 		return

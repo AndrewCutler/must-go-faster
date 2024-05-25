@@ -6,12 +6,12 @@ export type PlayerColor = 'white' | 'black';
 export type GameStatus = 'ongoing' | 'lost' | 'won' | 'draw';
 
 export type MessageType =
-	| 'GameJoinedType'
-	| 'GameStartedType'
-	| 'MoveType'
-	| 'PremoveType'
-	| 'TimeoutType'
-	| 'AbandonedType';
+	| 'GameJoinedFromServerType'
+	| 'GameStartedFromServerType'
+	| 'MoveFromServerType'
+	| 'PreMoveFromServerType'
+	| 'TimeoutFromServerType'
+	| 'AbandonedFromServerType';
 
 export type Message<T extends Payload> = {
 	gameId: string;
@@ -23,16 +23,17 @@ export type Message<T extends Payload> = {
 };
 
 export type Payload =
-	| GameJoinedIncoming
-	| GameStartedIncoming
-	| TimeoutIncoming
-	| MoveIncoming
-	| AbandonedIncoming
-	| TimeoutOutgoing
-	| PremoveOutgoing
-	| MoveOutgoing;
+	| GameJoinedFromServer
+	| GameStartedFromServer
+	| GameStartedToServer
+	| MoveFromServer
+	| MoveToServer
+	| PremoveToServer
+	| TimeoutFromServer
+	| TimeoutToServer
+	| AbandonedFromServer;
 
-export type GameJoinedIncoming = {
+export type GameJoinedFromServer = {
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -40,9 +41,11 @@ export type GameJoinedIncoming = {
 	validMoves: { [key: string]: string[] };
 };
 
-export type GameStartedIncoming = GameJoinedIncoming;
+export type GameStartedFromServer = GameJoinedFromServer;
 
-export type MoveIncoming = {
+export type GameStartedToServer = undefined;
+
+export type MoveFromServer = {
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -51,7 +54,7 @@ export type MoveIncoming = {
 	isCheckmated: PlayerColor;
 };
 
-export type TimeoutIncoming = {
+export type TimeoutFromServer = {
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -60,21 +63,19 @@ export type TimeoutIncoming = {
 	loser: PlayerColor;
 };
 
-export type AbandonedIncoming = {
+export type AbandonedFromServer = {
 	abandoned: boolean;
 };
 
-export type TimeoutOutgoing = {
+export type TimeoutToServer = {
 	timeout: boolean;
 };
 
-export type PremoveOutgoing = {
+export type PremoveToServer = {
 	premove: Move;
 };
 
-export type MoveOutgoing = {
-	move: Move;
-};
+export type MoveToServer = { move: Move };
 
 export type Move = {
 	from: cg.Key;

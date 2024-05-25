@@ -2,18 +2,18 @@ import { Chessground } from 'chessground';
 import {
 	ChessgroundConfig,
 	Config,
-	GameJoinedPayload,
-	GameStartedRequest,
-	GameStartedResponse,
+	GameJoinedIncoming,
+	GameStartedIncoming,
 	GameStatus,
 	Message,
 	Move,
-	MovePayload,
-	MoveRequest,
+	MoveIncoming,
+	MoveOutgoing,
+	Payload,
 	PlayerColor,
-	PremoveRequest,
-	TimeoutPayload,
-	TimeoutRequest,
+	PremoveOutgoing,
+	TimeoutIncoming,
+	TimeoutOutgoing,
 } from './models';
 
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -29,7 +29,7 @@ export class MustGoFaster {
 	#config: Config | undefined;
 	#connection: WebSocket | undefined;
 	#board: ChessgroundApi | undefined;
-	#message: Message | undefined;
+	#message: Message<Payload> | undefined;
 
 	get connection(): WebSocket | undefined {
 		return this.#connection;
@@ -91,7 +91,7 @@ export class MustGoFaster {
 		const self = this;
 		ws.onmessage = function (event) {
 			try {
-				const response: Message = JSON.parse(event.data);
+				const response: Message<Payload> = JSON.parse(event.data);
 				self.handleMessage(response);
 			} catch (e) {
 				console.error(e);
@@ -100,7 +100,7 @@ export class MustGoFaster {
 		this.#connection = ws;
 	}
 
-	private async handleMessage(message: Message) {
+	private async handleMessage(message: Message<Payload>) {
 		this.#message = message;
 
 		console.log('Handle message: ', { message });
@@ -130,7 +130,7 @@ export class MustGoFaster {
 
 	private async start(): Promise<void> {
 		console.log('start: ', { response: this.#message });
-		const response = this.#message as GameStartedResponse;
+		const response = this.#message as Message<GameStartedIncoming>;
 		this.setupBoard(response);
 		console.log(this.#board!.state);
 
@@ -144,7 +144,7 @@ export class MustGoFaster {
 
 	private move(): void {
 		if (this.#moveType === 'move') {
-			const payload = this.#message!.payload as MovePayload;
+			const payload = this.#message!.payload as MoveIncoming;
 			console.log('move: ', { move: this.#message });
 			let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 			if (payload.isCheckmated) {
@@ -181,7 +181,7 @@ export class MustGoFaster {
 	private timeout(): void {
 		let status: GameStatus = 'won';
 		if (
-			(this.#message?.payload as TimeoutPayload).loser ===
+			(this.#message!.payload as TimeoutIncoming).loser ===
 			this.#playerColor
 		) {
 			status = 'lost';
@@ -212,10 +212,12 @@ export class MustGoFaster {
 					window.clearInterval(countdownInterval);
 					countdownDisplay.style.display = 'none';
 					if (self.#connection) {
-						const gameStartedRequest: GameStartedRequest = {
-							type: 'gameStarted',
-							gameId: self.#gameId!,
-						};
+						const gameStartedRequest: Message<GameStartedIncoming> =
+							{
+								type: 'GameStartedType',
+								gameId: self.#gameId!,
+								playerColor: self.#playerColor!,
+							};
 						self.sendMessage(JSON.stringify(gameStartedRequest));
 					}
 					resolve();
@@ -243,11 +245,13 @@ export class MustGoFaster {
 				window.clearInterval(self.#timerInterval);
 				// send message to server to end game/find out the outcome
 				if (self.connection) {
-					const timeout: TimeoutRequest = {
-						type: 'timeout',
+					const timeout: Message<TimeoutOutgoing> = {
+						type: 'TimeoutType',
 						gameId: self.#gameId!,
 						playerColor: self.#playerColor!,
-						timeout: true,
+						payload: {
+							timeout: true,
+						},
 					};
 					self.sendMessage(JSON.stringify(timeout));
 				}
@@ -286,12 +290,12 @@ export class MustGoFaster {
 		modalHeader.innerText = `You ${gameStatus} via ${method}.`;
 	}
 
-	private setupBoard(message: Message) {
+	private setupBoard(message: Message<GameStartedIncoming>) {
 		this.#gameId = message.gameId;
 		this.#playerColor = message.playerColor;
 		this.#timeLeft = this.#gameClock = this.#config?.startingTime;
 
-		const payload = message.payload as GameJoinedPayload;
+		const payload = message.payload as GameJoinedIncoming;
 
 		const gameMeta = document.querySelector<HTMLDivElement>('#game-meta')!;
 		gameMeta.style.visibility = 'inherit';
@@ -335,10 +339,13 @@ export class MustGoFaster {
 	private sendPremoveMessage(p: Move): void {
 		console.log('sendPremoveMessage: ', { premove: p });
 		if (this.#connection) {
-			const premove: PremoveRequest = {
-				type: 'premove',
+			const premove: Message<PremoveOutgoing> = {
+				type: 'PremoveType',
 				gameId: this.#gameId!,
-				premove: p,
+				playerColor: this.#playerColor!,
+				payload: {
+					premove: p,
+				},
 			};
 			this.sendMessage(JSON.stringify(premove));
 		} else {
@@ -360,15 +367,16 @@ export class MustGoFaster {
 			self.#board!.move(from, to);
 
 			const move: { from: cg.Key; to: cg.Key } = { from, to };
-			// if (ws) {
 			if (self.#connection) {
-				const message: MoveRequest = {
-					move,
+				const message: Message<MoveOutgoing> = {
+					payload: {
+						move,
+					},
+					playerColor: self.#playerColor!,
 					gameId: self.#gameId!,
-					type: 'move',
+					type: 'MoveType',
 				};
 				self.sendMessage(JSON.stringify(message));
-				// ws.send(JSON.stringify(message));
 			}
 			console.log({ state: self.#board!.state });
 			self.#board!.set({

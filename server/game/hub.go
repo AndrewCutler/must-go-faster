@@ -117,7 +117,7 @@ func (h *Hub) onMessage(message BroadcastMessage) {
 			log.Printf("Missing gameId.")
 			return
 		}
-		handleGameStartedMessage(h.Config, message, game)
+		handleGameStartedMessage(h.Config, game)
 	case MoveType:
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
@@ -133,7 +133,7 @@ func (h *Hub) onMessage(message BroadcastMessage) {
 			log.Printf("Missing gameId.")
 			return
 		}
-		handleMoveMessage(h.Config, message, game)
+		handleMoveMessage(h.Config, game)
 	case TimeoutType:
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
@@ -149,7 +149,7 @@ func (h *Hub) onMessage(message BroadcastMessage) {
 			log.Printf("Missing gameId.")
 			return
 		}
-		handleTimeoutMessage(message, game)
+		handleTimeoutMessage(game)
 	case AbandonedType:
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {

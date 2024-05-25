@@ -9,26 +9,30 @@ export type MessageType =
 	| 'GameJoinedType'
 	| 'GameStartedType'
 	| 'MoveType'
+	| 'PremoveType'
 	| 'TimeoutType'
 	| 'AbandonedType';
 
-export type Message = {
+export type Message<T extends Payload> = {
 	gameId: string;
 	playerColor: PlayerColor;
-	payload: Payload; // todo
+	payload?: T;
 	type: MessageType;
 	// fen: string;
 	// whosNext: PlayerColor;
 };
 
-type Payload =
-	| GameJoinedPayload
-	| GameStartedPayload
-	| TimeoutPayload
-	| MovePayload
-	| AbandonedPayload;
+export type Payload =
+	| GameJoinedIncoming
+	| GameStartedIncoming
+	| TimeoutIncoming
+	| MoveIncoming
+	| AbandonedIncoming
+	| TimeoutOutgoing
+	| PremoveOutgoing
+	| MoveOutgoing;
 
-export type GameJoinedPayload = {
+export type GameJoinedIncoming = {
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -36,9 +40,9 @@ export type GameJoinedPayload = {
 	validMoves: { [key: string]: string[] };
 };
 
-export type GameStartedPayload = GameJoinedPayload;
+export type GameStartedIncoming = GameJoinedIncoming;
 
-export type MovePayload = {
+export type MoveIncoming = {
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -47,7 +51,7 @@ export type MovePayload = {
 	isCheckmated: PlayerColor;
 };
 
-export type TimeoutPayload = {
+export type TimeoutIncoming = {
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -56,92 +60,26 @@ export type TimeoutPayload = {
 	loser: PlayerColor;
 };
 
-export type AbandonedPayload = {
+export type AbandonedIncoming = {
 	abandoned: boolean;
 };
 
-type BaseResponse = {
-	gameId: string;
-	playerColor: PlayerColor;
-	payload: any; // todo
-	type: MessageType;
-	// fen: string;
-	// whosNext: PlayerColor;
+export type TimeoutOutgoing = {
+	timeout: boolean;
 };
 
-export type MoveResponse = BaseResponse & {
-	validMoves: { [key: string]: string[] };
-	isCheckmated: PlayerColor | '';
-	// timeLeft: number;
-	whiteTimeLeft: number;
-	blackTimeLeft: number;
+export type PremoveOutgoing = {
+	premove: Move;
 };
 
-export type GameJoinedResponse = Omit<MoveResponse, 'isCheckmated'> & {
-	gameJoined: boolean;
+export type MoveOutgoing = {
+	move: Move;
 };
-
-export type GameStartedResponse = Omit<MoveResponse, 'isCheckmated'> & {
-	gameStarted: boolean;
-};
-
-export type TimeoutResponse = BaseResponse & {
-	loser: PlayerColor;
-};
-
-export type AbandonedResponse = {
-	abandoned: boolean;
-};
-
-// export function isGameJoinedResponse(obj: Message): obj is GameJoinedResponse {
-// 	return (obj as any).gameJoined !== undefined;
-// }
-
-// export function isGameStartedResponse(
-// 	obj: unknown,
-// ): obj is GameStartedResponse {
-// 	return (obj as any).gameStarted !== undefined;
-// }
-
-// export function isMoveResponse(obj: unknown): obj is MoveResponse {
-// 	return (
-// 		(obj as any).validMoves !== undefined &&
-// 		(obj as any).gameStarted === undefined
-// 	);
-// }
-
-// export function isTimeoutResponse(obj: any): obj is TimeoutResponse {
-// 	return obj.loser !== undefined;
-// }
-
-// export function isAbandonedResponse(obj: any): obj is AbandonedResponse {
-// 	return obj.abandoned !== undefined;
-// }
 
 export type Move = {
 	from: cg.Key;
 	to: cg.Key;
 };
-
-type BaseRequest = {
-	gameId: string;
-	type: 'move' | 'premove' | 'timeout' | 'gameStarted';
-};
-
-export type GameStartedRequest = BaseRequest;
-
-export type MoveRequest = {
-	move: Move;
-} & BaseRequest;
-
-export type TimeoutRequest = {
-	timeout: true;
-	playerColor: PlayerColor;
-} & BaseRequest;
-
-export type PremoveRequest = {
-	premove: Move;
-} & BaseRequest;
 
 export type Config = {
 	startingTime: number;

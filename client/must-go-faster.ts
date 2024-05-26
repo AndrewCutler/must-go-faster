@@ -24,6 +24,7 @@ import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 import {
 	BoardElement,
+	ConnectButtonElement,
 	CountdownContainerElement,
 	GameMetaElement,
 	GameStatusModalElement,
@@ -134,8 +135,8 @@ export class MustGoFaster {
 
 	private async setupGame(): Promise<void> {
 		console.log('start: ', { response: this._message });
-		const response = this._message as FromMessage<GameStartedFromServer>;
-		this.setupBoard(response);
+		const message = this._message as FromMessage<GameStartedFromServer>;
+		this.setupBoard(message);
 		console.log(this._board!.state);
 
 		await this.showCountdownToStartGame();
@@ -166,6 +167,7 @@ export class MustGoFaster {
 				? payload.whiteTimeLeft
 				: payload.blackTimeLeft;
 		this.setTimer();
+
 		if (this._board!.state.premovable.current) {
 			// send premove message which checks if premove is valid
 			// if so, play response on server and send updated fen
@@ -207,11 +209,10 @@ export class MustGoFaster {
 		return new Promise((resolve) => {
 			const countdownDisplay = new CountdownContainerElement();
 			countdownDisplay.show();
-			let countdownInterval: number;
-			let i = 5;
+			let currentSecond = 5;
 			const self = this;
-			countdownInterval = window.setInterval(function () {
-				if (i <= 0) {
+			const countdownInterval = window.setInterval(function () {
+				if (currentSecond <= 0) {
 					window.clearInterval(countdownInterval);
 					countdownDisplay.hide();
 					if (self._connection) {
@@ -225,8 +226,8 @@ export class MustGoFaster {
 					}
 					resolve();
 				} else {
-					countdownDisplay.setCountdownText(i);
-					i--;
+					countdownDisplay.setCountdownText(currentSecond);
+					currentSecond--;
 				}
 			}, 1000);
 		});
@@ -268,9 +269,9 @@ export class MustGoFaster {
 	}
 
 	private toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
-		const validMoves = new Map();
+		const validMoves = new Map<cg.Key, cg.Key[]>();
 		for (const [key, value] of Object.entries(moves)) {
-			validMoves.set(key, value);
+			validMoves.set(key as cg.Key, value as cg.Key[]);
 		}
 
 		return validMoves;
@@ -298,6 +299,9 @@ export class MustGoFaster {
 			playerColor: this._playerColor,
 			whosNext: payload.whosNext,
 		});
+
+		const connectButton = new ConnectButtonElement();
+		connectButton.gameJoined();
 
 		this._board!.set({
 			viewOnly: true,

@@ -1,14 +1,15 @@
 import { MustGoFaster } from './must-go-faster';
 import { Config } from './models';
+import { ConnectButtonElement } from './dom';
 
 window.onload = function () {
-	initializeBoard()
+	initialize()
 		.then(getConfig)
 		.then(function ({ config, mustGoFaster }): void {
 			mustGoFaster.setConfig(config);
-			const button = document.querySelector('#connect-button')!;
-			button.addEventListener('click', function () {
-				button.classList.add('is-loading');
+            const button = new ConnectButtonElement();
+			button.element!.addEventListener('click', function () {
+				button.waitForOpponent();
 				mustGoFaster.connect();
 			});
 		})
@@ -32,14 +33,14 @@ function getConfig(
 	});
 }
 
-function initializeBoard(): Promise<MustGoFaster> {
+function initialize(): Promise<MustGoFaster> {
 	return new Promise<MustGoFaster>(function (resolve, reject) {
 		try {
 			const mustGoFaster = new MustGoFaster();
 			resolve(mustGoFaster);
 		} catch (error) {
 			console.error(error);
-			reject('Failed to initialize board.');
+			reject('Failed to initialize.');
 		}
 	});
 }

@@ -118,7 +118,13 @@ export class GameMetaElement implements IElement {
 		this._element = element;
 	}
 
-	show({playerColor, whosNext}:{playerColor: PlayerColor, whosNext: PlayerColor}) {
+	show({
+		playerColor,
+		whosNext,
+	}: {
+		playerColor: PlayerColor;
+		whosNext: PlayerColor;
+	}) {
 		this._element!.style.visibility = 'inherit';
 
 		const gameMetaIcon =
@@ -140,5 +146,29 @@ export class GameMetaElement implements IElement {
 			'#game-meta #player-color',
 		)!;
 		playerColorDiv.innerText = `You play ${playerColor}.`;
+	}
+}
+
+export class ConnectButtonElement implements IElement {
+	private _element: HTMLElement | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this._element;
+	}
+
+	constructor() {
+		const element =
+			document.querySelector<HTMLButtonElement>('#connect-button');
+		if (!element) throw new Error('Cannot find #connect-button');
+		this._element = element;
+	}
+
+	waitForOpponent(): void {
+		this._element!.classList.add('is-loading');
+	}
+
+	gameJoined(): void {
+		this._element!.classList.remove('is-loading');
+		this._element!.style.display = 'none';
 	}
 }

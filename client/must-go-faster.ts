@@ -10,11 +10,14 @@ import {
 	Move,
 	MoveFromServer,
 	MoveToServer,
-	Payload,
+	ToPayload,
 	PlayerColor,
 	PremoveToServer,
 	TimeoutFromServer,
 	TimeoutToServer,
+	ToMessage,
+	FromMessage,
+	FromPayload,
 } from './models';
 
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -29,7 +32,7 @@ export class MustGoFaster {
 	#config: Config | undefined;
 	#connection: WebSocket | undefined;
 	#board: ChessgroundApi | undefined;
-	#message: Message<Payload> | undefined;
+	#message: Message | undefined;
 
 	get connection(): WebSocket | undefined {
 		return this.#connection;
@@ -91,8 +94,10 @@ export class MustGoFaster {
 		const self = this;
 		ws.onmessage = function (event) {
 			try {
-				const response: Message<Payload> = JSON.parse(event.data);
-				self.handleMessage(response);
+				const message: FromMessage<FromPayload> = JSON.parse(
+					event.data,
+				);
+				self.handleMessage(message);
 			} catch (e) {
 				console.error(e);
 			}
@@ -100,24 +105,19 @@ export class MustGoFaster {
 		this.#connection = ws;
 	}
 
-	private async handleMessage(message: Message<Payload>) {
+	private async handleMessage(message: FromMessage<FromPayload>) {
 		this.#message = message;
 
 		console.log('Handle message: ', { message });
 		switch (message.type) {
 			case 'GameJoinedFromServerType':
-				await this.start();
+				await this.setupGame();
 				break;
 			case 'GameStartedFromServerType':
-				// move to function
-				this.setTimer();
-				this.#board!.set({
-					viewOnly: false,
-				});
-
+				this.enableBoard();
 				break;
 			case 'MoveFromServerType':
-				this.move();
+				this.updateBoardWithMove();
 				break;
 			case 'TimeoutFromServerType':
 				this.timeout();
@@ -128,17 +128,38 @@ export class MustGoFaster {
 		}
 	}
 
-	private async start(): Promise<void> {
+	private sendMessage(message: ToMessage<ToPayload>): void {
+		if (!this.#connection) {
+			console.error('Attempted send() on closed connection.');
+			return;
+		}
+
+		try {
+			this.#connection.send(JSON.stringify(message));
+		} catch (error) {
+			console.error('Cannot JSON.stingify message: ', message);
+		}
+	}
+
+	private async setupGame(): Promise<void> {
 		console.log('start: ', { response: this.#message });
-		const response = this.#message as Message<GameStartedFromServer>;
+		const response = this.#message as FromMessage<GameStartedFromServer>;
 		this.setupBoard(response);
 		console.log(this.#board!.state);
 
 		await this.showCountdownToStartGame();
 	}
 
-	private move(): void {
-		const payload = this.#message!.payload as MoveFromServer;
+	private enableBoard(): void {
+		this.setTimer();
+		this.#board!.set({
+			viewOnly: false,
+		});
+	}
+
+	private updateBoardWithMove(): void {
+		const payload = (this.#message! as FromMessage<MoveFromServer>)
+			.payload!;
 		console.log('move: ', { move: this.#message });
 		let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 		if (payload.isCheckmated) {
@@ -174,8 +195,8 @@ export class MustGoFaster {
 	private timeout(): void {
 		let status: GameStatus = 'won';
 		if (
-			(this.#message!.payload as TimeoutFromServer).loser ===
-			this.#playerColor
+			(this.#message! as FromMessage<TimeoutFromServer>).payload!
+				.loser === this.#playerColor
 		) {
 			status = 'lost';
 		}
@@ -205,13 +226,13 @@ export class MustGoFaster {
 					window.clearInterval(countdownInterval);
 					countdownDisplay.style.display = 'none';
 					if (self.#connection) {
-						const gameStartedRequest: Message<GameStartedToServer> =
+						const gameStartedRequest: ToMessage<GameStartedToServer> =
 							{
 								type: 'GameStartedToServerType',
 								gameId: self.#gameId!,
 								playerColor: self.#playerColor!,
 							};
-						self.sendMessage(JSON.stringify(gameStartedRequest));
+						self.sendMessage(gameStartedRequest);
 					}
 					resolve();
 				} else {
@@ -238,7 +259,7 @@ export class MustGoFaster {
 				window.clearInterval(self.#timerInterval);
 				// send message to server to end game/find out the outcome
 				if (self.connection) {
-					const timeout: Message<TimeoutToServer> = {
+					const timeout: ToMessage<TimeoutToServer> = {
 						type: 'TimeoutToServerType',
 						gameId: self.#gameId!,
 						playerColor: self.#playerColor!,
@@ -246,7 +267,7 @@ export class MustGoFaster {
 							timeout: true,
 						},
 					};
-					self.sendMessage(JSON.stringify(timeout));
+					self.sendMessage(timeout);
 				}
 				return;
 			}
@@ -283,7 +304,7 @@ export class MustGoFaster {
 		modalHeader.innerText = `You ${gameStatus} via ${method}.`;
 	}
 
-	private setupBoard(message: Message<GameStartedFromServer>) {
+	private setupBoard(message: FromMessage<GameStartedFromServer>) {
 		this.#gameId = message.gameId;
 		this.#playerColor = message.playerColor;
 		this.#timeLeft = this.#gameClock = this.#config?.startingTime;
@@ -332,7 +353,7 @@ export class MustGoFaster {
 	private sendPremoveMessage(p: Move): void {
 		console.log('sendPremoveMessage: ', { premove: p });
 		if (this.#connection) {
-			const premove: Message<PremoveToServer> = {
+			const premove: ToMessage<PremoveToServer> = {
 				type: 'PreMoveToServerType',
 				gameId: this.#gameId!,
 				playerColor: this.#playerColor!,
@@ -340,7 +361,7 @@ export class MustGoFaster {
 					premove: p,
 				},
 			};
-			this.sendMessage(JSON.stringify(premove));
+			this.sendMessage(premove);
 		} else {
 			throw new Error('connection is undefined.');
 		}
@@ -361,14 +382,13 @@ export class MustGoFaster {
 
 			const move: { from: cg.Key; to: cg.Key } = { from, to };
 			if (self.#connection) {
-				const moveMessage: Message<MoveToServer> = {
+				const moveMessage: ToMessage<MoveToServer> = {
 					payload: { move },
 					playerColor: self.#playerColor!,
 					gameId: self.#gameId!,
 					type: 'MoveToServerType',
 				};
-				console.log({ moveToServer: moveMessage });
-				self.sendMessage(JSON.stringify(moveMessage));
+				self.sendMessage(moveMessage);
 			}
 			console.log({ state: self.#board!.state });
 			self.#board!.set({
@@ -391,16 +411,5 @@ export class MustGoFaster {
 		}
 
 		return to;
-	}
-
-	private sendMessage(
-		message: string | ArrayBufferLike | Blob | ArrayBufferView,
-	): void {
-		if (!this.#connection) {
-			console.error('Attempted send() on closed connection.');
-			return;
-		}
-
-		this.#connection.send(message);
 	}
 }

@@ -17,27 +17,35 @@ export type MessageType =
 	| 'MoveToServerType'
 	| 'PreMoveToServerType'
 	| 'TimeoutToServerType'
-	| 'AbandonedToServerType'
-    ;
+	| 'AbandonedToServerType';
 
-export type Message<T extends Payload> = {
+export type Message = {
 	gameId: string;
 	playerColor: PlayerColor;
-	payload?: T;
 	type: MessageType;
-	// fen: string;
-	// whosNext: PlayerColor;
 };
 
-export type Payload =
+export type ToMessage<T extends ToPayload> = Message & {
+	payload?: T;
+};
+
+export type FromMessage<T extends FromPayload> = Message & {
+	payload?: T;
+};
+
+export type ToPayload =
 	| GameJoinedFromServer
 	| GameStartedFromServer
 	| GameStartedToServer
-	| MoveFromServer
 	| MoveToServer
 	| PremoveToServer
+	| TimeoutToServer;
+
+export type FromPayload =
+	| GameJoinedFromServer
+	| GameStartedFromServer
+	| MoveFromServer
 	| TimeoutFromServer
-	| TimeoutToServer
 	| AbandonedFromServer;
 
 export type GameJoinedFromServer = {
@@ -62,8 +70,8 @@ export type MoveFromServer = {
 };
 
 export type TimeoutFromServer = {
-	whiteTimeLeft: number;
-	blackTimeLeft: number;
+	// whiteTimeLeft: number;
+	// blackTimeLeft: number;
 	fen: string;
 	whosNext: PlayerColor;
 	validMoves: { [key: string]: string[] };

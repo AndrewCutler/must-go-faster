@@ -11,7 +11,14 @@ export type MessageType =
 	| 'MoveFromServerType'
 	| 'PreMoveFromServerType'
 	| 'TimeoutFromServerType'
-	| 'AbandonedFromServerType';
+	| 'AbandonedFromServerType'
+	| 'GameJoinedToServerType'
+	| 'GameStartedToServerType'
+	| 'MoveToServerType'
+	| 'PreMoveToServerType'
+	| 'TimeoutToServerType'
+	| 'AbandonedToServerType'
+    ;
 
 export type Message<T extends Payload> = {
 	gameId: string;

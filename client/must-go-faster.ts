@@ -215,7 +215,7 @@ export class MustGoFaster {
 					if (self.#connection) {
 						const gameStartedRequest: Message<GameStartedToServer> =
 							{
-								type: 'GameStartedFromServerType',
+								type: 'GameStartedToServerType',
 								gameId: self.#gameId!,
 								playerColor: self.#playerColor!,
 							};
@@ -247,7 +247,7 @@ export class MustGoFaster {
 				// send message to server to end game/find out the outcome
 				if (self.connection) {
 					const timeout: Message<TimeoutToServer> = {
-						type: 'TimeoutFromServerType',
+						type: 'TimeoutToServerType',
 						gameId: self.#gameId!,
 						playerColor: self.#playerColor!,
 						payload: {
@@ -341,7 +341,7 @@ export class MustGoFaster {
 		console.log('sendPremoveMessage: ', { premove: p });
 		if (this.#connection) {
 			const premove: Message<PremoveToServer> = {
-				type: 'PreMoveFromServerType',
+				type: 'PreMoveToServerType',
 				gameId: this.#gameId!,
 				playerColor: this.#playerColor!,
 				payload: {
@@ -373,7 +373,7 @@ export class MustGoFaster {
 					payload: { move },
 					playerColor: self.#playerColor!,
 					gameId: self.#gameId!,
-					type: 'MoveFromServerType',
+					type: 'MoveToServerType',
 				};
 				self.sendMessage(JSON.stringify(moveMessage));
 			}

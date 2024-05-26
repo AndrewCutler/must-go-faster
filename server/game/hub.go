@@ -98,10 +98,11 @@ func (h *Hub) onRegister(player *Player) {
 }
 
 func (h *Hub) onMessage(message MessageToServer) {
+	fmt.Println("MESSAGE: ", message)
 	switch message.Type {
 	case GameJoinedFromServerType.String():
 		return
-	case GameStartedFromServerType.String():
+	case GameStartedToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
 			if len(h.GamesAwaitingOpponent) == 0 {
@@ -118,7 +119,7 @@ func (h *Hub) onMessage(message MessageToServer) {
 		}
 
 		handleGameStartedMessage(h.Config, game)
-	case MoveFromServerType.String():
+	case MoveToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
 			if len(h.GamesAwaitingOpponent) == 0 {
@@ -135,7 +136,7 @@ func (h *Hub) onMessage(message MessageToServer) {
 		}
 
 		handleMoveMessage(h.Config, message, game)
-	case TimeoutFromServerType.String():
+	case TimeoutToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
 			if len(h.GamesAwaitingOpponent) == 0 {
@@ -152,7 +153,7 @@ func (h *Hub) onMessage(message MessageToServer) {
 		}
 
 		handleTimeoutMessage(game)
-	case AbandonedFromServerType.String():
+	case AbandonedToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
 			if len(h.GamesAwaitingOpponent) == 0 {

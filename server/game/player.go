@@ -2,6 +2,8 @@ package game
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -36,27 +38,28 @@ func (p *Player) ReadMessage() {
 			return
 		}
 
-		type MoveFromServerType struct {
+		typeOnly := struct {
 			Type        string `json:"type"`
 			GameId      string `json:"-"`
 			PlayerColor string `json:"-"`
 			Payload     string `json:"-"`
+		}{
+			Type: "",
 		}
-		var MoveFromServerType MoveFromServerType
-		// var m BroadcastMessage
-		if err := json.Unmarshal(content, &MoveFromServerType); err != nil {
-			// todo: properly handle error
-			log.Println("Cannot unmarshal message content: ", string(content))
+		if err := json.Unmarshal(content, &typeOnly); err != nil {
+			log.Println("Cannot unmarshal message type: ", string(content))
 			return
 		}
 
-		// MoveFromServerTypeString, err := MessageTypeFromString(m.Type)
+		payload, err := deserialize(string(content), typeOnly.Type)
 		if err != nil {
-			log.Panic(err)
+			log.Println("Deserialization failed: ", err)
+			return
 		}
-		// todo: conditionally unmarshal content here, based on message type
-		payload := deserialize(string(content), MoveFromServerType.Type)
-		p.Hub.BroadcastChan <- MessageToServer{GameId: p.GameId, Payload: payload, Type: MoveFromServerType.Type}
+
+		fmt.Printf("\nPayload: %s\n\n", payload)
+
+		p.Hub.BroadcastChan <- MessageToServer{GameId: p.GameId, Payload: payload, Type: typeOnly.Type}
 	}
 }
 
@@ -85,23 +88,51 @@ func (p *Player) WriteMessage() {
 	}
 }
 
-func deserialize(content string, messageType string) interface{} {
+func deserialize(content string, messageType string) (interface{}, error) {
+	log.Println("Deserializing content: ", content)
+	// first we unmarshal into MessageToServer, which sets payload to map[string]interface{}
+	// then we marshal the payload into a string to unmarshal again into appropriate type
+	// todo: move this ^ to a function.
 	switch messageType {
-	case "MoveFromServerType":
-		var result MoveToServer
+	case "GameStartedToServerType":
+		return nil, nil
+	case "MoveToServerType":
+		var result MessageToServer
 		if err := json.Unmarshal([]byte(content), &result); err != nil {
-			log.Println("cannot deserialize: ", content)
-			return err
+			log.Println("cannot deserialize: ", content, err)
+			return nil, err
 		}
-		return result
-	case "TimeoutFromServerType":
-		var result TimeoutToServer
+		payloadData, err := json.Marshal(result.Payload)
+		if err != nil {
+			fmt.Println("Error marshalling map to JSON:", err)
+			return nil, err
+		}
+		var payload MoveToServer
+		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
+			log.Println("cannot deserialize: ", content, err)
+			return nil, err
+		}
+
+		return payload, nil
+	case "TimeoutToServerType":
+		var result MessageToServer
 		if err := json.Unmarshal([]byte(content), &result); err != nil {
-			log.Println("cannot deserialize: ", content)
-			return err
+			log.Println("cannot deserialize: ", content, err)
+			return nil, err
 		}
-		return result
+		payloadData, err := json.Marshal(result.Payload)
+		if err != nil {
+			fmt.Println("Error marshalling map to JSON:", err)
+			return nil, err
+		}
+		var payload TimeoutToServer
+		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
+			log.Println("cannot deserialize: ", content, err)
+			return nil, err
+		}
+
+		return payload, nil
 	}
 
-	return nil
+	return nil, errors.New("cannot deserialize unknown message type")
 }

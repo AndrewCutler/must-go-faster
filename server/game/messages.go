@@ -35,6 +35,16 @@ func (m MessageType) String() string {
 		return "TimeoutFromServerType"
 	case AbandonedFromServerType:
 		return "AbandonedFromServerType"
+	case GameJoinedToServerType:
+		return "GameJoinedToServerType"
+	case GameStartedToServerType:
+		return "GameStartedToServerType"
+	case MoveToServerType:
+		return "MoveToServerType"
+	case TimeoutToServerType:
+		return "TimeoutToServerType"
+	case AbandonedToServerType:
+		return "AbandonedToServerType"
 	default:
 		return ""
 	}

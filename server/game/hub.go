@@ -14,7 +14,7 @@ import (
 type Hub struct {
 	GamesInProgress       map[string]*GameMeta
 	GamesAwaitingOpponent map[string]*GameMeta
-	BroadcastChan         chan MessageToServer
+	ReadChan              chan MessageToServer
 	RegisterChan          chan *Player
 	UnregisterChan        chan *Player
 	Config                *c.ClientConfig
@@ -22,7 +22,7 @@ type Hub struct {
 
 func NewHub(config *c.ClientConfig) *Hub {
 	return &Hub{
-		BroadcastChan:         make(chan MessageToServer),
+		ReadChan:              make(chan MessageToServer),
 		RegisterChan:          make(chan *Player),
 		UnregisterChan:        make(chan *Player),
 		GamesInProgress:       make(map[string]*GameMeta),
@@ -36,7 +36,7 @@ func (h *Hub) Run() {
 		select {
 		case player := <-h.RegisterChan:
 			h.onRegister(player)
-		case message := <-h.BroadcastChan:
+		case message := <-h.ReadChan:
 			h.onMessage(message)
 			// todo: unregister
 		}
@@ -92,8 +92,8 @@ func (h *Hub) onRegister(player *Player) {
 		h.GamesInProgress[game.GameId] = game
 
 		fmt.Println("broadcasting game joined to white...")
-		player.SendChan <- sendGameJoinedMessage(h.Config, game, player.Color)
-		game.White.SendChan <- sendGameJoinedMessage(h.Config, game, game.White.Color)
+		player.WriteChan <- sendGameJoinedMessage(h.Config, game, player.Color)
+		game.White.WriteChan <- sendGameJoinedMessage(h.Config, game, game.White.Color)
 	}
 }
 

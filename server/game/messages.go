@@ -303,9 +303,9 @@ func sendAbandonedMessage() []byte {
 func handleAbandonedMessage(game *GameMeta) {
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.SendChan <- sendAbandonedMessage():
+		case player.WriteChan <- sendAbandonedMessage():
 		default:
-			close(player.SendChan)
+			close(player.WriteChan)
 		}
 	}
 }
@@ -320,9 +320,9 @@ func handlePremoveMessage(message MessageFromServer, game *GameMeta) {
 	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.SendChan <- sendMoveMessage(nil, game, player.Color):
+		case player.WriteChan <- sendMoveMessage(nil, game, player.Color):
 		default:
-			close(player.SendChan)
+			close(player.WriteChan)
 		}
 	}
 }
@@ -332,9 +332,9 @@ func handleGameStartedMessage(config *c.ClientConfig, game *GameMeta) {
 	for _, player := range game.GetPlayers() {
 		m := sendGameStartedMessage(config, game, player.Color)
 		select {
-		case player.SendChan <- m:
+		case player.WriteChan <- m:
 		default:
-			close(player.SendChan)
+			close(player.WriteChan)
 		}
 	}
 }
@@ -351,18 +351,16 @@ func handleTimeoutMessage(game *GameMeta) {
 	for _, player := range game.GetPlayers() {
 		m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
 		select {
-		case player.SendChan <- m:
+		case player.WriteChan <- m:
 		default:
-			close(player.SendChan)
+			close(player.WriteChan)
 		}
 	}
 }
 
 func handleMoveMessage(config *c.ClientConfig, message MessageToServer, game *GameMeta) {
-	// fmt.Println("payload: ", string(message.Payload))
 	payload := message.Payload.(MoveToServer)
 	err := parseMove(payload, game.Game)
-	// err := parseMove(string(message.Payload), game.Game)
 	if err != nil {
 		log.Println("Cannot make move: ", err)
 		return
@@ -370,9 +368,9 @@ func handleMoveMessage(config *c.ClientConfig, message MessageToServer, game *Ga
 
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.SendChan <- sendMoveMessage(config, game, player.Color):
+		case player.WriteChan <- sendMoveMessage(config, game, player.Color):
 		default:
-			close(player.SendChan)
+			close(player.WriteChan)
 		}
 	}
 }

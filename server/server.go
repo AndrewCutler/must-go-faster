@@ -60,7 +60,7 @@ func main() {
 			return
 		}
 
-		player := &game.Player{Connection: connection, Hub: hub, SendChan: make(chan []byte)}
+		player := &game.Player{Connection: connection, Hub: hub, WriteChan: make(chan []byte)}
 		player.Hub.RegisterChan <- player
 		go player.ReadMessage()
 		go player.WriteMessage()

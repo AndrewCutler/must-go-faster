@@ -13,7 +13,7 @@ import (
 type Player struct {
 	GameId     string
 	Connection *websocket.Conn
-	SendChan   chan []byte
+	WriteChan  chan []byte
 	Hub        *Hub
 	Color      string
 	Timer      time.Time
@@ -29,7 +29,7 @@ func (p *Player) ReadMessage() {
 		// MessageType: 2, GoingAwayMessage
 		_, content, err := p.Connection.ReadMessage()
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			p.Hub.BroadcastChan <- MessageToServer{GameId: p.GameId, Type: AbandonedFromServerType.String()}
+			p.Hub.ReadChan <- MessageToServer{GameId: p.GameId, Type: AbandonedFromServerType.String()}
 			// game is over, send game abandoned message to winner and remove from active games
 			return
 		}
@@ -59,7 +59,7 @@ func (p *Player) ReadMessage() {
 
 		fmt.Printf("\nPayload: %s\n\n", payload)
 
-		p.Hub.BroadcastChan <- MessageToServer{GameId: p.GameId, Payload: payload, Type: typeOnly.Type}
+		p.Hub.ReadChan <- MessageToServer{GameId: p.GameId, Payload: payload, Type: typeOnly.Type}
 	}
 }
 
@@ -68,17 +68,17 @@ func (p *Player) WriteMessage() {
 		p.Connection.Close()
 	}()
 
-	for message := range p.SendChan {
+	for message := range p.WriteChan {
 		writer, err := p.Connection.NextWriter(websocket.TextMessage)
 		if err != nil {
 			return
 		}
 		writer.Write(message)
 
-		n := len(p.SendChan)
+		n := len(p.WriteChan)
 		for i := 0; i < n; i++ {
 			writer.Write([]byte{'\n'})
-			writer.Write(<-p.SendChan)
+			writer.Write(<-p.WriteChan)
 		}
 
 		if err := writer.Close(); err != nil {
@@ -90,21 +90,12 @@ func (p *Player) WriteMessage() {
 
 func deserialize(content string, messageType string) (interface{}, error) {
 	log.Println("Deserializing content: ", content)
-	// first we unmarshal into MessageToServer, which sets payload to map[string]interface{}
-	// then we marshal the payload into a string to unmarshal again into appropriate type
-	// todo: move this ^ to a function.
 	switch messageType {
 	case "GameStartedToServerType":
 		return nil, nil
 	case "MoveToServerType":
-		var result MessageToServer
-		if err := json.Unmarshal([]byte(content), &result); err != nil {
-			log.Println("cannot deserialize: ", content, err)
-			return nil, err
-		}
-		payloadData, err := json.Marshal(result.Payload)
+		payloadData, err := toServerMessage(content)
 		if err != nil {
-			fmt.Println("Error marshalling map to JSON:", err)
 			return nil, err
 		}
 		var payload MoveToServer
@@ -115,16 +106,11 @@ func deserialize(content string, messageType string) (interface{}, error) {
 
 		return payload, nil
 	case "TimeoutToServerType":
-		var result MessageToServer
-		if err := json.Unmarshal([]byte(content), &result); err != nil {
-			log.Println("cannot deserialize: ", content, err)
-			return nil, err
-		}
-		payloadData, err := json.Marshal(result.Payload)
+		payloadData, err := toServerMessage(content)
 		if err != nil {
-			fmt.Println("Error marshalling map to JSON:", err)
 			return nil, err
 		}
+
 		var payload TimeoutToServer
 		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
 			log.Println("cannot deserialize: ", content, err)
@@ -135,4 +121,21 @@ func deserialize(content string, messageType string) (interface{}, error) {
 	}
 
 	return nil, errors.New("cannot deserialize unknown message type")
+}
+
+// first we unmarshal into MessageToServer, which sets payload to map[string]interface{}
+// then we marshal the payload into a string to unmarshal again into appropriate type
+func toServerMessage(content string) ([]byte, error) {
+	var result MessageToServer
+	if err := json.Unmarshal([]byte(content), &result); err != nil {
+		log.Println("cannot deserialize: ", content, err)
+		return nil, err
+	}
+	payloadData, err := json.Marshal(result.Payload)
+	if err != nil {
+		fmt.Println("Error marshalling map to JSON:", err)
+		return nil, err
+	}
+
+	return payloadData, nil
 }

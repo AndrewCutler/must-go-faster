@@ -21,7 +21,6 @@ import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 
 export class MustGoFaster {
-	#MoveFromServerType: 'gameStarted' | 'abandoned' | 'timeout' | 'move' | undefined;
 	#gameId: string | undefined;
 	#playerColor: PlayerColor | undefined;
 	#timeLeft: number | undefined;
@@ -136,47 +135,40 @@ export class MustGoFaster {
 		console.log(this.#board!.state);
 
 		await this.showCountdownToStartGame();
-
-		// this.setTimer();
-		// this.#board!.set({
-		// 	viewOnly: false,
-		// });
 	}
 
 	private move(): void {
-		if (this.#MoveFromServerType === 'move') {
-			const payload = this.#message!.payload as MoveFromServer;
-			console.log('move: ', { move: this.#message });
-			let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
-			if (payload.isCheckmated) {
-				gameStatus =
-					payload.isCheckmated === this.#playerColor ? 'lost' : 'won';
-				this.gameOver(gameStatus, 'checkmate');
-				this.#gameClock = 0;
-				return;
-			}
-
-			this.#timeLeft =
-				this.#playerColor === 'white'
-					? payload.whiteTimeLeft
-					: payload.blackTimeLeft;
-			this.setTimer();
-			if (this.#board!.state.premovable.current) {
-				// send premove message which checks if premove is valid
-				// if so, play response on server and send updated fen
-				const [from, to] = this.#board!.state.premovable.current;
-				this.sendPremoveMessage({ from, to });
-				this.#board!.playPremove();
-			}
-
-			this.#board!.set({
-				fen: payload.fen,
-				turnColor: payload.whosNext,
-				movable: {
-					dests: this.toValidMoves(payload.validMoves),
-				},
-			});
+		const payload = this.#message!.payload as MoveFromServer;
+		console.log('move: ', { move: this.#message });
+		let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
+		if (payload.isCheckmated) {
+			gameStatus =
+				payload.isCheckmated === this.#playerColor ? 'lost' : 'won';
+			this.gameOver(gameStatus, 'checkmate');
+			this.#gameClock = 0;
+			return;
 		}
+
+		this.#timeLeft =
+			this.#playerColor === 'white'
+				? payload.whiteTimeLeft
+				: payload.blackTimeLeft;
+		this.setTimer();
+		if (this.#board!.state.premovable.current) {
+			// send premove message which checks if premove is valid
+			// if so, play response on server and send updated fen
+			const [from, to] = this.#board!.state.premovable.current;
+			this.sendPremoveMessage({ from, to });
+			this.#board!.playPremove();
+		}
+
+		this.#board!.set({
+			fen: payload.fen,
+			turnColor: payload.whosNext,
+			movable: {
+				dests: this.toValidMoves(payload.validMoves),
+			},
+		});
 	}
 
 	private timeout(): void {
@@ -375,6 +367,7 @@ export class MustGoFaster {
 					gameId: self.#gameId!,
 					type: 'MoveToServerType',
 				};
+				console.log({ moveToServer: moveMessage });
 				self.sendMessage(JSON.stringify(moveMessage));
 			}
 			console.log({ state: self.#board!.state });

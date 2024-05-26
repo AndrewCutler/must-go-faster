@@ -14,13 +14,3 @@
 3. Increment
 4. Show material count
 5. Fix timer; it doesn't stop when it's not the current player's move
-6. Add message types:
-```json
-   {
-        "type": "move",
-        "payload": {
-            ...
-        }
-   }
-
-```

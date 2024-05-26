@@ -5,86 +5,97 @@ export type PlayerColor = 'white' | 'black';
 
 export type GameStatus = 'ongoing' | 'lost' | 'won' | 'draw';
 
-type BaseResponse = {
-	fen: string;
+export type MessageType =
+	| 'GameJoinedFromServerType'
+	| 'GameStartedFromServerType'
+	| 'MoveFromServerType'
+	| 'PreMoveFromServerType'
+	| 'TimeoutFromServerType'
+	| 'AbandonedFromServerType'
+	| 'GameJoinedToServerType'
+	| 'GameStartedToServerType'
+	| 'MoveToServerType'
+	| 'PreMoveToServerType'
+	| 'TimeoutToServerType'
+	| 'AbandonedToServerType';
+
+export type Message = {
 	gameId: string;
-	whosNext: PlayerColor;
 	playerColor: PlayerColor;
+	type: MessageType;
 };
 
-export type MoveResponse = BaseResponse & {
-	validMoves: { [key: string]: string[] };
-	isCheckmated: PlayerColor | '';
-	// timeLeft: number;
+export type ToMessage<T extends ToPayload> = Message & {
+	payload?: T;
+};
+
+export type FromMessage<T extends FromPayload> = Message & {
+	payload?: T;
+};
+
+export type ToPayload =
+	| GameJoinedFromServer
+	| GameStartedFromServer
+	| GameStartedToServer
+	| MoveToServer
+	| PremoveToServer
+	| TimeoutToServer;
+
+export type FromPayload =
+	| GameJoinedFromServer
+	| GameStartedFromServer
+	| MoveFromServer
+	| TimeoutFromServer
+	| AbandonedFromServer;
+
+export type GameJoinedFromServer = {
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
+	fen: string;
+	whosNext: PlayerColor;
+	validMoves: { [key: string]: string[] };
 };
 
-export type GameJoinedResponse = Omit<MoveResponse, 'isCheckmated'> & {
-	gameJoined: boolean;
+export type GameStartedFromServer = GameJoinedFromServer;
+
+export type GameStartedToServer = undefined;
+
+export type MoveFromServer = {
+	whiteTimeLeft: number;
+	blackTimeLeft: number;
+	fen: string;
+	whosNext: PlayerColor;
+	validMoves: { [key: string]: string[] };
+	isCheckmated: PlayerColor;
 };
 
-export type GameStartedResponse = Omit<MoveResponse, 'isCheckmated'> & {
-	gameStarted: boolean;
-};
-
-export type TimeoutResponse = BaseResponse & {
+export type TimeoutFromServer = {
+	// whiteTimeLeft: number;
+	// blackTimeLeft: number;
+	fen: string;
+	whosNext: PlayerColor;
+	validMoves: { [key: string]: string[] };
 	loser: PlayerColor;
 };
 
-export type AbandonedResponse = {
+export type AbandonedFromServer = {
 	abandoned: boolean;
 };
 
-export function isGameJoinedResponse(obj: unknown): obj is GameJoinedResponse {
-	return (obj as any).gameJoined !== undefined;
-}
+export type TimeoutToServer = {
+	timeout: boolean;
+};
 
-export function isGameStartedResponse(
-	obj: unknown,
-): obj is GameStartedResponse {
-	return (obj as any).gameStarted !== undefined;
-}
+export type PremoveToServer = {
+	premove: Move;
+};
 
-export function isMoveResponse(obj: unknown): obj is MoveResponse {
-	return (
-		(obj as any).validMoves !== undefined &&
-		(obj as any).gameStarted === undefined
-	);
-}
-
-export function isTimeoutResponse(obj: any): obj is TimeoutResponse {
-	return obj.loser !== undefined;
-}
-
-export function isAbandonedResponse(obj: any): obj is AbandonedResponse {
-	return obj.abandoned !== undefined;
-}
+export type MoveToServer = { move: Move };
 
 export type Move = {
 	from: cg.Key;
 	to: cg.Key;
 };
-
-type BaseRequest = {
-	gameId: string;
-	type: 'move' | 'premove' | 'timeout' | 'gameStarted';
-};
-
-export type GameStartedRequest = BaseRequest;
-
-export type MoveRequest = {
-	move: Move;
-} & BaseRequest;
-
-export type TimeoutRequest = {
-	timeout: true;
-	playerColor: PlayerColor;
-} & BaseRequest;
-
-export type PremoveRequest = {
-	premove: Move;
-} & BaseRequest;
 
 export type Config = {
 	startingTime: number;

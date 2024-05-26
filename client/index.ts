@@ -5,7 +5,7 @@ window.onload = function () {
 	initializeBoard()
 		.then(getConfig)
 		.then(function ({ config, mustGoFaster }): void {
-			mustGoFaster.config = config;
+			mustGoFaster.setConfig(config);
 			const button = document.querySelector('#connect-button')!;
 			button.addEventListener('click', function () {
 				button.classList.add('is-loading');

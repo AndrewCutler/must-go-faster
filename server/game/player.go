@@ -2,6 +2,8 @@ package game
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -11,7 +13,7 @@ import (
 type Player struct {
 	GameId     string
 	Connection *websocket.Conn
-	Send       chan []byte
+	WriteChan  chan []byte
 	Hub        *Hub
 	Color      string
 	Timer      time.Time
@@ -27,7 +29,7 @@ func (p *Player) ReadMessage() {
 		// MessageType: 2, GoingAwayMessage
 		_, content, err := p.Connection.ReadMessage()
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId}, MessageType: 2}
+			p.Hub.ReadChan <- MessageToServer{GameId: p.GameId, Type: AbandonedFromServerType.String()}
 			// game is over, send game abandoned message to winner and remove from active games
 			return
 		}
@@ -36,22 +38,28 @@ func (p *Player) ReadMessage() {
 			return
 		}
 
-		type moveType struct {
+		typeOnly := struct {
 			Type        string `json:"type"`
-			Move        Move   `json:"-"`
-			Timeout     string `json:"-"`
 			GameId      string `json:"-"`
 			PlayerColor string `json:"-"`
-			Premove     string `json:"-"`
+			Payload     string `json:"-"`
+		}{
+			Type: "",
 		}
-		var movetype moveType
-		if err := json.Unmarshal(content, &movetype); err != nil {
-			// todo: properly handle error
-			log.Println("Cannot unmarshal message content: ", string(content))
+		if err := json.Unmarshal(content, &typeOnly); err != nil {
+			log.Println("Cannot unmarshal message type: ", string(content))
 			return
 		}
 
-		p.Hub.Broadcast <- Message{Move: Move{GameId: p.GameId, Data: content, Type: movetype.Type}, MessageType: 1}
+		payload, err := deserialize(string(content), typeOnly.Type)
+		if err != nil {
+			log.Println("Deserialization failed: ", err)
+			return
+		}
+
+		fmt.Printf("\nPayload: %s\n\n", payload)
+
+		p.Hub.ReadChan <- MessageToServer{GameId: p.GameId, Payload: payload, Type: typeOnly.Type}
 	}
 }
 
@@ -60,17 +68,17 @@ func (p *Player) WriteMessage() {
 		p.Connection.Close()
 	}()
 
-	for message := range p.Send {
+	for message := range p.WriteChan {
 		writer, err := p.Connection.NextWriter(websocket.TextMessage)
 		if err != nil {
 			return
 		}
 		writer.Write(message)
 
-		n := len(p.Send)
+		n := len(p.WriteChan)
 		for i := 0; i < n; i++ {
 			writer.Write([]byte{'\n'})
-			writer.Write(<-p.Send)
+			writer.Write(<-p.WriteChan)
 		}
 
 		if err := writer.Close(); err != nil {
@@ -78,4 +86,56 @@ func (p *Player) WriteMessage() {
 			return
 		}
 	}
+}
+
+func deserialize(content string, messageType string) (interface{}, error) {
+	log.Println("Deserializing content: ", content)
+	switch messageType {
+	case "GameStartedToServerType":
+		return nil, nil
+	case "MoveToServerType":
+		payloadData, err := toServerMessage(content)
+		if err != nil {
+			return nil, err
+		}
+		var payload MoveToServer
+		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
+			log.Println("cannot deserialize: ", content, err)
+			return nil, err
+		}
+
+		return payload, nil
+	case "TimeoutToServerType":
+		payloadData, err := toServerMessage(content)
+		if err != nil {
+			return nil, err
+		}
+
+		var payload TimeoutToServer
+		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
+			log.Println("cannot deserialize: ", content, err)
+			return nil, err
+		}
+
+		return payload, nil
+	}
+
+	return nil, errors.New("cannot deserialize unknown message type")
+}
+
+// first we unmarshal into MessageToServer, which sets payload to map[string]interface{}
+// then we marshal the payload into a string to unmarshal again into appropriate type
+func toServerMessage(content string) ([]byte, error) {
+	var result MessageToServer
+	if err := json.Unmarshal([]byte(content), &result); err != nil {
+		log.Println("cannot deserialize: ", content, err)
+		return nil, err
+	}
+	payloadData, err := json.Marshal(result.Payload)
+	if err != nil {
+		fmt.Println("Error marshalling map to JSON:", err)
+		return nil, err
+	}
+
+	return payloadData, nil
 }

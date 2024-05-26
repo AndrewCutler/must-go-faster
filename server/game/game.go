@@ -11,16 +11,9 @@ import (
 	"github.com/notnil/chess"
 )
 
-type Message struct {
-	Premove     Move
-	Move        Move
-	MessageType int
-}
-
 type Move struct {
-	Type   string // 'move' || 'premove' || 'timeout' || 'gameStarted'
-	GameId string
-	Data   []byte
+	From string `json:"from"`
+	To   string `json:"to"`
 }
 
 type Timer struct {
@@ -99,25 +92,12 @@ func ValidMovesMap(g *chess.Game) map[string][]string {
 	return result
 }
 
-func parseMove(m string, g *chess.Game) error {
-	type move struct {
-		Move struct {
-			From string `json:"from"`
-			To   string `json:"to"`
-		}
-		GameId string `json:"gameId"`
-	}
-	var result move
-
-	if err := json.Unmarshal([]byte(m), &result); err != nil {
+func parseMove(m MoveToServer, g *chess.Game) error {
+	log.Println("move: ", m)
+	if err := g.MoveStr(m.Move.From + m.Move.To); err != nil {
 		return err
 	}
 
-	if err := g.MoveStr(result.Move.From + result.Move.To); err != nil {
-		return err
-	}
-
-	log.Println("move: ", result)
 	return nil
 }
 

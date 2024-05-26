@@ -100,7 +100,8 @@ func (h *Hub) onRegister(player *Player) {
 func (h *Hub) onMessage(message MessageToServer) {
 	fmt.Println("MESSAGE: ", message)
 	switch message.Type {
-	case GameJoinedFromServerType.String():
+	case GameJoinedToServerType.String():
+		fmt.Println("Game joined: ", message)
 		return
 	case GameStartedToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
@@ -170,53 +171,6 @@ func (h *Hub) onMessage(message MessageToServer) {
 		}
 
 		handleAbandonedMessage(game)
-	// case
-	// case 0:
-	// 	return
-	// case 1:
-	// 	// move this to "get game" func
-	// 	game, ok := h.GamesInProgress[message.GameId]
-	// 	if !ok {
-	// 		if len(h.GamesAwaitingOpponent) == 0 {
-	// 			log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
-	// 			return
-	// 		}
-
-	// 		log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
-	// 		return
-	// 	}
-	// 	if game.GameId == "" {
-	// 		log.Printf("Missing gameId.")
-	// 		return
-	// 	}
-
-	// 	switch message.Type {
-	// 	case "move":
-	// 		handleMoveMessage(h.Config, message, game)
-	// 	case "premove":
-	// 		handlePremoveMessage(message, game)
-	// 	case "timeout":
-	// 		handleTimeoutMessage(message, game)
-	// 	case "gameStarted":
-	// 		handleGameStartedMessage(h.Config, message, game)
-	// 	default:
-	// 		log.Println("Unknown move type: ", message.Type)
-	// 	}
-	// case 2:
-	// 	game, ok := h.GamesInProgress[message.GameId]
-	// 	if !ok {
-	// 		if len(h.GamesAwaitingOpponent) == 0 {
-	// 			log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
-	// 			return
-	// 		}
-	// 	}
-
-	// 	if game != nil {
-	// 		fmt.Println("GAME ABANDONED")
-	// 		handleAbandonedMessage(game)
-	// 	}
-	// 	delete(h.GamesInProgress, message.GameId)
-	// 	delete(h.GamesAwaitingOpponent, message.GameId)
 	default:
 		log.Println(message)
 		return

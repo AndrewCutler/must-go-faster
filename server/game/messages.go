@@ -135,7 +135,6 @@ type PremoveToServer struct {
 	Premove Move `json:"move"`
 }
 
-// Send
 func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
 	// todo: logic for time left is a disaster
 	// set previous time for whosNext to time.Now()
@@ -153,16 +152,6 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 			BlackTimeLeft: blackTimeLeft,
 		},
 	}
-	// data := map[string]interface{}{
-	// 	"gameJoined":    true,
-	// 	"fen":           gameMeta.getFen(),
-	// 	"gameId":        gameMeta.GameId,
-	// 	"playerColor":   playerColor, // is this necessary
-	// 	"validMoves":    ValidMovesMap(gameMeta.Game),
-	// 	"whosNext":      gameMeta.whoseMoveIsIt(),
-	// 	"whiteTimeLeft": whiteTimeLeft,
-	// 	"blackTimeLeft": blackTimeLeft,
-	// }
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
@@ -190,16 +179,6 @@ func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCo
 			BlackTimeLeft: blackTimeLeft,
 		},
 	}
-	// data := map[string]interface{}{
-	// 	"gameStarted":   true,
-	// 	"fen":           gameMeta.getFen(),
-	// 	"gameId":        gameMeta.GameId,
-	// 	"playerColor":   playerColor, // is this necessary
-	// 	"validMoves":    ValidMovesMap(gameMeta.Game),
-	// 	"whosNext":      gameMeta.whoseMoveIsIt(),
-	// 	"whiteTimeLeft": whiteTimeLeft,
-	// 	"blackTimeLeft": blackTimeLeft,
-	// }
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
@@ -232,15 +211,6 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 
 		},
 	}
-	// data := map[string]interface{}{
-	// 	"fen":          gameMeta.getFen(),
-	// 	"gameId":       gameMeta.GameId,
-	// 	"playerColor":  playerColor,
-	// 	"validMoves":   ValidMovesMap(gameMeta.Game),
-	// 	"whosNext":     gameMeta.whoseMoveIsIt(),
-	// 	"isCheckmated": isCheckmated,
-	// 	// "timeLeft":     gameMeta.getTimeRemaining(config),
-	// }
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
@@ -265,13 +235,6 @@ func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []
 
 		},
 	}
-	// data := map[string]interface{}{
-	// 	"fen":         gameMeta.getFen(),
-	// 	"gameId":      gameMeta.GameId,
-	// 	"whosNext":    gameMeta.whoseMoveIsIt(),
-	// 	"playerColor": playerColor,
-	// 	"loser":       loser,
-	// }
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
@@ -310,9 +273,9 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
+// todo: yse this
 func handlePremoveMessage(message MessageFromServer, game *GameMeta) {
 	err := parsePremove("", game.Game)
-	// err := parsePremove(string(message.Move.Data), game.Game)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)
 		return
@@ -339,10 +302,9 @@ func handleGameStartedMessage(config *c.ClientConfig, game *GameMeta) {
 	}
 }
 
-// is message necessary?
 func handleTimeoutMessage(game *GameMeta) {
+	// todo
 	err := parseTimeout("", game.Game)
-	// err := parseTimeout(string(message.Move.Data), game.Game)
 	if err != nil {
 		fmt.Println("Failed to parse timeout move data")
 		return

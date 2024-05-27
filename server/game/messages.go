@@ -12,14 +12,21 @@ type MessageType int
 
 const (
 	GameJoinedFromServerType = MessageType(iota)
-	GameStartedFromServerType
-	MoveFromServerType
-	TimeoutFromServerType
-	AbandonedFromServerType
 	GameJoinedToServerType
+
+	GameStartedFromServerType
 	GameStartedToServerType
+
+	MoveFromServerType
 	MoveToServerType
+
+	PremoveFromServerType
+	PremoveToServerType
+
+	TimeoutFromServerType
 	TimeoutToServerType
+
+	AbandonedFromServerType
 	AbandonedToServerType
 )
 
@@ -41,6 +48,8 @@ func (m MessageType) String() string {
 		return "GameStartedToServerType"
 	case MoveToServerType:
 		return "MoveToServerType"
+	case PremoveToServerType:
+		return "PremoveToServerType"
 	case TimeoutToServerType:
 		return "TimeoutToServerType"
 	case AbandonedToServerType:
@@ -62,6 +71,8 @@ func MessageTypeFromString(s string) (MessageType, error) {
 		return TimeoutFromServerType, nil
 	case "AbandonedFromServerType":
 		return AbandonedFromServerType, nil
+	case "PremoveFromServerType":
+		return PremoveFromServerType, nil
 	}
 
 	return -1, fmt.Errorf("invalid message type: %s", s)
@@ -198,15 +209,18 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 		isCheckmated = "black"
 	}
 
+	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
 	message := MessageFromServer{
 		Type:        MoveFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
 		Payload: MoveFromServer{
-			Fen:          gameMeta.getFen(),
-			ValidMoves:   ValidMovesMap(gameMeta.Game),
-			WhosNext:     gameMeta.whoseMoveIsIt(),
-			IsCheckmated: isCheckmated,
+			Fen:           gameMeta.getFen(),
+			ValidMoves:    ValidMovesMap(gameMeta.Game),
+			WhosNext:      gameMeta.whoseMoveIsIt(),
+			IsCheckmated:  isCheckmated,
+			WhiteTimeLeft: whiteTimeLeft,
+			BlackTimeLeft: blackTimeLeft,
 			// "timeLeft":     gameMeta.getTimeRemaining(config),
 
 		},
@@ -273,8 +287,7 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
-// todo: yse this
-func handlePremoveMessage(message MessageFromServer, game *GameMeta) {
+func handlePremoveMessage(message MessageToServer, game *GameMeta) {
 	err := parsePremove("", game.Game)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)

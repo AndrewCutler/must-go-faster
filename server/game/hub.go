@@ -137,6 +137,23 @@ func (h *Hub) onMessage(message MessageToServer) {
 		}
 
 		handleMoveMessage(h.Config, message, game)
+	case PremoveToServerType.String():
+		game, ok := h.GamesInProgress[message.GameId]
+		if !ok {
+			if len(h.GamesAwaitingOpponent) == 0 {
+				log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+				return
+			}
+
+			log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
+			return
+		}
+		if game.GameId == "" {
+			log.Printf("Missing gameId.")
+			return
+		}
+
+		handlePremoveMessage(message, game)
 	case TimeoutToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {

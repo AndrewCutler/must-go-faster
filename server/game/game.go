@@ -16,21 +16,6 @@ type Move struct {
 	To   string `json:"to"`
 }
 
-type Timer struct {
-	WhosNext     string // 'white' || 'black'
-	LastMoveTime time.Time
-}
-
-func (t *Timer) GetTimeLeft(lastMoveTime time.Time, config *c.ClientConfig) {
-	gameTime, err := time.ParseDuration(fmt.Sprintf("%ds", config.StartingTime))
-	if err != nil {
-		log.Println("Unable to create duration of 30s")
-	} else {
-		x := (gameTime - time.Since(lastMoveTime)).Seconds()
-		fmt.Println(x)
-	}
-}
-
 type GameMeta struct {
 	Game   *chess.Game
 	White  *Player

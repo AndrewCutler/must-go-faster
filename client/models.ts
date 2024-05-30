@@ -9,13 +9,13 @@ export type MessageType =
 	| 'GameJoinedFromServerType'
 	| 'GameStartedFromServerType'
 	| 'MoveFromServerType'
-	| 'PreMoveFromServerType'
+	| 'PremoveFromServerType'
 	| 'TimeoutFromServerType'
 	| 'AbandonedFromServerType'
 	| 'GameJoinedToServerType'
 	| 'GameStartedToServerType'
 	| 'MoveToServerType'
-	| 'PreMoveToServerType'
+	| 'PremoveToServerType'
 	| 'TimeoutToServerType'
 	| 'AbandonedToServerType';
 
@@ -23,6 +23,7 @@ export type Message = {
 	gameId: string;
 	playerColor: PlayerColor;
 	type: MessageType;
+	serverTimeStamp?: string;
 };
 
 export type ToMessage<T extends ToPayload> = Message & {
@@ -86,11 +87,12 @@ export type TimeoutToServer = {
 	timeout: boolean;
 };
 
+export type MoveToServer = { move: Move; previousTimeStamp: string };
+
 export type PremoveToServer = {
 	premove: Move;
+	previousTimeStamp: string;
 };
-
-export type MoveToServer = { move: Move };
 
 export type Move = {
 	from: cg.Key;

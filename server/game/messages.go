@@ -137,8 +137,6 @@ type TimeoutToServer struct {
 }
 
 func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
-	// whiteTimeLeft, blackTimeLeft := config.StartingTime, config.StartingTime
-	// whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
 	message := Message{
 		Type:        GameJoinedFromServerType.String(),
 		GameId:      gameMeta.GameId,
@@ -148,8 +146,6 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 			Fen:        gameMeta.getFen(),
 			ValidMoves: ValidMovesMap(gameMeta.Game),
 			WhosNext:   gameMeta.whoseMoveIsIt(),
-			// WhiteTimeLeft: whiteTimeLeft,
-			// BlackTimeLeft: blackTimeLeft,
 		},
 	}
 
@@ -163,23 +159,7 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 }
 
 func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
-	// gameMeta.White.Clock = Clock{
-	// 	TimeLeft:  config.StartingTime,
-	// 	TimeStamp: time.Now(),
-	// }
-	// gameMeta.Black.Clock = Clock{
-	// 	TimeLeft:  config.StartingTime,
-	// 	TimeStamp: time.Now(),
-	// }
-
-	// if gameMeta.whoseMoveIsIt() == "white" {
-	// 	gameMeta.White.Clock.IsRunning = true
-	// } else {
-	// 	gameMeta.Black.Clock.IsRunning = true
-	// }
-
 	whiteTimeLeft, blackTimeLeft := gameMeta.White.Clock.TimeLeft, gameMeta.Black.Clock.TimeLeft
-
 	message := Message{
 		Type:        GameStartedFromServerType.String(),
 		GameId:      gameMeta.GameId,
@@ -247,8 +227,6 @@ func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []
 			ValidMoves: ValidMovesMap(gameMeta.Game),
 			WhosNext:   gameMeta.whoseMoveIsIt(),
 			Loser:      loser,
-			// "timeLeft":     gameMeta.getTimeRemaining(config),
-
 		},
 	}
 
@@ -352,7 +330,6 @@ func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) 
 		return
 	}
 
-	fmt.Println("WHITE CLOCK: ", game.White.Clock.IsRunning)
 	if game.White.Clock.IsRunning {
 		game.White.Clock.TimeLeft -= time.Since(game.White.Clock.TimeStamp).Seconds()
 		game.White.Clock.IsRunning = false

@@ -46,19 +46,6 @@ func (g *GameMeta) whoseMoveIsIt() string {
 	return ""
 }
 
-// player whose clock is winding down is player whose turn it is
-// func (g *GameMeta) getTimeLeft(config *c.ClientConfig) (float64, float64) {
-// 	gameTime, err := time.ParseDuration(fmt.Sprintf("%ds", config.StartingTime))
-// 	if err != nil {
-// 		log.Println("Unable to create duration of 30s")
-// 		return 0, 0
-// 	} else {
-// 		whiteTimeLeft := (gameTime - time.Since(g.White.Clock.TimeStamp)).Seconds()
-// 		blackTimeLeft := (gameTime - time.Since(g.Black.Clock.TimeStamp)).Seconds()
-// 		return whiteTimeLeft, blackTimeLeft
-// 	}
-// }
-
 func ValidMovesMap(g *chess.Game) map[string][]string {
 	validMoves := g.ValidMoves()
 	result := make(map[string][]string)

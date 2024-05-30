@@ -333,7 +333,6 @@ export class MustGoFaster {
 				playerColor: this._playerColor!,
 				payload: {
 					premove: move,
-					previousTimeStamp: this._timestamp!,
 				},
 			};
 			this.sendMessage(premove);
@@ -358,7 +357,7 @@ export class MustGoFaster {
 			const move: { from: cg.Key; to: cg.Key } = { from, to };
 			if (self._connection) {
 				const moveMessage: ToMessage<MoveToServer> = {
-					payload: { move, previousTimeStamp: self._timestamp! },
+					payload: { move },
 					playerColor: self._playerColor!,
 					gameId: self._gameId!,
 					type: 'MoveToServerType',

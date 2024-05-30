@@ -87,11 +87,10 @@ export type TimeoutToServer = {
 	timeout: boolean;
 };
 
-export type MoveToServer = { move: Move; previousTimeStamp: string };
+export type MoveToServer = { move: Move; };
 
 export type PremoveToServer = {
 	premove: Move;
-	previousTimeStamp: string;
 };
 
 export type Move = {

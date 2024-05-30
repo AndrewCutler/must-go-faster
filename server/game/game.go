@@ -2,11 +2,8 @@ package game
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	c "server/config"
 	"strings"
-	"time"
 
 	"github.com/notnil/chess"
 )
@@ -21,9 +18,6 @@ type GameMeta struct {
 	White  *Player
 	Black  *Player
 	GameId string
-	// Timer          time.Time
-	CurrentPremove string // todo: premove type
-	LastMoveTime   time.Time
 }
 
 func (g *GameMeta) getFen() string {
@@ -50,19 +44,6 @@ func (g *GameMeta) whoseMoveIsIt() string {
 	}
 
 	return ""
-}
-
-// todo: separate timeLeft for each color
-func (g *GameMeta) getTimeLeft(config *c.ClientConfig) (float64, float64) {
-	gameTime, err := time.ParseDuration(fmt.Sprintf("%ds", config.StartingTime))
-	if err != nil {
-		log.Println("Unable to create duration of 30s")
-		return 0, 0
-	} else {
-		whiteTimeLeft := (gameTime - time.Since(g.White.Timer)).Seconds()
-		blackTimeLeft := (gameTime - time.Since(g.Black.Timer)).Seconds()
-		return whiteTimeLeft, blackTimeLeft
-	}
 }
 
 func ValidMovesMap(g *chess.Game) map[string][]string {
@@ -105,20 +86,5 @@ func parsePremove(m string, g *chess.Game) error {
 	}
 
 	log.Println("premove: ", result)
-	return nil
-}
-
-func parseTimeout(m string, g *chess.Game) error {
-	type timeout struct {
-		Timeout     bool   `json:"timeout"`
-		PlayerColor string `json:"playerColor"`
-	}
-	var result timeout
-
-	if err := json.Unmarshal([]byte(m), &result); err != nil {
-		return err
-	}
-
-	log.Println("timeout: ", result)
 	return nil
 }

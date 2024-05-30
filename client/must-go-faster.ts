@@ -41,6 +41,7 @@ export class MustGoFaster {
 	private _connection: WebSocket | undefined;
 	private _board: ChessgroundApi | undefined;
 	private _message: Message | undefined;
+	private _timestamp: string | undefined;
 
 	setConfig(value: Config) {
 		this._config = value;
@@ -99,6 +100,7 @@ export class MustGoFaster {
 
 	private async handleMessage(message: FromMessage<FromPayload>) {
 		this._message = message;
+		this._timestamp = message.serverTimeStamp;
 
 		console.log('Handle message: ', { message });
 		switch (message.type) {
@@ -322,15 +324,15 @@ export class MustGoFaster {
 		} as ChessgroundConfig);
 	}
 
-	private sendPremoveMessage(p: Move): void {
-		console.log('sendPremoveMessage: ', { premove: p });
+	private sendPremoveMessage(move: Move): void {
+		console.log('sendPremoveMessage: ', { premove: move });
 		if (this._connection) {
 			const premove: ToMessage<PremoveToServer> = {
-				type: 'PreMoveToServerType',
+				type: 'PremoveToServerType',
 				gameId: this._gameId!,
 				playerColor: this._playerColor!,
 				payload: {
-					premove: p,
+					premove: move,
 				},
 			};
 			this.sendMessage(premove);

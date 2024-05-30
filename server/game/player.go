@@ -10,13 +10,19 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type Clock struct {
+	TimeLeft  float64
+	TimeStamp time.Time
+	IsRunning bool
+}
+
 type Player struct {
 	GameId     string
 	Connection *websocket.Conn
 	WriteChan  chan []byte
 	Hub        *Hub
 	Color      string
-	Timer      time.Time
+	Clock      Clock
 }
 
 func (p *Player) ReadMessage() {
@@ -29,7 +35,7 @@ func (p *Player) ReadMessage() {
 		// MessageType: 2, GoingAwayMessage
 		_, content, err := p.Connection.ReadMessage()
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			p.Hub.ReadChan <- MessageToServer{GameId: p.GameId, Type: AbandonedFromServerType.String()}
+			p.Hub.ReadChan <- Message{GameId: p.GameId, Type: AbandonedFromServerType.String()}
 			// game is over, send game abandoned message to winner and remove from active games
 			return
 		}
@@ -59,7 +65,7 @@ func (p *Player) ReadMessage() {
 
 		fmt.Printf("\nPayload: %s\n\n", payload)
 
-		p.Hub.ReadChan <- MessageToServer{GameId: p.GameId, Payload: payload, Type: typeOnly.Type}
+		p.Hub.ReadChan <- Message{GameId: p.GameId, Payload: payload, Type: typeOnly.Type}
 	}
 }
 
@@ -89,7 +95,6 @@ func (p *Player) WriteMessage() {
 }
 
 func deserialize(content string, messageType string) (interface{}, error) {
-	log.Println("Deserializing content: ", content)
 	switch messageType {
 	case "GameStartedToServerType":
 		return nil, nil
@@ -126,7 +131,7 @@ func deserialize(content string, messageType string) (interface{}, error) {
 // first we unmarshal into MessageToServer, which sets payload to map[string]interface{}
 // then we marshal the payload into a string to unmarshal again into appropriate type
 func toServerMessage(content string) ([]byte, error) {
-	var result MessageToServer
+	var result Message
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
 		log.Println("cannot deserialize: ", content, err)
 		return nil, err

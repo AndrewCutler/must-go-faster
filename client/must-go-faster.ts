@@ -243,7 +243,6 @@ export class MustGoFaster {
 
 		const runClock = whosNext === this._playerColor;
 		if (!runClock) {
-			console.log('not running');
 			timerDiv.setTime(this._timeLeft!);
 			return;
 		}

@@ -35,13 +35,11 @@ export class MustGoFaster {
 	private _gameId: string | undefined;
 	private _playerColor: PlayerColor | undefined;
 	private _timeLeft: number | undefined;
-	private _gameClock: number | undefined;
 	private _timerInterval: number | undefined;
 	private _config: Config | undefined;
 	private _connection: WebSocket | undefined;
 	private _board: ChessgroundApi | undefined;
 	private _message: Message | undefined;
-	private _timestamp: string | undefined;
 
 	setConfig(value: Config) {
 		this._config = value;
@@ -100,7 +98,6 @@ export class MustGoFaster {
 
 	private async handleMessage(message: FromMessage<FromPayload>) {
 		this._message = message;
-		this._timestamp = message.serverTimeStamp;
 
 		console.log('Handle message: ', { message });
 		switch (message.type) {
@@ -145,7 +142,9 @@ export class MustGoFaster {
 	}
 
 	private enableBoard(): void {
-		this.setTimer();
+		const payload = (this._message as FromMessage<GameJoinedFromServer>)
+			.payload!;
+		this.toggleClock(payload.whosNext);
 		this._board!.set({
 			viewOnly: false,
 		});
@@ -160,7 +159,7 @@ export class MustGoFaster {
 			gameStatus =
 				payload.isCheckmated === this._playerColor ? 'lost' : 'won';
 			this.gameOver(gameStatus, 'checkmate');
-			this._gameClock = 0;
+			this._timeLeft = 0;
 			return;
 		}
 
@@ -168,7 +167,8 @@ export class MustGoFaster {
 			this._playerColor === 'white'
 				? payload.whiteTimeLeft
 				: payload.blackTimeLeft;
-		this.setTimer();
+
+		this.toggleClock(payload.whosNext);
 
 		if (this._board!.state.premovable.current) {
 			// send premove message which checks if premove is valid
@@ -235,11 +235,19 @@ export class MustGoFaster {
 		});
 	}
 
-	private setTimer(): void {
+	private toggleClock(whosNext: PlayerColor): void {
 		// clear previous interval
 		window.clearInterval(this._timerInterval);
 
 		const timerDiv = new TimerElement()!;
+
+		const runClock = whosNext === this._playerColor;
+		if (!runClock) {
+			console.log('not running');
+			timerDiv.setTime(this._timeLeft!);
+			return;
+		}
+
 		const start = new Date();
 		const self = this;
 		this._timerInterval = window.setInterval(function () {
@@ -247,7 +255,7 @@ export class MustGoFaster {
 				console.log('no time left', self._timeLeft);
 				return;
 			}
-			if ((self._gameClock ?? 0) <= 0) {
+			if ((self._timeLeft ?? 0) <= 0) {
 				window.clearInterval(self._timerInterval);
 				// send message to server to end game/find out the outcome
 				if (self._connection) {
@@ -264,9 +272,9 @@ export class MustGoFaster {
 				return;
 			}
 			const diff = new Date().getTime() - start.getTime();
-			self._gameClock = self._timeLeft - diff / 1_000;
+			const gameClock = self._timeLeft - diff / 1_000;
 
-			timerDiv.setTime(self._gameClock);
+			timerDiv.setTime(gameClock);
 		}, 10);
 	}
 
@@ -293,7 +301,7 @@ export class MustGoFaster {
 	private setupBoard(message: FromMessage<GameStartedFromServer>) {
 		this._gameId = message.gameId;
 		this._playerColor = message.playerColor;
-		this._timeLeft = this._gameClock = this._config?.startingTime;
+		this._timeLeft = this._config?.startingTime;
 
 		const payload = message.payload as GameJoinedFromServer;
 		const gameMeta = new GameMetaElement();

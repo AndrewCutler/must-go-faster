@@ -23,7 +23,6 @@ export type Message = {
 	gameId: string;
 	playerColor: PlayerColor;
 	type: MessageType;
-	serverTimeStamp?: string;
 };
 
 export type ToMessage<T extends ToPayload> = Message & {

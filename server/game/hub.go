@@ -91,9 +91,9 @@ func (h *Hub) onRegister(player *Player) {
 		// h.GamesAwaitingOpponent = make(map[string]*GameMeta, 0)
 		h.GamesInProgress[game.GameId] = game
 
-		fmt.Println("broadcasting game joined to white...")
-		player.WriteChan <- sendGameJoinedMessage(h.Config, game, player.Color)
-		game.White.WriteChan <- sendGameJoinedMessage(h.Config, game, game.White.Color)
+		fmt.Println("broadcasting game joined...")
+		player.WriteChan <- sendGameJoinedMessage(game, player.Color)
+		game.White.WriteChan <- sendGameJoinedMessage(game, game.White.Color)
 	}
 }
 

@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/json"
 	"log"
 	"strings"
 
@@ -58,7 +57,7 @@ func ValidMovesMap(g *chess.Game) map[string][]string {
 	return result
 }
 
-func parseMove(m MoveToServer, g *chess.Game) error {
+func tryPlayMove(m MoveToServer, g *chess.Game) error {
 	log.Println("move: ", m)
 	if err := g.MoveStr(m.Move.From + m.Move.To); err != nil {
 		return err
@@ -67,24 +66,11 @@ func parseMove(m MoveToServer, g *chess.Game) error {
 	return nil
 }
 
-func parsePremove(m string, g *chess.Game) error {
-	type premove struct {
-		Premove struct {
-			From string `json:"from"`
-			To   string `json:"to"`
-		}
-		GameId string `json:"gameId"`
-	}
-	var result premove
-
-	if err := json.Unmarshal([]byte(m), &result); err != nil {
+func tryPlayPremove(m PremoveToServer, g *chess.Game) error {
+	log.Println("premove: ", m)
+	if err := g.MoveStr(m.Premove.From + m.Premove.To); err != nil {
 		return err
 	}
 
-	if err := g.MoveStr(result.Premove.From + result.Premove.To); err != nil {
-		return err
-	}
-
-	log.Println("premove: ", result)
 	return nil
 }

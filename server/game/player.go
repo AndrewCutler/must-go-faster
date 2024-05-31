@@ -59,7 +59,7 @@ func (p *Player) ReadMessage() {
 
 		payload, err := deserialize(string(content), typeOnly.Type)
 		if err != nil {
-			log.Println("Deserialization failed: ", err)
+			log.Printf("Deserialization failed for type %s: %s\n", typeOnly.Type, err)
 			return
 		}
 
@@ -117,6 +117,19 @@ func deserialize(content string, messageType string) (interface{}, error) {
 		}
 
 		var payload TimeoutToServer
+		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
+			log.Println("cannot deserialize: ", content, err)
+			return nil, err
+		}
+
+		return payload, nil
+	case "PremoveToServerType":
+		payloadData, err := toServerMessage(content)
+		if err != nil {
+			return nil, err
+		}
+
+		var payload PremoveToServer
 		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
 			log.Println("cannot deserialize: ", content, err)
 			return nil, err

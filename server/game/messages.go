@@ -129,14 +129,14 @@ type MoveToServer struct {
 }
 
 type PremoveToServer struct {
-	Premove Move `json:"move"`
+	Premove Move `json:"premove"`
 }
 
 type TimeoutToServer struct {
 	Timeout bool `json:"timeout"`
 }
 
-func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
+func sendGameJoinedMessage(gameMeta *GameMeta, playerColor string) []byte {
 	message := Message{
 		Type:        GameJoinedFromServerType.String(),
 		GameId:      gameMeta.GameId,
@@ -158,7 +158,7 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 	return jsonData
 }
 
-func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
+func sendGameStartedMessage(gameMeta *GameMeta, playerColor string) []byte {
 	whiteTimeLeft, blackTimeLeft := gameMeta.White.Clock.TimeLeft, gameMeta.Black.Clock.TimeLeft
 	message := Message{
 		Type:        GameStartedFromServerType.String(),
@@ -268,12 +268,43 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
+func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
+	payload := message.Payload.(MoveToServer)
+	err := tryPlayMove(payload, game.Game)
+	if err != nil {
+		log.Println("Cannot make move: ", err)
+		return
+	}
+
+	if game.White.Clock.IsRunning {
+		game.White.Clock.TimeLeft -= time.Since(game.White.Clock.TimeStamp).Seconds()
+		game.White.Clock.IsRunning = false
+		game.Black.Clock.IsRunning = true
+	} else {
+		game.Black.Clock.TimeLeft -= time.Since(game.Black.Clock.TimeStamp).Seconds()
+		game.White.Clock.IsRunning = true
+		game.Black.Clock.IsRunning = false
+	}
+	game.White.Clock.TimeStamp = time.Now()
+	game.Black.Clock.TimeStamp = time.Now()
+
+	for _, player := range game.GetPlayers() {
+		select {
+		case player.WriteChan <- sendMoveMessage(config, game, player.Color):
+		default:
+			close(player.WriteChan)
+		}
+	}
+}
+
 func handlePremoveMessage(message Message, game *GameMeta) {
-	err := parsePremove("", game.Game)
+	payload := message.Payload.(PremoveToServer)
+	err := tryPlayPremove(payload, game.Game)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)
 		return
 	}
+
 	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range game.GetPlayers() {
 		select {
@@ -302,7 +333,7 @@ func handleGameStartedMessage(config *c.ClientConfig, game *GameMeta) {
 	}
 
 	for _, player := range game.GetPlayers() {
-		m := sendGameStartedMessage(config, game, player.Color)
+		m := sendGameStartedMessage(game, player.Color)
 		select {
 		case player.WriteChan <- m:
 		default:
@@ -316,35 +347,6 @@ func handleTimeoutMessage(game *GameMeta) {
 		m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
 		select {
 		case player.WriteChan <- m:
-		default:
-			close(player.WriteChan)
-		}
-	}
-}
-
-func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
-	payload := message.Payload.(MoveToServer)
-	err := parseMove(payload, game.Game)
-	if err != nil {
-		log.Println("Cannot make move: ", err)
-		return
-	}
-
-	if game.White.Clock.IsRunning {
-		game.White.Clock.TimeLeft -= time.Since(game.White.Clock.TimeStamp).Seconds()
-		game.White.Clock.IsRunning = false
-		game.Black.Clock.IsRunning = true
-	} else {
-		game.Black.Clock.TimeLeft -= time.Since(game.Black.Clock.TimeStamp).Seconds()
-		game.White.Clock.IsRunning = true
-		game.Black.Clock.IsRunning = false
-	}
-	game.White.Clock.TimeStamp = time.Now()
-	game.Black.Clock.TimeStamp = time.Now()
-
-	for _, player := range game.GetPlayers() {
-		select {
-		case player.WriteChan <- sendMoveMessage(config, game, player.Color):
 		default:
 			close(player.WriteChan)
 		}

@@ -132,7 +132,7 @@ func (h *Hub) onMessage(message Message) {
 			return
 		}
 
-		handleMoveMessage(h.Config, message, game)
+		handleMoveMessage(message, game)
 	case PremoveToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {

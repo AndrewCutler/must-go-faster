@@ -183,7 +183,7 @@ func sendGameStartedMessage(gameMeta *GameMeta, playerColor string) []byte {
 	return jsonData
 }
 
-func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
+func sendMoveMessage(gameMeta *GameMeta, playerColor string) []byte {
 	isCheckmated := ""
 	switch gameMeta.Game.Outcome() {
 	case "0-1":
@@ -268,7 +268,7 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
-func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
+func handleMoveMessage(message Message, game *GameMeta) {
 	payload := message.Payload.(MoveToServer)
 	err := tryPlayMove(payload, game.Game)
 	if err != nil {
@@ -290,7 +290,7 @@ func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) 
 
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.WriteChan <- sendMoveMessage(config, game, player.Color):
+		case player.WriteChan <- sendMoveMessage(game, player.Color):
 		default:
 			close(player.WriteChan)
 		}
@@ -308,7 +308,7 @@ func handlePremoveMessage(message Message, game *GameMeta) {
 	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range game.GetPlayers() {
 		select {
-		case player.WriteChan <- sendMoveMessage(nil, game, player.Color):
+		case player.WriteChan <- sendMoveMessage(game, player.Color):
 		default:
 			close(player.WriteChan)
 		}

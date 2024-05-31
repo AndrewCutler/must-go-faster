@@ -14,7 +14,7 @@ import (
 type Hub struct {
 	GamesInProgress       map[string]*GameMeta
 	GamesAwaitingOpponent map[string]*GameMeta
-	ReadChan              chan MessageToServer
+	ReadChan              chan Message
 	RegisterChan          chan *Player
 	UnregisterChan        chan *Player
 	Config                *c.ClientConfig
@@ -22,7 +22,7 @@ type Hub struct {
 
 func NewHub(config *c.ClientConfig) *Hub {
 	return &Hub{
-		ReadChan:              make(chan MessageToServer),
+		ReadChan:              make(chan Message),
 		RegisterChan:          make(chan *Player),
 		UnregisterChan:        make(chan *Player),
 		GamesInProgress:       make(map[string]*GameMeta),
@@ -97,12 +97,8 @@ func (h *Hub) onRegister(player *Player) {
 	}
 }
 
-func (h *Hub) onMessage(message MessageToServer) {
-	fmt.Println("MESSAGE: ", message)
+func (h *Hub) onMessage(message Message) {
 	switch message.Type {
-	case GameJoinedToServerType.String():
-		fmt.Println("Game joined: ", message)
-		return
 	case GameStartedToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {
@@ -137,6 +133,23 @@ func (h *Hub) onMessage(message MessageToServer) {
 		}
 
 		handleMoveMessage(h.Config, message, game)
+	case PremoveToServerType.String():
+		game, ok := h.GamesInProgress[message.GameId]
+		if !ok {
+			if len(h.GamesAwaitingOpponent) == 0 {
+				log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
+				return
+			}
+
+			log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
+			return
+		}
+		if game.GameId == "" {
+			log.Printf("Missing gameId.")
+			return
+		}
+
+		handlePremoveMessage(message, game)
 	case TimeoutToServerType.String():
 		game, ok := h.GamesInProgress[message.GameId]
 		if !ok {

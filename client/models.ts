@@ -9,13 +9,13 @@ export type MessageType =
 	| 'GameJoinedFromServerType'
 	| 'GameStartedFromServerType'
 	| 'MoveFromServerType'
-	| 'PreMoveFromServerType'
+	| 'PremoveFromServerType'
 	| 'TimeoutFromServerType'
 	| 'AbandonedFromServerType'
 	| 'GameJoinedToServerType'
 	| 'GameStartedToServerType'
 	| 'MoveToServerType'
-	| 'PreMoveToServerType'
+	| 'PremoveToServerType'
 	| 'TimeoutToServerType'
 	| 'AbandonedToServerType';
 
@@ -86,11 +86,11 @@ export type TimeoutToServer = {
 	timeout: boolean;
 };
 
+export type MoveToServer = { move: Move; };
+
 export type PremoveToServer = {
 	premove: Move;
 };
-
-export type MoveToServer = { move: Move };
 
 export type Move = {
 	from: cg.Key;

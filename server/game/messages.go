@@ -12,14 +12,21 @@ type MessageType int
 
 const (
 	GameJoinedFromServerType = MessageType(iota)
-	GameStartedFromServerType
-	MoveFromServerType
-	TimeoutFromServerType
-	AbandonedFromServerType
 	GameJoinedToServerType
+
+	GameStartedFromServerType
 	GameStartedToServerType
+
+	MoveFromServerType
 	MoveToServerType
+
+	PremoveFromServerType
+	PremoveToServerType
+
+	TimeoutFromServerType
 	TimeoutToServerType
+
+	AbandonedFromServerType
 	AbandonedToServerType
 )
 
@@ -41,6 +48,8 @@ func (m MessageType) String() string {
 		return "GameStartedToServerType"
 	case MoveToServerType:
 		return "MoveToServerType"
+	case PremoveToServerType:
+		return "PremoveToServerType"
 	case TimeoutToServerType:
 		return "TimeoutToServerType"
 	case AbandonedToServerType:
@@ -62,23 +71,19 @@ func MessageTypeFromString(s string) (MessageType, error) {
 		return TimeoutFromServerType, nil
 	case "AbandonedFromServerType":
 		return AbandonedFromServerType, nil
+	case "PremoveFromServerType":
+		return PremoveFromServerType, nil
 	}
 
 	return -1, fmt.Errorf("invalid message type: %s", s)
 }
 
-type MessageToServer struct {
+type Message struct {
 	Payload     interface{} `json:"payload"`
 	PlayerColor string      `json:"playerColor"`
 	Type        string      `json:"type"`
 	GameId      string      `json:"gameId"`
-}
-
-type MessageFromServer struct {
-	Payload     interface{} `json:"payload"`
-	Type        string      `json:"type"`
-	GameId      string      `json:"gameId"`
-	PlayerColor string      `json:"playerColor"`
+	TimeStamp   string      `json:"serverTimeStamp"`
 }
 
 type GameJoinedFromServer struct {
@@ -104,8 +109,6 @@ type MoveFromServer struct {
 	ValidMoves    map[string][]string `json:"validMoves"`
 	WhosNext      string              `json:"whosNext"`
 	IsCheckmated  string              `json:"isCheckmated"`
-	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-	// BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
 type TimeoutFromServer struct {
@@ -115,8 +118,6 @@ type TimeoutFromServer struct {
 	ValidMoves    map[string][]string `json:"validMoves"`
 	WhosNext      string              `json:"whosNext"`
 	Loser         string              `json:"loser"`
-	// WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-	// BlackTimeLeft float64             `json:"blackTimeLeft"`
 }
 
 type AbandonedFromServer struct {
@@ -127,29 +128,24 @@ type MoveToServer struct {
 	Move Move `json:"move"`
 }
 
-type TimeoutToServer struct {
-	Timeout bool `json:"timeout"`
-}
-
 type PremoveToServer struct {
 	Premove Move `json:"move"`
 }
 
+type TimeoutToServer struct {
+	Timeout bool `json:"timeout"`
+}
+
 func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
-	// todo: logic for time left is a disaster
-	// set previous time for whosNext to time.Now()
-	gameMeta.LastMoveTime = time.Now()
-	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
-	message := MessageFromServer{
+	message := Message{
 		Type:        GameJoinedFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
+		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: GameJoinedFromServer{
-			Fen:           gameMeta.getFen(),
-			ValidMoves:    ValidMovesMap(gameMeta.Game),
-			WhosNext:      gameMeta.whoseMoveIsIt(),
-			WhiteTimeLeft: whiteTimeLeft,
-			BlackTimeLeft: blackTimeLeft,
+			Fen:        gameMeta.getFen(),
+			ValidMoves: ValidMovesMap(gameMeta.Game),
+			WhosNext:   gameMeta.whoseMoveIsIt(),
 		},
 	}
 
@@ -163,14 +159,12 @@ func sendGameJoinedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerCol
 }
 
 func sendGameStartedMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor string) []byte {
-	// todo: logic for time left is a disaster
-	// set previous time for whosNext to time.Now()
-	gameMeta.LastMoveTime = time.Now()
-	whiteTimeLeft, blackTimeLeft := gameMeta.getTimeLeft(config)
-	message := MessageFromServer{
+	whiteTimeLeft, blackTimeLeft := gameMeta.White.Clock.TimeLeft, gameMeta.Black.Clock.TimeLeft
+	message := Message{
 		Type:        GameStartedFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
+		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: GameStartedFromServer{
 			Fen:           gameMeta.getFen(),
 			ValidMoves:    ValidMovesMap(gameMeta.Game),
@@ -198,17 +192,18 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 		isCheckmated = "black"
 	}
 
-	message := MessageFromServer{
+	message := Message{
 		Type:        MoveFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
+		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: MoveFromServer{
-			Fen:          gameMeta.getFen(),
-			ValidMoves:   ValidMovesMap(gameMeta.Game),
-			WhosNext:     gameMeta.whoseMoveIsIt(),
-			IsCheckmated: isCheckmated,
-			// "timeLeft":     gameMeta.getTimeRemaining(config),
-
+			Fen:           gameMeta.getFen(),
+			ValidMoves:    ValidMovesMap(gameMeta.Game),
+			WhosNext:      gameMeta.whoseMoveIsIt(),
+			IsCheckmated:  isCheckmated,
+			WhiteTimeLeft: gameMeta.White.Clock.TimeLeft,
+			BlackTimeLeft: gameMeta.Black.Clock.TimeLeft,
 		},
 	}
 
@@ -222,17 +217,16 @@ func sendMoveMessage(config *c.ClientConfig, gameMeta *GameMeta, playerColor str
 }
 
 func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []byte {
-	message := MessageFromServer{
+	message := Message{
 		Type:        TimeoutFromServerType.String(),
 		GameId:      gameMeta.GameId,
 		PlayerColor: playerColor,
+		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: TimeoutFromServer{
 			Fen:        gameMeta.getFen(),
 			ValidMoves: ValidMovesMap(gameMeta.Game),
 			WhosNext:   gameMeta.whoseMoveIsIt(),
 			Loser:      loser,
-			// "timeLeft":     gameMeta.getTimeRemaining(config),
-
 		},
 	}
 
@@ -246,8 +240,9 @@ func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []
 }
 
 func sendAbandonedMessage() []byte {
-	message := MessageFromServer{
-		Type: AbandonedFromServerType.String(),
+	message := Message{
+		Type:      AbandonedFromServerType.String(),
+		TimeStamp: time.Now().Format(time.RFC3339),
 		Payload: AbandonedFromServer{
 			Abandoned: true,
 		},
@@ -273,8 +268,7 @@ func handleAbandonedMessage(game *GameMeta) {
 	}
 }
 
-// todo: yse this
-func handlePremoveMessage(message MessageFromServer, game *GameMeta) {
+func handlePremoveMessage(message Message, game *GameMeta) {
 	err := parsePremove("", game.Game)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)
@@ -292,6 +286,21 @@ func handlePremoveMessage(message MessageFromServer, game *GameMeta) {
 
 func handleGameStartedMessage(config *c.ClientConfig, game *GameMeta) {
 	fmt.Println("game started")
+	game.White.Clock = Clock{
+		TimeLeft:  config.StartingTime,
+		TimeStamp: time.Now(),
+	}
+	game.Black.Clock = Clock{
+		TimeLeft:  config.StartingTime,
+		TimeStamp: time.Now(),
+	}
+
+	if game.whoseMoveIsIt() == "white" {
+		game.White.Clock.IsRunning = true
+	} else {
+		game.Black.Clock.IsRunning = true
+	}
+
 	for _, player := range game.GetPlayers() {
 		m := sendGameStartedMessage(config, game, player.Color)
 		select {
@@ -303,13 +312,6 @@ func handleGameStartedMessage(config *c.ClientConfig, game *GameMeta) {
 }
 
 func handleTimeoutMessage(game *GameMeta) {
-	// todo
-	err := parseTimeout("", game.Game)
-	if err != nil {
-		fmt.Println("Failed to parse timeout move data")
-		return
-	}
-
 	for _, player := range game.GetPlayers() {
 		m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
 		select {
@@ -320,13 +322,25 @@ func handleTimeoutMessage(game *GameMeta) {
 	}
 }
 
-func handleMoveMessage(config *c.ClientConfig, message MessageToServer, game *GameMeta) {
+func handleMoveMessage(config *c.ClientConfig, message Message, game *GameMeta) {
 	payload := message.Payload.(MoveToServer)
 	err := parseMove(payload, game.Game)
 	if err != nil {
 		log.Println("Cannot make move: ", err)
 		return
 	}
+
+	if game.White.Clock.IsRunning {
+		game.White.Clock.TimeLeft -= time.Since(game.White.Clock.TimeStamp).Seconds()
+		game.White.Clock.IsRunning = false
+		game.Black.Clock.IsRunning = true
+	} else {
+		game.Black.Clock.TimeLeft -= time.Since(game.Black.Clock.TimeStamp).Seconds()
+		game.White.Clock.IsRunning = true
+		game.Black.Clock.IsRunning = false
+	}
+	game.White.Clock.TimeStamp = time.Now()
+	game.Black.Clock.TimeStamp = time.Now()
 
 	for _, player := range game.GetPlayers() {
 		select {

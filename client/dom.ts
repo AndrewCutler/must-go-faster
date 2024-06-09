@@ -72,6 +72,7 @@ export class TimerElement implements IElement {
 export class GameStatusModalElement implements IElement {
 	private _element: HTMLElement | undefined;
 	private _headerElement: HTMLElement | undefined;
+	private _playAgainButtonElement: HTMLElement | undefined;
 
 	get element(): HTMLElement | undefined {
 		return this._element;
@@ -86,6 +87,11 @@ export class GameStatusModalElement implements IElement {
 			document.querySelector<HTMLDivElement>('#modal-header');
 		if (!headerElement) throw new Error('Cannot find #modal-header');
 		this._headerElement = headerElement;
+		const playAgainButton =
+			document.querySelector<HTMLDivElement>('#play-again-button');
+		if (!playAgainButton) throw new Error('Cannot find #play-again-button');
+		this._playAgainButtonElement = playAgainButton;
+		this._playAgainButtonElement.addEventListener('click', this.playAgain);
 	}
 
 	setTime(time: number): void {
@@ -102,6 +108,10 @@ export class GameStatusModalElement implements IElement {
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 	): void {
 		this._headerElement!.innerText = `You ${gameStatus} via ${method}.`;
+	}
+
+	private playAgain(): void {
+		console.log('play again');
 	}
 }
 

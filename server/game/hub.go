@@ -45,7 +45,6 @@ func (h *Hub) Run() {
 
 func (h *Hub) onRegister(player *Player) {
 	// todo: randomize colors
-	// if there are no games with only one player, make one
 	if len(h.GamesAwaitingOpponent) == 0 {
 		fen, err := getGameFEN()
 		if err != nil {

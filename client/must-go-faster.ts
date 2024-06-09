@@ -254,7 +254,10 @@ export class MustGoFaster {
 				console.log('no time left', self._timeLeft);
 				return;
 			}
-			if ((self._timeLeft ?? 0) <= 0) {
+			const diff = new Date().getTime() - start.getTime();
+			const gameClock = self._timeLeft - diff / 1_000;
+
+			if (gameClock<= 0) {
 				window.clearInterval(self._timerInterval);
 				// send message to server to end game/find out the outcome
 				if (self._connection) {
@@ -270,8 +273,6 @@ export class MustGoFaster {
 				}
 				return;
 			}
-			const diff = new Date().getTime() - start.getTime();
-			const gameClock = self._timeLeft - diff / 1_000;
 
 			timerDiv.setTime(gameClock);
 		}, 10);

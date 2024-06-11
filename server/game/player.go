@@ -17,7 +17,7 @@ type Clock struct {
 }
 
 type Player struct {
-	GameId     string
+	SessionId  string
 	Connection *websocket.Conn
 	WriteChan  chan []byte
 	Hub        *Hub
@@ -35,7 +35,7 @@ func (p *Player) ReadMessage() {
 		// MessageType: 2, GoingAwayMessage
 		_, content, err := p.Connection.ReadMessage()
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			p.Hub.ReadChan <- Message{GameId: p.GameId, Type: AbandonedFromServerType.String()}
+			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
 			// game is over, send game abandoned message to winner and remove from active games
 			return
 		}
@@ -46,7 +46,6 @@ func (p *Player) ReadMessage() {
 
 		typeOnly := struct {
 			Type        string `json:"type"`
-			GameId      string `json:"-"`
 			PlayerColor string `json:"-"`
 			Payload     string `json:"-"`
 		}{
@@ -63,9 +62,7 @@ func (p *Player) ReadMessage() {
 			return
 		}
 
-		fmt.Printf("\nPayload: %s\n\n", payload)
-
-		p.Hub.ReadChan <- Message{GameId: p.GameId, Payload: payload, Type: typeOnly.Type}
+		p.Hub.ReadChan <- Message{SessionId: p.SessionId, Payload: payload, Type: typeOnly.Type}
 	}
 }
 
@@ -136,6 +133,9 @@ func deserialize(content string, messageType string) (interface{}, error) {
 		}
 
 		return payload, nil
+	case "NewGameToServerType":
+		fmt.Println("NewGameToServerType")
+		return nil, nil
 	}
 
 	return nil, errors.New("cannot deserialize unknown message type")

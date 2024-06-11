@@ -73,12 +73,15 @@ export class GameStatusModalElement implements IElement {
 	private _element: HTMLElement | undefined;
 	private _headerElement: HTMLElement | undefined;
 	private _playAgainButtonElement: HTMLElement | undefined;
+    private _callback: () => void;
 
 	get element(): HTMLElement | undefined {
 		return this._element;
 	}
 
-	constructor() {
+	constructor(callback: () => void) {
+        this._callback = callback;
+
 		const element =
 			document.querySelector<HTMLDivElement>('#game-status-modal');
 		if (!element) throw new Error('Cannot find #game-status-modal');
@@ -112,6 +115,7 @@ export class GameStatusModalElement implements IElement {
 
 	private playAgain(): void {
 		console.log('play again');
+		this._callback();
 	}
 }
 

@@ -12,25 +12,43 @@ type Move struct {
 	To   string `json:"to"`
 }
 
-type GameMeta struct {
-	Game   *chess.Game
-	White  *Player
-	Black  *Player
-	GameId string
+type Session struct {
+	Game      *chess.Game
+	White     *Player
+	Black     *Player
+	SessionId string
 }
 
-func (g *GameMeta) getFen() string {
-	fen := g.Game.Position().String()
+func (s *Session) getFen() string {
+	fen := s.Game.Position().String()
 
 	return fen
 }
 
-func (g *GameMeta) GetPlayers() []*Player {
-	return []*Player{g.White, g.Black}
+func (s *Session) newGame() *chess.Game {
+	fen, err := getGameFEN()
+	if err != nil {
+		log.Println("Cannot get game fen: ", err)
+		return nil
+	}
+
+	f, err := chess.FEN(fen)
+	if err != nil {
+		log.Println("Cannot parse game fen: ", err)
+		return nil
+	}
+
+	game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
+
+	return game
 }
 
-func (g *GameMeta) whoseMoveIsIt() string {
-	split := strings.Split(g.getFen(), " ")
+func (s *Session) GetPlayers() []*Player {
+	return []*Player{s.White, s.Black}
+}
+
+func (s *Session) whoseMoveIsIt() string {
+	split := strings.Split(s.getFen(), " ")
 	if len(split) == 6 {
 		switch split[1] {
 		case "w":

@@ -18,6 +18,7 @@ import {
 	ToMessage,
 	FromMessage,
 	FromPayload,
+	NewGameToServer,
 } from './models';
 
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -32,7 +33,7 @@ import {
 } from './dom';
 
 export class MustGoFaster {
-	private _gameId: string | undefined;
+	private _sessionId: string | undefined;
 	private _playerColor: PlayerColor | undefined;
 	private _timeLeft: number | undefined;
 	private _timerInterval: number | undefined;
@@ -221,7 +222,7 @@ export class MustGoFaster {
 						const gameStartedRequest: ToMessage<GameStartedToServer> =
 							{
 								type: 'GameStartedToServerType',
-								gameId: self._gameId!,
+								sessionId: self._sessionId!,
 								playerColor: self._playerColor!,
 							};
 						self.sendMessage(gameStartedRequest);
@@ -257,13 +258,13 @@ export class MustGoFaster {
 			const diff = new Date().getTime() - start.getTime();
 			const gameClock = self._timeLeft - diff / 1_000;
 
-			if (gameClock<= 0) {
+			if (gameClock <= 0) {
 				window.clearInterval(self._timerInterval);
 				// send message to server to end game/find out the outcome
 				if (self._connection) {
 					const timeout: ToMessage<TimeoutToServer> = {
 						type: 'TimeoutToServerType',
-						gameId: self._gameId!,
+						sessionId: self._sessionId!,
 						playerColor: self._playerColor!,
 						payload: {
 							timeout: true,
@@ -287,19 +288,32 @@ export class MustGoFaster {
 		return validMoves;
 	}
 
+	test() {
+		console.log('test');
+		// listen for click of modal button
+		if (this._connection) {
+			const gameStartedRequest: ToMessage<NewGameToServer> = {
+				type: 'NewGameToServerType',
+				sessionId: this._sessionId!,
+				playerColor: this._playerColor!,
+			};
+			this.sendMessage(gameStartedRequest);
+		}
+	}
+
 	private gameOver(
 		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 	): void {
 		console.log('gameOver: ', { gameStatus, method });
 		// have to add draws
-		const modal = new GameStatusModalElement();
+		const modal = new GameStatusModalElement(this.test);
 		modal.show();
 		modal.setOutcome(gameStatus, method);
 	}
 
 	private setupBoard(message: FromMessage<GameStartedFromServer>) {
-		this._gameId = message.gameId;
+		this._sessionId = message.sessionId;
 		this._playerColor = message.playerColor;
 		this._timeLeft = this._config?.startingTime;
 
@@ -337,7 +351,7 @@ export class MustGoFaster {
 		if (this._connection) {
 			const premove: ToMessage<PremoveToServer> = {
 				type: 'PremoveToServerType',
-				gameId: this._gameId!,
+				sessionId: this._sessionId!,
 				playerColor: this._playerColor!,
 				payload: {
 					premove: move,
@@ -367,7 +381,7 @@ export class MustGoFaster {
 				const moveMessage: ToMessage<MoveToServer> = {
 					payload: { move },
 					playerColor: self._playerColor!,
-					gameId: self._gameId!,
+					sessionId: self._sessionId!,
 					type: 'MoveToServerType',
 				};
 				self.sendMessage(moveMessage);

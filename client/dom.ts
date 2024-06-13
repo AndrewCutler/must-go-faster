@@ -73,15 +73,13 @@ export class GameStatusModalElement implements IElement {
 	private _element: HTMLElement | undefined;
 	private _headerElement: HTMLElement | undefined;
 	private _playAgainButtonElement: HTMLElement | undefined;
-    private _callback: () => void;
 
 	get element(): HTMLElement | undefined {
 		return this._element;
 	}
 
-	constructor(callback: () => void) {
-        this._callback = callback;
-
+	constructor(sendMessageCallback: () => void) {
+		const self = this;
 		const element =
 			document.querySelector<HTMLDivElement>('#game-status-modal');
 		if (!element) throw new Error('Cannot find #game-status-modal');
@@ -94,7 +92,9 @@ export class GameStatusModalElement implements IElement {
 			document.querySelector<HTMLDivElement>('#play-again-button');
 		if (!playAgainButton) throw new Error('Cannot find #play-again-button');
 		this._playAgainButtonElement = playAgainButton;
-		this._playAgainButtonElement.addEventListener('click', this.playAgain);
+		this._playAgainButtonElement.addEventListener('click', function () {
+			self.playAgain(sendMessageCallback);
+		});
 	}
 
 	setTime(time: number): void {
@@ -106,6 +106,10 @@ export class GameStatusModalElement implements IElement {
 		this._element!.style.display = 'block';
 	}
 
+	hide(): void {
+		this._element!.style.display = 'none';
+	}
+
 	setOutcome(
 		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
@@ -113,9 +117,9 @@ export class GameStatusModalElement implements IElement {
 		this._headerElement!.innerText = `You ${gameStatus} via ${method}.`;
 	}
 
-	private playAgain(): void {
-		console.log('play again');
-		this._callback();
+	private playAgain(sendMessageCallback: () => void): void {
+		this.hide();
+		sendMessageCallback();
 	}
 }
 

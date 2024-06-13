@@ -276,6 +276,10 @@ func handleAbandonedMessage(session *Session) {
 }
 
 func handleNewGameMessage(session *Session) {
+	// have to end session and join a new one?
+	// close connection and have client request new one
+	// so actually we should close the connection when the game ends
+	// (no rematches)
 	fmt.Println("new game request")
 	fmt.Println(session)
 

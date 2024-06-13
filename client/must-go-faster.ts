@@ -203,7 +203,7 @@ export class MustGoFaster {
 		let status: GameStatus = 'won';
 		this.gameOver(status, 'abandonment');
 		if (this._connection) {
-			this._connection.close();
+			this._connection.close(1000, 'Game abandoned by opponent.');
 		}
 		// wipe out all game-specific data in class
 	}
@@ -288,26 +288,32 @@ export class MustGoFaster {
 		return validMoves;
 	}
 
-	test() {
-		console.log('test');
-		// listen for click of modal button
-		if (this._connection) {
-			const gameStartedRequest: ToMessage<NewGameToServer> = {
-				type: 'NewGameToServerType',
-				sessionId: this._sessionId!,
-				playerColor: this._playerColor!,
-			};
-			this.sendMessage(gameStartedRequest);
-		}
-	}
-
 	private gameOver(
 		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 	): void {
 		console.log('gameOver: ', { gameStatus, method });
+		if (this._connection) {
+			this._connection.close(1000, 'Game over.');
+		}
+		const self = this;
+		function sendNewGameMessage() {
+			// listen for click of modal button
+            self.connect();
+			// if (self._connection) {
+            //     // send new game request
+			// 	self._connection.close(1000, 'Game abandoned by opponent.');
+			// 	// instead of a new game request, we close the connection and ask for a new session
+			// 	// const gameStartedRequest: ToMessage<NewGameToServer> = {
+			// 	// 	type: 'NewGameToServerType',
+			// 	// 	sessionId: self._sessionId!,
+			// 	// 	playerColor: self._playerColor!,
+			// 	// };
+			// 	// self.sendMessage(gameStartedRequest);
+			// }
+		}
 		// have to add draws
-		const modal = new GameStatusModalElement(this.test);
+		const modal = new GameStatusModalElement(sendNewGameMessage);
 		modal.show();
 		modal.setOutcome(gameStatus, method);
 	}

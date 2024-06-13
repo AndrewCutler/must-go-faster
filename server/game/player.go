@@ -33,12 +33,18 @@ func (p *Player) ReadMessage() {
 	for {
 		// MessageType: 1, TextMessage
 		// MessageType: 2, GoingAwayMessage
-		_, content, err := p.Connection.ReadMessage()
+		messageType, content, err := p.Connection.ReadMessage()
+		fmt.Println("messageType: ", messageType)
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
 			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
 			// game is over, send game abandoned message to winner and remove from active games
 			return
 		}
+
+		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+			fmt.Println("session ended")
+		}
+
 		if err != nil {
 			log.Println("Cannot read message: ", err)
 			return

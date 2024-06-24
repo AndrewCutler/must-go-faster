@@ -158,7 +158,7 @@ func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
@@ -183,7 +183,7 @@ func sendGameStartedMessage(session *Session, playerColor string) []byte {
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
@@ -216,7 +216,7 @@ func sendMoveMessage(session *Session, playerColor string) []byte {
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
@@ -239,7 +239,7 @@ func sendTimeoutMessage(session *Session, playerColor string, loser string) []by
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
@@ -257,7 +257,7 @@ func sendAbandonedMessage() []byte {
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
@@ -266,6 +266,7 @@ func sendAbandonedMessage() []byte {
 
 // Receive
 func handleAbandonedMessage(session *Session) {
+	// log.Println("handleAbandonedMessage")
 	for _, player := range session.GetPlayers() {
 		select {
 		case player.WriteChan <- sendAbandonedMessage():
@@ -280,13 +281,14 @@ func handleNewGameMessage(session *Session) {
 	// close connection and have client request new one
 	// so actually we should close the connection when the game ends
 	// (no rematches)
-	fmt.Println("new game request")
-	fmt.Println(session)
+	log.Println("New game request.")
+	log.Println("Session:", session)
 
 	// sendNewGameMessage(), which is sendGameStarted()?
 }
 
 func handleMoveMessage(message Message, session *Session) {
+	// log.Println("handleMoveMessage")
 	payload := message.Payload.(MoveToServer)
 	err := tryPlayMove(payload, session.Game)
 	if err != nil {
@@ -316,6 +318,7 @@ func handleMoveMessage(message Message, session *Session) {
 }
 
 func handlePremoveMessage(message Message, session *Session) {
+	// log.Println("handlePremoveMessage")
 	payload := message.Payload.(PremoveToServer)
 	err := tryPlayPremove(payload, session.Game)
 	if err != nil {

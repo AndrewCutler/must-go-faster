@@ -1,9 +1,9 @@
 package game
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"time"
 
 	c "server/config"
 
@@ -31,14 +31,23 @@ func NewHub(config *c.ClientConfig) *Hub {
 	}
 }
 
-func (h *Hub) Run() {
+func (h *Hub) Run(quit chan bool) {
 	for {
 		select {
 		case player := <-h.RegisterChan:
 			h.onRegister(player)
-		case message := <-h.ReadChan:
+		case message, ok := <-h.ReadChan:
+			if !ok {
+				log.Println("ReadChan is closed.")
+				return
+			}
+
 			h.onMessage(message)
 			// todo: unregister
+		case <-time.After(2 * time.Second):
+			log.Println("No message received by Hub after 2 seconds...")
+		case <-quit:
+			log.Println("Quit!")
 		}
 	}
 }
@@ -69,7 +78,7 @@ func (h *Hub) onRegister(player *Player) {
 			Game:      game,
 		}
 		h.AwaitingOpponentSessions[sessionId] = &session
-		fmt.Printf("Creating new pending game...\n")
+		log.Println("Creating new pending game for player", player.Color)
 	} else {
 		// set session state to ready
 		var session *Session
@@ -83,14 +92,14 @@ func (h *Hub) onRegister(player *Player) {
 		delete(h.AwaitingOpponentSessions, session.SessionId)
 		h.InProgressSessions[session.SessionId] = session
 
-		fmt.Println("broadcasting game joined...")
+		log.Println("Broadcasting game joined for player", player.Color)
 		player.WriteChan <- sendGameJoinedMessage(session, player.Color)
 		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color)
 	}
 }
 
 func (h *Hub) onMessage(message Message) {
-	fmt.Println(message)
+	log.Printf("onMessage message for player %s: %s\n", message.PlayerColor, message)
 	session, ok := h.InProgressSessions[message.SessionId]
 	if !ok {
 		log.Printf("Session not found; sessionId: %s\n", message.SessionId)
@@ -103,6 +112,7 @@ func (h *Hub) onMessage(message Message) {
 	case GameStartedToServerType.String():
 		handleGameStartedMessage(h.Config, session)
 	case MoveToServerType.String():
+		// "panic: send on closed channel" when starting new game
 		handleMoveMessage(message, session)
 	case PremoveToServerType.String():
 		handlePremoveMessage(message, session)

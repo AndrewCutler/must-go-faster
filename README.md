@@ -13,4 +13,7 @@
 2. Make game over modal presentable
 3. Increment
 4. Show material count
-5. Fix timer; it doesn't stop when it's not the current player's move
+5. Various bugs with channels and messages.
+    * GameStartedToServerType is sent when player's clock starts,
+        so whoever goes second will send this message after the first player makes a move,
+        so the server responds with __two__ GameStartedFromServerMessages

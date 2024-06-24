@@ -18,6 +18,7 @@ import (
 )
 
 func main() {
+	quit := make(chan bool)
 	config, err := c.GetConfig()
 	if err != nil {
 		log.Panicln("Cannot get config: ", err)
@@ -50,10 +51,10 @@ func main() {
 	}
 
 	hub := game.NewHub(clientConfig)
-	go hub.Run()
+	go hub.Run(quit)
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("connection successful")
+		log.Println("Connection successful.")
 		connection, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("Failed to upgrade: ", err)
@@ -62,8 +63,8 @@ func main() {
 
 		player := &game.Player{Connection: connection, Hub: hub, WriteChan: make(chan []byte)}
 		player.Hub.RegisterChan <- player
-		go player.ReadMessage()
-		go player.WriteMessage()
+		go player.ReadMessage(quit)
+		go player.WriteMessage(quit)
 	})
 
 	r.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {

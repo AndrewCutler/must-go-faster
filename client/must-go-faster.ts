@@ -33,17 +33,17 @@ import {
 } from './dom';
 
 export class MustGoFaster {
-	private _sessionId: string | undefined;
-	private _playerColor: PlayerColor | undefined;
-	private _timeLeft: number | undefined;
-	private _timerInterval: number | undefined;
-	private _config: Config | undefined;
-	private _connection: WebSocket | undefined;
-	private _board: ChessgroundApi | undefined;
-	private _message: Message | undefined;
+	#sessionId: string | undefined;
+	#playerColor: PlayerColor | undefined;
+	#timeLeft: number | undefined;
+	#timerInterval: number | undefined;
+	#config: Config | undefined;
+	#connection: WebSocket | undefined;
+	#board: ChessgroundApi | undefined;
+	#message: Message | undefined;
 
 	setConfig(value: Config) {
-		this._config = value;
+		this.#config = value;
 	}
 
 	constructor() {
@@ -55,8 +55,8 @@ export class MustGoFaster {
 				color: 'white',
 			},
 		};
-		this._board = Chessground(new BoardElement().element!, initialConfig);
-		this._board.set({
+		this.#board = Chessground(new BoardElement().element!, initialConfig);
+		this.#board.set({
 			viewOnly: false,
 			movable: {
 				events: {
@@ -94,11 +94,11 @@ export class MustGoFaster {
 				console.error(e);
 			}
 		};
-		this._connection = ws;
+		this.#connection = ws;
 	}
 
 	private async handleMessage(message: FromMessage<FromPayload>) {
-		this._message = message;
+		this.#message = message;
 
 		console.log('Handle message: ', { message });
 		switch (message.type) {
@@ -121,65 +121,67 @@ export class MustGoFaster {
 	}
 
 	private sendMessage(message: ToMessage<ToPayload>): void {
-		if (!this._connection) {
+        console.log('connection:', this.#connection)
+		if (!this.#connection) {
 			console.error('Attempted send() on closed connection.');
 			return;
 		}
 
 		try {
-			this._connection.send(JSON.stringify(message));
+
+			this.#connection.send(JSON.stringify(message));
 		} catch (error) {
 			console.error('Cannot JSON.stingify message: ', message);
 		}
 	}
 
 	private async setupGame(): Promise<void> {
-		console.log('start: ', { response: this._message });
-		const message = this._message as FromMessage<GameStartedFromServer>;
+		console.log('start: ', { response: this.#message });
+		const message = this.#message as FromMessage<GameStartedFromServer>;
 		this.setupBoard(message);
-		console.log(this._board!.state);
+		console.log(this.#board!.state);
 
 		await this.showCountdownToStartGame();
 	}
 
 	private enableBoard(): void {
-		const payload = (this._message as FromMessage<GameJoinedFromServer>)
+		const payload = (this.#message as FromMessage<GameJoinedFromServer>)
 			.payload!;
 		this.toggleClock(payload.whosNext);
-		this._board!.set({
+		this.#board!.set({
 			viewOnly: false,
 		});
 	}
 
 	private updateBoardWithMove(): void {
-		const payload = (this._message! as FromMessage<MoveFromServer>)
+		const payload = (this.#message! as FromMessage<MoveFromServer>)
 			.payload!;
-		console.log('move: ', { move: this._message });
+		console.log('move: ', { move: this.#message });
 		let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
 		if (payload.isCheckmated) {
 			gameStatus =
-				payload.isCheckmated === this._playerColor ? 'lost' : 'won';
+				payload.isCheckmated === this.#playerColor ? 'lost' : 'won';
 			this.gameOver(gameStatus, 'checkmate');
-			this._timeLeft = 0;
+			this.#timeLeft = 0;
 			return;
 		}
 
-		this._timeLeft =
-			this._playerColor === 'white'
+		this.#timeLeft =
+			this.#playerColor === 'white'
 				? payload.whiteTimeLeft
 				: payload.blackTimeLeft;
 
 		this.toggleClock(payload.whosNext);
 
-		if (this._board!.state.premovable.current) {
+		if (this.#board!.state.premovable.current) {
 			// send premove message which checks if premove is valid
 			// if so, play response on server and send updated fen
-			const [from, to] = this._board!.state.premovable.current;
+			const [from, to] = this.#board!.state.premovable.current;
 			this.sendPremoveMessage({ from, to });
-			this._board!.playPremove();
+			this.#board!.playPremove();
 		}
 
-		this._board!.set({
+		this.#board!.set({
 			fen: payload.fen,
 			turnColor: payload.whosNext,
 			movable: {
@@ -191,8 +193,8 @@ export class MustGoFaster {
 	private timeout(): void {
 		let status: GameStatus = 'won';
 		if (
-			(this._message! as FromMessage<TimeoutFromServer>).payload!
-				.loser === this._playerColor
+			(this.#message! as FromMessage<TimeoutFromServer>).payload!
+				.loser === this.#playerColor
 		) {
 			status = 'lost';
 		}
@@ -202,10 +204,11 @@ export class MustGoFaster {
 	private abandoned(): void {
 		let status: GameStatus = 'won';
 		this.gameOver(status, 'abandonment');
-		if (this._connection) {
-			this._connection.close(1000, 'Game abandoned by opponent.');
+		if (this.#connection) {
+			this.#connection.close(1000, 'Game abandoned by opponent.');
+            this.#connection = undefined;
 		}
-		// wipe out all game-specific data in class
+		// wipe out all game-specific data in class?
 	}
 
 	private async showCountdownToStartGame(): Promise<void> {
@@ -218,12 +221,12 @@ export class MustGoFaster {
 				if (currentSecond <= 0) {
 					window.clearInterval(countdownInterval);
 					countdownDisplay.hide();
-					if (self._connection) {
+					if (self.#connection) {
 						const gameStartedRequest: ToMessage<GameStartedToServer> =
 							{
 								type: 'GameStartedToServerType',
-								sessionId: self._sessionId!,
-								playerColor: self._playerColor!,
+								sessionId: self.#sessionId!,
+								playerColor: self.#playerColor!,
 							};
 						self.sendMessage(gameStartedRequest);
 					}
@@ -238,34 +241,34 @@ export class MustGoFaster {
 
 	private toggleClock(whosNext: PlayerColor): void {
 		// clear previous interval
-		window.clearInterval(this._timerInterval);
+		window.clearInterval(this.#timerInterval);
 
 		const timerDiv = new TimerElement()!;
 
-		const runClock = whosNext === this._playerColor;
+		const runClock = whosNext === this.#playerColor;
 		if (!runClock) {
-			timerDiv.setTime(this._timeLeft!);
+			timerDiv.setTime(this.#timeLeft!);
 			return;
 		}
 
 		const start = new Date();
 		const self = this;
-		this._timerInterval = window.setInterval(function () {
-			if (!self._timeLeft) {
-				console.log('no time left', self._timeLeft);
+		this.#timerInterval = window.setInterval(function () {
+			if (!self.#timeLeft) {
+				console.log('no time left', self.#timeLeft);
 				return;
 			}
 			const diff = new Date().getTime() - start.getTime();
-			const gameClock = self._timeLeft - diff / 1_000;
+			const gameClock = self.#timeLeft - diff / 1_000;
 
 			if (gameClock <= 0) {
-				window.clearInterval(self._timerInterval);
+				window.clearInterval(self.#timerInterval);
 				// send message to server to end game/find out the outcome
-				if (self._connection) {
+				if (self.#connection) {
 					const timeout: ToMessage<TimeoutToServer> = {
 						type: 'TimeoutToServerType',
-						sessionId: self._sessionId!,
-						playerColor: self._playerColor!,
+						sessionId: self.#sessionId!,
+						playerColor: self.#playerColor!,
 						payload: {
 							timeout: true,
 						},
@@ -293,21 +296,22 @@ export class MustGoFaster {
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 	): void {
 		console.log('gameOver: ', { gameStatus, method });
-		if (this._connection) {
-			this._connection.close(1000, 'Game over.');
+		if (this.#connection) {
+			this.#connection.close(1000, 'Game over.');
+            this.#connection = undefined;
 		}
 		const self = this;
 		function sendNewGameMessage() {
 			// listen for click of modal button
-            self.connect();
-			// if (self._connection) {
-            //     // send new game request
-			// 	self._connection.close(1000, 'Game abandoned by opponent.');
+			self.connect();
+			// if (self.#connection) {
+			//     // send new game request
+			// 	self.#connection.close(1000, 'Game abandoned by opponent.');
 			// 	// instead of a new game request, we close the connection and ask for a new session
 			// 	// const gameStartedRequest: ToMessage<NewGameToServer> = {
 			// 	// 	type: 'NewGameToServerType',
-			// 	// 	sessionId: self._sessionId!,
-			// 	// 	playerColor: self._playerColor!,
+			// 	// 	sessionId: self.#sessionId!,
+			// 	// 	playerColor: self.#playerColor!,
 			// 	// };
 			// 	// self.sendMessage(gameStartedRequest);
 			// }
@@ -319,28 +323,28 @@ export class MustGoFaster {
 	}
 
 	private setupBoard(message: FromMessage<GameStartedFromServer>) {
-		this._sessionId = message.sessionId;
-		this._playerColor = message.playerColor;
-		this._timeLeft = this._config?.startingTime;
+		this.#sessionId = message.sessionId;
+		this.#playerColor = message.playerColor;
+		this.#timeLeft = this.#config?.startingTime;
 
 		const payload = message.payload as GameJoinedFromServer;
 		const gameMeta = new GameMetaElement();
 		gameMeta.show({
-			playerColor: this._playerColor,
+			playerColor: this.#playerColor,
 			whosNext: payload.whosNext,
 		});
 
 		const connectButton = new ConnectButtonElement();
 		connectButton.gameJoined();
 
-		this._board!.set({
+		this.#board!.set({
 			viewOnly: true,
 			fen: payload.fen,
 			turnColor: payload.whosNext,
-			orientation: this._playerColor,
+			orientation: this.#playerColor,
 			movable: {
 				dests: this.toValidMoves(payload.validMoves),
-				color: this._playerColor,
+				color: this.#playerColor,
 			},
 			premovable: {
 				enabled: true,
@@ -354,11 +358,11 @@ export class MustGoFaster {
 
 	private sendPremoveMessage(move: Move): void {
 		console.log('sendPremoveMessage: ', { premove: move });
-		if (this._connection) {
+		if (this.#connection) {
 			const premove: ToMessage<PremoveToServer> = {
 				type: 'PremoveToServerType',
-				sessionId: this._sessionId!,
-				playerColor: this._playerColor!,
+				sessionId: this.#sessionId!,
+				playerColor: this.#playerColor!,
 				payload: {
 					premove: move,
 				},
@@ -380,23 +384,23 @@ export class MustGoFaster {
 			// handle promotion here; autopromote to queen for now
 			to = self.checkIsPromotion(to);
 			// premove is set here
-			self._board!.move(from, to);
+			self.#board!.move(from, to);
 
 			const move: { from: cg.Key; to: cg.Key } = { from, to };
-			if (self._connection) {
+			if (self.#connection) {
 				const moveMessage: ToMessage<MoveToServer> = {
 					payload: { move },
-					playerColor: self._playerColor!,
-					sessionId: self._sessionId!,
+					playerColor: self.#playerColor!,
+					sessionId: self.#sessionId!,
 					type: 'MoveToServerType',
 				};
 				self.sendMessage(moveMessage);
 			}
-			console.log({ state: self._board!.state });
-			self._board!.set({
-				turnColor: self._playerColor === 'white' ? 'black' : 'white',
+			console.log({ state: self.#board!.state });
+			self.#board!.set({
+				turnColor: self.#playerColor === 'white' ? 'black' : 'white',
 				movable: {
-					color: self._playerColor,
+					color: self.#playerColor,
 				},
 				premovable: {
 					enabled: true,
@@ -406,7 +410,7 @@ export class MustGoFaster {
 	}
 
 	private checkIsPromotion(to: cg.Key): cg.Key {
-		const movedPiece = this._board!.state.pieces.get(to);
+		const movedPiece = this.#board!.state.pieces.get(to);
 		// any pawn move ending in 1 or 8, i.e. last rank
 		if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
 			to += 'q';

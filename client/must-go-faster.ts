@@ -139,7 +139,6 @@ export class MustGoFaster {
 		console.log('start: ', { response: this.#message });
 		const message = this.#message as FromMessage<GameStartedFromServer>;
 		this.setupBoard(message);
-		console.log(this.#board!.state);
 
 		await this.showCountdownToStartGame();
 	}

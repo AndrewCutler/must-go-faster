@@ -363,6 +363,7 @@ func handleGameStartedMessage(config *c.ClientConfig, session *Session) {
 }
 
 func handleTimeoutMessage(session *Session) {
+	// should I only send to opponent?
 	for _, player := range session.GetPlayers() {
 		m := sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
 		select {

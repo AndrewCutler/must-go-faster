@@ -47,24 +47,11 @@ func (p *Player) ReadMessage(quit chan bool) {
 		}
 
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-			log.Println("playerColor ", p.Color, " ended 2")
+			log.Println("playerColor ", p.Color, " normal closure")
 			// handle game over here
 		}
 
-		// if e, ok := err.(*websocket.CloseError); ok {
-		// 	if e.Code == websocket.CloseNormalClosure {
-		// 		log.Println("playerColor ", p.Color, "close normal closure", e)
-		// 	}
-
-		// 	if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-		// 		log.Printf("Unexpected close error: %v", err)
-		// 	}
-		// }
-
 		if err != nil {
-			// log.Println("playerColor ", p.Color, "websocket.CloseNormalClosure : ", websocket.CloseNormalClosure)
-			// Cannot read message:  read tcp 10.0.0.73:8000->10.0.0.73:51126: use of closed network connection
-			// Cannot read message:  websocket: close 1000 (normal): Game over.
 			log.Println("playerColor ", p.Color, "Cannot read message: ", err)
 			return
 		}

@@ -25,24 +25,6 @@ func (s *Session) getFen() string {
 	return fen
 }
 
-func (s *Session) newGame() *chess.Game {
-	fen, err := getGameFEN()
-	if err != nil {
-		log.Println("Cannot get game fen: ", err)
-		return nil
-	}
-
-	f, err := chess.FEN(fen)
-	if err != nil {
-		log.Println("Cannot parse game fen: ", err)
-		return nil
-	}
-
-	game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
-
-	return game
-}
-
 func (s *Session) GetPlayers() []*Player {
 	return []*Player{s.White, s.Black}
 }

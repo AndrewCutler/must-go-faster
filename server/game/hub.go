@@ -2,6 +2,7 @@ package game
 
 import (
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -45,7 +46,7 @@ func (h *Hub) Run(quit chan bool) {
 			h.onMessage(message)
 			// todo: unregister
 		case <-time.After(2 * time.Second):
-			log.Println("No message received by Hub after 2 seconds...")
+			// log.Println("No message received by Hub after 2 seconds...")
 		case <-quit:
 			log.Println("Quit!")
 		}
@@ -106,13 +107,10 @@ func (h *Hub) onMessage(message Message) {
 		return
 	}
 
-	// game := session.newGame()
-
 	switch message.Type {
 	case GameStartedToServerType.String():
 		handleGameStartedMessage(h.Config, session)
 	case MoveToServerType.String():
-		// "panic: send on closed channel" when starting new game
 		handleMoveMessage(message, session)
 	case PremoveToServerType.String():
 		handlePremoveMessage(message, session)
@@ -138,11 +136,10 @@ func getGameFEN() (string, error) {
 	}
 
 	var result string
-	var isGameAcceptable bool
-	for !isGameAcceptable {
+	for isGameAcceptable := false; !isGameAcceptable; {
 		// testing with same game every time
-		fileName := files[1].Name()
-		// fileName := files[rand.Intn(len(files))].Name()
+		// fileName := files[1].Name()
+		fileName := files[rand.Intn(len(files))].Name()
 		file, err := os.Open(dir + "\\" + fileName)
 		if err != nil {
 			return "", err

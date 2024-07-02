@@ -3,7 +3,6 @@ package game
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -17,7 +16,7 @@ type Clock struct {
 }
 
 type Player struct {
-	GameId     string
+	SessionId  string
 	Connection *websocket.Conn
 	WriteChan  chan []byte
 	Hub        *Hub
@@ -25,28 +24,40 @@ type Player struct {
 	Clock      Clock
 }
 
-func (p *Player) ReadMessage() {
+func (p *Player) ReadMessage(quit chan bool) {
 	defer func() {
+		log.Println("Closing for player color and quitting: ", p.Color)
 		p.Connection.Close()
+		quit <- true
 	}()
 
 	for {
 		// MessageType: 1, TextMessage
 		// MessageType: 2, GoingAwayMessage
-		_, content, err := p.Connection.ReadMessage()
+		messageType, content, err := p.Connection.ReadMessage()
+		log.Println("playerColor ", p.Color, "messageType: ", messageType)
+
+		// this will fire for the player who is doing the abandonment
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			p.Hub.ReadChan <- Message{GameId: p.GameId, Type: AbandonedFromServerType.String()}
+			log.Println("playerColor ", p.Color, " close going away error: ", err)
+
 			// game is over, send game abandoned message to winner and remove from active games
+			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
 			return
 		}
+
+		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+			log.Println("playerColor ", p.Color, " normal closure")
+			// handle game over here
+		}
+
 		if err != nil {
-			log.Println("Cannot read message: ", err)
+			log.Println("playerColor ", p.Color, "Cannot read message: ", err)
 			return
 		}
 
 		typeOnly := struct {
 			Type        string `json:"type"`
-			GameId      string `json:"-"`
 			PlayerColor string `json:"-"`
 			Payload     string `json:"-"`
 		}{
@@ -63,15 +74,15 @@ func (p *Player) ReadMessage() {
 			return
 		}
 
-		fmt.Printf("\nPayload: %s\n\n", payload)
-
-		p.Hub.ReadChan <- Message{GameId: p.GameId, Payload: payload, Type: typeOnly.Type}
+		p.Hub.ReadChan <- Message{SessionId: p.SessionId, Payload: payload, Type: typeOnly.Type}
 	}
 }
 
-func (p *Player) WriteMessage() {
+func (p *Player) WriteMessage(quit chan bool) {
 	defer func() {
+		log.Println("Closing in WriteMessage for player ", p.Color)
 		p.Connection.Close()
+		quit <- true
 	}()
 
 	for message := range p.WriteChan {
@@ -88,7 +99,7 @@ func (p *Player) WriteMessage() {
 		}
 
 		if err := writer.Close(); err != nil {
-			log.Println("Failed to close writer: ", err)
+			log.Println("playerColor ", p.Color, "Failed to close writer: ", err)
 			return
 		}
 	}
@@ -136,6 +147,9 @@ func deserialize(content string, messageType string) (interface{}, error) {
 		}
 
 		return payload, nil
+	case "NewGameToServerType":
+		log.Println("NewGameToServerType")
+		return nil, nil
 	}
 
 	return nil, errors.New("cannot deserialize unknown message type")
@@ -151,7 +165,7 @@ func toServerMessage(content string) ([]byte, error) {
 	}
 	payloadData, err := json.Marshal(result.Payload)
 	if err != nil {
-		fmt.Println("Error marshalling map to JSON:", err)
+		log.Println("Error marshalling map to JSON:", err)
 		return nil, err
 	}
 

@@ -17,10 +17,11 @@ export type MessageType =
 	| 'MoveToServerType'
 	| 'PremoveToServerType'
 	| 'TimeoutToServerType'
-	| 'AbandonedToServerType';
+	| 'AbandonedToServerType'
+	| 'NewGameToServerType';
 
 export type Message = {
-	gameId: string;
+	sessionId: string;
 	playerColor: PlayerColor;
 	type: MessageType;
 };
@@ -39,7 +40,8 @@ export type ToPayload =
 	| GameStartedToServer
 	| MoveToServer
 	| PremoveToServer
-	| TimeoutToServer;
+	| TimeoutToServer
+	| NewGameToServer;
 
 export type FromPayload =
 	| GameJoinedFromServer
@@ -86,11 +88,13 @@ export type TimeoutToServer = {
 	timeout: boolean;
 };
 
-export type MoveToServer = { move: Move; };
+export type MoveToServer = { move: Move };
 
 export type PremoveToServer = {
 	premove: Move;
 };
+
+export type NewGameToServer = undefined;
 
 export type Move = {
 	from: cg.Key;

@@ -4,7 +4,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"time"
 
 	c "server/config"
 
@@ -45,8 +44,8 @@ func (h *Hub) Run(quit chan bool) {
 
 			h.onMessage(message)
 			// todo: unregister
-		case <-time.After(2 * time.Second):
-			// log.Println("No message received by Hub after 2 seconds...")
+		// case <-time.After(2 * time.Second):
+		// log.Println("No message received by Hub after 2 seconds...")
 		case <-quit:
 			log.Println("Quit!")
 		}
@@ -118,8 +117,8 @@ func (h *Hub) onMessage(message Message) {
 		handleTimeoutMessage(session)
 	case AbandonedToServerType.String():
 		handleAbandonedMessage(session)
-	case NewGameToServerType.String():
-		handleNewGameMessage(session)
+	// case NewGameToServerType.String():
+	// 	handleNewGameMessage(session)
 	default:
 		log.Println(message)
 		return

@@ -29,8 +29,7 @@ const (
 	AbandonedFromServerType
 	AbandonedToServerType
 
-	NewGameFromServerType // unnecessary?
-	NewGameToServerType
+	// NewGameToServerType
 )
 
 func (m MessageType) String() string {
@@ -45,8 +44,6 @@ func (m MessageType) String() string {
 		return "TimeoutFromServerType"
 	case AbandonedFromServerType:
 		return "AbandonedFromServerType"
-	case NewGameFromServerType:
-		return "NewGameFromServerType"
 	case GameJoinedToServerType:
 		return "GameJoinedToServerType"
 	case GameStartedToServerType:
@@ -59,8 +56,8 @@ func (m MessageType) String() string {
 		return "TimeoutToServerType"
 	case AbandonedToServerType:
 		return "AbandonedToServerType"
-	case NewGameToServerType:
-		return "NewGameToServerType"
+	// case NewGameToServerType:
+	// 	return "NewGameToServerType"
 	default:
 		return ""
 	}
@@ -276,16 +273,15 @@ func handleAbandonedMessage(session *Session) {
 	}
 }
 
-func handleNewGameMessage(session *Session) {
-	// have to end session and join a new one?
-	// close connection and have client request new one
-	// so actually we should close the connection when the game ends
-	// (no rematches)
-	log.Println("New game request.")
-	log.Println("Session:", session)
+// func handleNewGameMessage(session *Session) {
+// 	// have to end session and join a new one?
+// 	// close connection and have client request new one
+// 	// so actually we should close the connection when the game ends
+// 	// (no rematches)
+// 	log.Println("New game request.")
+// 	log.Println("Session:", session)
 
-	// sendNewGameMessage(), which is sendGameStarted()?
-}
+// }
 
 func handleMoveMessage(message Message, session *Session) {
 	// log.Println("handleMoveMessage")

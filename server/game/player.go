@@ -147,9 +147,9 @@ func deserialize(content string, messageType string) (interface{}, error) {
 		}
 
 		return payload, nil
-	case "NewGameToServerType":
-		log.Println("NewGameToServerType")
-		return nil, nil
+		// case "NewGameToServerType":
+		// 	log.Println("NewGameToServerType")
+		// 	return nil, nil
 	}
 
 	return nil, errors.New("cannot deserialize unknown message type")

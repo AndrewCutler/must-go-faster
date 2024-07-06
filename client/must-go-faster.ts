@@ -94,6 +94,18 @@ export class MustGoFaster {
 				console.error(e);
 			}
 		};
+
+		ws.onopen = function (openEvent) {
+			console.log('WebSocket opened.', { event: openEvent });
+		};
+
+		ws.onerror = function (errorEvent) {
+			console.error('WebSocket error.', { event: errorEvent });
+		};
+
+		ws.onclose = function (closeEvent) {
+			console.log('WebSocket closed.', { event: closeEvent });
+		};
 		this.#connection = ws;
 	}
 
@@ -121,14 +133,20 @@ export class MustGoFaster {
 	}
 
 	private sendMessage(message: ToMessage<ToPayload>): void {
-        console.log('connection:', this.#connection)
 		if (!this.#connection) {
-			console.error('Attempted send() on closed connection.');
+			console.error('Connection does not exist.');
+			return;
+		}
+
+		if (this.#connection.readyState !== this.#connection.OPEN) {
+			console.error(
+				'Attempted send() on connection that is not open. State: ',
+				this.#connection.readyState,
+			);
 			return;
 		}
 
 		try {
-
 			this.#connection.send(JSON.stringify(message));
 		} catch (error) {
 			console.error('Cannot JSON.stingify message: ', message);
@@ -205,7 +223,7 @@ export class MustGoFaster {
 		this.gameOver(status, 'abandonment');
 		if (this.#connection) {
 			this.#connection.close(1000, 'Game abandoned by opponent.');
-            this.#connection = undefined;
+			this.#connection = undefined;
 		}
 		// wipe out all game-specific data in class?
 	}
@@ -297,23 +315,12 @@ export class MustGoFaster {
 		console.log('gameOver: ', { gameStatus, method });
 		if (this.#connection) {
 			this.#connection.close(1000, 'Game over.');
-            this.#connection = undefined;
+			this.#connection = undefined;
 		}
 		const self = this;
 		function sendNewGameMessage() {
 			// listen for click of modal button
 			self.connect();
-			// if (self.#connection) {
-			//     // send new game request
-			// 	self.#connection.close(1000, 'Game abandoned by opponent.');
-			// 	// instead of a new game request, we close the connection and ask for a new session
-			// 	// const gameStartedRequest: ToMessage<NewGameToServer> = {
-			// 	// 	type: 'NewGameToServerType',
-			// 	// 	sessionId: self.#sessionId!,
-			// 	// 	playerColor: self.#playerColor!,
-			// 	// };
-			// 	// self.sendMessage(gameStartedRequest);
-			// }
 		}
 		// have to add draws
 		const modal = new GameStatusModalElement(sendNewGameMessage);

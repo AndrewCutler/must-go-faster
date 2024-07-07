@@ -77,10 +77,19 @@ export class MustGoFaster {
 	}
 
 	connect(): void {
-		console.log('Connecting...');
 		const ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
-		ws.onopen = function (event) {
+
+		ws.onopen = function (openEvent) {
+			console.log('WebSocket opened.', { event: openEvent });
 			new BoardElement()!.enable();
+		};
+
+		ws.onerror = function (errorEvent) {
+			console.error('WebSocket error.', { event: errorEvent });
+		};
+
+		ws.onclose = function (closeEvent) {
+			console.log('WebSocket closed.', { event: closeEvent });
 		};
 
 		const self = this;
@@ -95,17 +104,6 @@ export class MustGoFaster {
 			}
 		};
 
-		ws.onopen = function (openEvent) {
-			console.log('WebSocket opened.', { event: openEvent });
-		};
-
-		ws.onerror = function (errorEvent) {
-			console.error('WebSocket error.', { event: errorEvent });
-		};
-
-		ws.onclose = function (closeEvent) {
-			console.log('WebSocket closed.', { event: closeEvent });
-		};
 		this.#connection = ws;
 	}
 

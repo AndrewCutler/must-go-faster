@@ -78,7 +78,8 @@ export class MustGoFaster {
 
 	connect(): void {
 		const ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
-
+        console.log('Creating WebSocket.');
+        
 		ws.onopen = function (openEvent) {
 			console.log('WebSocket opened.', { event: openEvent });
 			new BoardElement()!.enable();
@@ -322,6 +323,7 @@ export class MustGoFaster {
 		}
 		// have to add draws
 		const modal = new GameStatusModalElement(sendNewGameMessage);
+        // this should be obsolete if rendering happens in ctor
 		modal.show();
 		modal.setOutcome(gameStatus, method);
 	}

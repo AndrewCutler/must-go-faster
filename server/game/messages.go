@@ -265,11 +265,12 @@ func sendAbandonedMessage() []byte {
 func handleAbandonedMessage(session *Session) {
 	// log.Println("handleAbandonedMessage")
 	for _, player := range session.GetPlayers() {
-		select {
-		case player.WriteChan <- sendAbandonedMessage():
-		default:
-			close(player.WriteChan)
-		}
+		player.WriteChan <- sendAbandonedMessage()
+		// select {
+		// case player.WriteChan <- sendAbandonedMessage():
+		// default:
+		// 	// close(player.WriteChan)
+		// }
 	}
 }
 
@@ -305,11 +306,12 @@ func handleMoveMessage(message Message, session *Session) {
 	session.Black.Clock.TimeStamp = time.Now()
 
 	for _, player := range session.GetPlayers() {
-		select {
-		case player.WriteChan <- sendMoveMessage(session, player.Color):
-		default:
-			close(player.WriteChan)
-		}
+		player.WriteChan <- sendMoveMessage(session, player.Color)
+		// select {
+		// case player.WriteChan <- sendMoveMessage(session, player.Color):
+		// default:
+		// 	// close(player.WriteChan)
+		// }
 	}
 }
 
@@ -324,11 +326,12 @@ func handlePremoveMessage(message Message, session *Session) {
 
 	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range session.GetPlayers() {
-		select {
-		case player.WriteChan <- sendMoveMessage(session, player.Color):
-		default:
-			close(player.WriteChan)
-		}
+		player.WriteChan <- sendMoveMessage(session, player.Color)
+		// select {
+		// case player.WriteChan <- sendMoveMessage(session, player.Color):
+		// default:
+		// 	// close(player.WriteChan)
+		// }
 	}
 }
 
@@ -350,11 +353,12 @@ func handleGameStartedMessage(config *c.ClientConfig, session *Session) {
 
 	for _, player := range session.GetPlayers() {
 		m := sendGameStartedMessage(session, player.Color)
-		select {
-		case player.WriteChan <- m:
-		default:
-			close(player.WriteChan)
-		}
+		player.WriteChan <- m
+		// select {
+		// case player.WriteChan <- m:
+		// default:
+		// 	// close(player.WriteChan)
+		// }
 	}
 }
 
@@ -362,10 +366,11 @@ func handleTimeoutMessage(session *Session) {
 	// should I only send to opponent?
 	for _, player := range session.GetPlayers() {
 		m := sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
-		select {
-		case player.WriteChan <- m:
-		default:
-			close(player.WriteChan)
-		}
+		player.WriteChan <- m
+		// select {
+		// case player.WriteChan <- m:
+		// default:
+		// 	// close(player.WriteChan)
+		// }
 	}
 }

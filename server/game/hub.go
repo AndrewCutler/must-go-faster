@@ -45,7 +45,7 @@ func (h *Hub) Run(quit chan bool) {
 			h.onMessage(message)
 			// todo: unregister
 		// case <-time.After(2 * time.Second):
-		// log.Println("No message received by Hub after 2 seconds...")
+		// 	log.Println("No message received by Hub after 2 seconds...")
 		case <-quit:
 			log.Println("Quit!")
 		}

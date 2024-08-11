@@ -26,9 +26,10 @@ type Player struct {
 
 func (p *Player) ReadMessage(quit chan bool) {
 	defer func() {
-		log.Println("Closing for player color and quitting: ", p.Color)
+		log.Println()
+		log.Println("DEFER Closing in ReadMessage for player ", p.Color)
 		p.Connection.Close()
-		quit <- true
+		// quit <- true
 	}()
 
 	for {
@@ -43,16 +44,27 @@ func (p *Player) ReadMessage(quit chan bool) {
 
 			// game is over, send game abandoned message to winner and remove from active games
 			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
+			delete(p.Hub.InProgressSessions, p.SessionId)
+			// do we need to close for other player too?
+			close(p.WriteChan)
 			return
 		}
 
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 			log.Println("playerColor ", p.Color, " normal closure")
 			// handle game over here
+			// remove from InProgressSessions
+			delete(p.Hub.InProgressSessions, p.SessionId)
+			// do we need to close for other player too?
+			close(p.WriteChan)
+			return
 		}
 
 		if err != nil {
 			log.Println("playerColor ", p.Color, "Cannot read message: ", err)
+			delete(p.Hub.InProgressSessions, p.SessionId)
+			// do we need to close for other player too?
+			close(p.WriteChan)
 			return
 		}
 
@@ -80,9 +92,10 @@ func (p *Player) ReadMessage(quit chan bool) {
 
 func (p *Player) WriteMessage(quit chan bool) {
 	defer func() {
-		log.Println("Closing in WriteMessage for player ", p.Color)
+		log.Println()
+		log.Println("DEFER Closing in WriteMessage for player ", p.Color)
 		p.Connection.Close()
-		quit <- true
+		// quit <- true
 	}()
 
 	for message := range p.WriteChan {

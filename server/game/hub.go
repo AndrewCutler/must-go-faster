@@ -1,8 +1,8 @@
 package game
 
 import (
-	"fmt"
 	"log"
+	"math/rand"
 	"os"
 
 	c "server/config"
@@ -12,22 +12,22 @@ import (
 )
 
 type Hub struct {
-	GamesInProgress       map[string]*GameMeta
-	GamesAwaitingOpponent map[string]*GameMeta
-	ReadChan              chan Message
-	RegisterChan          chan *Player
-	UnregisterChan        chan *Player
-	Config                *c.ClientConfig
+	InProgressSessions       map[string]*Session
+	AwaitingOpponentSessions map[string]*Session
+	ReadChan                 chan Message
+	RegisterChan             chan *Player
+	UnregisterChan           chan *Player
+	Config                   *c.ClientConfig
 }
 
 func NewHub(config *c.ClientConfig) *Hub {
 	return &Hub{
-		ReadChan:              make(chan Message),
-		RegisterChan:          make(chan *Player),
-		UnregisterChan:        make(chan *Player),
-		GamesInProgress:       make(map[string]*GameMeta),
-		GamesAwaitingOpponent: make(map[string]*GameMeta),
-		Config:                config,
+		ReadChan:                 make(chan Message),
+		RegisterChan:             make(chan *Player),
+		UnregisterChan:           make(chan *Player),
+		InProgressSessions:       make(map[string]*Session),
+		AwaitingOpponentSessions: make(map[string]*Session),
+		Config:                   config,
 	}
 }
 
@@ -36,16 +36,23 @@ func (h *Hub) Run() {
 		select {
 		case player := <-h.RegisterChan:
 			h.onRegister(player)
-		case message := <-h.ReadChan:
+		case message, ok := <-h.ReadChan:
+			if !ok {
+				log.Println("ReadChan is closed.")
+				return
+			}
+
 			h.onMessage(message)
 			// todo: unregister
+			// case <-time.After(2 * time.Second):
+			// 	log.Println("No message received by Hub after 2 seconds...")
 		}
 	}
 }
 
 func (h *Hub) onRegister(player *Player) {
 	// todo: randomize colors
-	if len(h.GamesAwaitingOpponent) == 0 {
+	if len(h.AwaitingOpponentSessions) == 0 {
 		fen, err := getGameFEN()
 		if err != nil {
 			log.Println("Cannot get game fen: ", err)
@@ -58,131 +65,56 @@ func (h *Hub) onRegister(player *Player) {
 			return
 		}
 
-		gameId := uuid.New().String()
 		game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
-		player.GameId = gameId
+
+		sessionId := uuid.New().String()
+		player.SessionId = sessionId
 		player.Color = "white"
-		gameMeta := GameMeta{
-			Game:   game,
-			White:  player,
-			GameId: gameId,
+		session := Session{
+			White:     player,
+			SessionId: sessionId,
+			Game:      game,
 		}
-		h.GamesAwaitingOpponent[gameId] = &gameMeta
-		fmt.Printf("Creating new pending game...\n")
-		// otherwise, pair up with pending game and move to in progress
+		h.AwaitingOpponentSessions[sessionId] = &session
+		log.Println("Creating new pending game for player", player.Color)
 	} else {
-		// set game state to ready
-		var game *GameMeta
-		for key := range h.GamesAwaitingOpponent {
-			game = h.GamesAwaitingOpponent[key]
+		// set session state to ready
+		var session *Session
+		for key := range h.AwaitingOpponentSessions {
+			session = h.AwaitingOpponentSessions[key]
 			break
 		}
-		// todo: timer for both colors.
-		// should not start on Register,
-		// but on receipt of GameStarted message from client
-		// which indicates on-screen countdown finished
-		// and play has begun
-		// game.Timer = time.Now()
-		game.Black = player
-		player.GameId = game.GameId
+		session.Black = player
+		player.SessionId = session.SessionId
 		player.Color = "black"
-		delete(h.GamesAwaitingOpponent, game.GameId)
-		// h.GamesAwaitingOpponent = make(map[string]*GameMeta, 0)
-		h.GamesInProgress[game.GameId] = game
+		delete(h.AwaitingOpponentSessions, session.SessionId)
+		h.InProgressSessions[session.SessionId] = session
 
-		fmt.Println("broadcasting game joined...")
-		player.WriteChan <- sendGameJoinedMessage(game, player.Color)
-		game.White.WriteChan <- sendGameJoinedMessage(game, game.White.Color)
+		log.Println("Broadcasting game joined for player", player.Color)
+		player.WriteChan <- sendGameJoinedMessage(session, player.Color)
+		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color)
 	}
 }
 
 func (h *Hub) onMessage(message Message) {
+	log.Printf("onMessage message for player %s: %s\n", message.PlayerColor, message)
+	session, ok := h.InProgressSessions[message.SessionId]
+	if !ok {
+		log.Printf("Session not found; sessionId: %s\n", message.SessionId)
+		return
+	}
+
 	switch message.Type {
 	case GameStartedToServerType.String():
-		game, ok := h.GamesInProgress[message.GameId]
-		if !ok {
-			if len(h.GamesAwaitingOpponent) == 0 {
-				log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
-				return
-			}
-
-			log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
-			return
-		}
-		if game.GameId == "" {
-			log.Printf("Missing gameId.")
-			return
-		}
-
-		handleGameStartedMessage(h.Config, game)
+		handleGameStartedMessage(h.Config, session)
 	case MoveToServerType.String():
-		game, ok := h.GamesInProgress[message.GameId]
-		if !ok {
-			if len(h.GamesAwaitingOpponent) == 0 {
-				log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
-				return
-			}
-
-			log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
-			return
-		}
-		if game.GameId == "" {
-			log.Printf("Missing gameId.")
-			return
-		}
-
-		handleMoveMessage(message, game)
+		handleMoveMessage(message, session)
 	case PremoveToServerType.String():
-		game, ok := h.GamesInProgress[message.GameId]
-		if !ok {
-			if len(h.GamesAwaitingOpponent) == 0 {
-				log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
-				return
-			}
-
-			log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
-			return
-		}
-		if game.GameId == "" {
-			log.Printf("Missing gameId.")
-			return
-		}
-
-		handlePremoveMessage(message, game)
+		handlePremoveMessage(message, session)
 	case TimeoutToServerType.String():
-		game, ok := h.GamesInProgress[message.GameId]
-		if !ok {
-			if len(h.GamesAwaitingOpponent) == 0 {
-				log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
-				return
-			}
-
-			log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
-			return
-		}
-		if game.GameId == "" {
-			log.Printf("Missing gameId.")
-			return
-		}
-
-		handleTimeoutMessage(game)
+		handleTimeoutMessage(session)
 	case AbandonedToServerType.String():
-		game, ok := h.GamesInProgress[message.GameId]
-		if !ok {
-			if len(h.GamesAwaitingOpponent) == 0 {
-				log.Printf("Invalid gameId; no pending games: %s\n", message.GameId)
-				return
-			}
-
-			log.Printf("Game awaiting opponent; gameId: %s\n", message.GameId)
-			return
-		}
-		if game.GameId == "" {
-			log.Printf("Missing gameId.")
-			return
-		}
-
-		handleAbandonedMessage(game)
+		handleAbandonedMessage(session)
 	default:
 		log.Println(message)
 		return
@@ -199,11 +131,10 @@ func getGameFEN() (string, error) {
 	}
 
 	var result string
-	var isGameAcceptable bool
-	for !isGameAcceptable {
+	for isGameAcceptable := false; !isGameAcceptable; {
 		// testing with same game every time
-		fileName := files[1].Name()
-		// fileName := files[rand.Intn(len(files))].Name()
+		// fileName := files[1].Name()
+		fileName := files[rand.Intn(len(files))].Name()
 		file, err := os.Open(dir + "\\" + fileName)
 		if err != nil {
 			return "", err

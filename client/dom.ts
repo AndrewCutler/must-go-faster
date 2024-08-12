@@ -5,137 +5,171 @@ interface IElement {
 }
 
 export class BoardElement implements IElement {
-	private _element: HTMLElement | undefined;
+	#element: HTMLElement | undefined;
 
 	get element(): HTMLElement | undefined {
-		return this._element;
+		return this.#element;
 	}
 
 	constructor() {
 		const element = document.getElementById('board');
 		if (!element) throw new Error('Cannot find #board');
-		this._element = element;
+		this.#element = element;
 	}
 
 	enable(): void {
-		this._element!.style.pointerEvents = 'auto';
+		this.#element!.style.pointerEvents = 'auto';
 	}
 }
 
 export class CountdownContainerElement implements IElement {
-	private _element: HTMLElement | undefined;
+	#element: HTMLElement | undefined;
+	readonly #selector: string = '#countdown-container';
 
 	get element(): HTMLElement | undefined {
-		return this._element;
+		return this.#element;
 	}
 
 	constructor() {
-		const element = document.querySelector<HTMLDivElement>(
-			'#countdown-container',
-		);
-		if (!element) throw new Error('Cannot find #countdown-container');
-		this._element = element;
-	}
+		const parent = document.querySelector('#board-container')!;
+		const element = document.createElement('div');
+		element.id = this.#selector.replace('#', '');
+		const span = document.createElement('span');
+		span.innerText = 'Get ready...';
+		span.style.fontSize = '2rem';
+		(span.style as any)['-webkit-text-stroke'] = '1px black';
 
-	show(): void {
-		this._element!.style.display = 'block';
+		element.appendChild(span);
+		parent.prepend(element);
+
+		this.#element = element;
 	}
 
 	hide(): void {
-		this._element!.style.display = 'none';
+		this.#element!.remove();
 	}
 
 	setCountdownText(text: number): void {
-		this._element!.innerText = text.toString();
+		this.#element!.innerText = text.toString();
 	}
 }
 
 export class TimerElement implements IElement {
-	private _element: HTMLElement | undefined;
+	#element: HTMLElement | undefined;
+	readonly #selector = '#timer';
 
 	get element(): HTMLElement | undefined {
-		return this._element;
+		return this.#element;
 	}
 
 	constructor() {
-		const element = document.querySelector<HTMLDivElement>('#timer');
-		if (!element) throw new Error('Cannot find #timer');
-		this._element = element;
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}`);
+		this.#element = element;
 	}
 
 	setTime(time: number): void {
-		this._element!.innerHTML =
+		this.#element!.innerHTML =
 			'<div>' + (time > 0 ? time : 0).toFixed(1) + 's</div>';
 	}
 }
 
+// todo: bulma
 export class GameStatusModalElement implements IElement {
-	private _element: HTMLElement | undefined;
-	private _headerElement: HTMLElement | undefined;
-	private _playAgainButtonElement: HTMLElement | undefined;
+	readonly #selector: string = '#game-status-modal';
+	#element: HTMLElement | undefined;
+	#headerElement: HTMLElement | undefined;
+	#playAgainButtonElement: HTMLElement | undefined;
 
 	get element(): HTMLElement | undefined {
-		return this._element;
+		return this.#element;
 	}
 
-	constructor() {
-		const element =
-			document.querySelector<HTMLDivElement>('#game-status-modal');
-		if (!element) throw new Error('Cannot find #game-status-modal');
-		this._element = element;
-		const headerElement =
-			document.querySelector<HTMLDivElement>('#modal-header');
-		if (!headerElement) throw new Error('Cannot find #modal-header');
-		this._headerElement = headerElement;
-		const playAgainButton =
-			document.querySelector<HTMLDivElement>('#play-again-button');
-		if (!playAgainButton) throw new Error('Cannot find #play-again-button');
-		this._playAgainButtonElement = playAgainButton;
-		this._playAgainButtonElement.addEventListener('click', this.playAgain);
+	constructor(sendMessageCallback: () => void) {
+		const self = this;
+		const parent = document.querySelector('#board-container')!;
+		const element = document.createElement('div');
+		element.id = this.#selector.replace('#', '');
+		const headerElement = document.createElement('div');
+		headerElement.id = 'modal-header';
+		const contentElement = document.createElement('div');
+		contentElement.id = 'modal-content';
+		const modalButtonContainer = document.createElement('div');
+		modalButtonContainer.id = 'modal-button-container';
+		const playAgainButton = document.createElement('button');
+		playAgainButton.id = 'play-again-button';
+		playAgainButton.classList.add('button');
+		playAgainButton.classList.add('is-dark');
+		playAgainButton.innerText = 'Play again';
+
+		modalButtonContainer.appendChild(playAgainButton);
+		contentElement.appendChild(modalButtonContainer);
+
+		element.appendChild(headerElement);
+		element.appendChild(contentElement);
+		parent.prepend(element);
+
+		this.#element = element;
+		this.#headerElement = headerElement;
+		this.#playAgainButtonElement = playAgainButton;
+		this.#playAgainButtonElement.addEventListener('click', function () {
+			self.playAgain(sendMessageCallback);
+		});
 	}
 
 	setTime(time: number): void {
-		this._element!.innerHTML =
+		this.#element!.innerHTML =
 			'<div>' + (time > 0 ? time : 0).toFixed(1) + 's</div>';
 	}
 
-	show(): void {
-		this._element!.style.display = 'block';
+	hide(): void {
+		this.#element!.remove();
 	}
 
 	setOutcome(
 		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 	): void {
-		this._headerElement!.innerText = `You ${gameStatus} via ${method}.`;
+		this.#headerElement!.innerText = `You ${gameStatus} via ${method}.`;
 	}
 
-	private playAgain(): void {
-		console.log('play again');
+	private playAgain(sendMessageCallback: () => void): void {
+		this.hide();
+		sendMessageCallback();
 	}
 }
 
 export class GameMetaElement implements IElement {
-	private _element: HTMLElement | undefined;
+	#element: HTMLElement | undefined;
 
 	get element(): HTMLElement | undefined {
-		return this._element;
+		return this.#element;
 	}
 
-	constructor() {
-		const element = document.querySelector<HTMLDivElement>('#game-meta');
-		if (!element) throw new Error('Cannot find #game-meta');
-		this._element = element;
-	}
-
-	show({
+	constructor({
 		playerColor,
 		whosNext,
 	}: {
 		playerColor: PlayerColor;
 		whosNext: PlayerColor;
 	}) {
-		this._element!.style.visibility = 'inherit';
+		const element = document.querySelector<HTMLDivElement>('#game-meta');
+		if (!element) throw new Error('Cannot find #game-meta');
+		this.#element = element;
+		this.show({
+			playerColor,
+			whosNext,
+		});
+	}
+
+	private show({
+		playerColor,
+		whosNext,
+	}: {
+		playerColor: PlayerColor;
+		whosNext: PlayerColor;
+	}) {
+		this.#element!.style.visibility = 'inherit';
 
 		const gameMetaIcon =
 			document.querySelector<HTMLElement>('#game-meta .icon i');
@@ -160,25 +194,25 @@ export class GameMetaElement implements IElement {
 }
 
 export class ConnectButtonElement implements IElement {
-	private _element: HTMLElement | undefined;
+	#element: HTMLElement | undefined;
 
 	get element(): HTMLElement | undefined {
-		return this._element;
+		return this.#element;
 	}
 
 	constructor() {
 		const element =
 			document.querySelector<HTMLButtonElement>('#connect-button');
 		if (!element) throw new Error('Cannot find #connect-button');
-		this._element = element;
+		this.#element = element;
 	}
 
 	waitForOpponent(): void {
-		this._element!.classList.add('is-loading');
+		this.#element!.classList.add('is-loading');
 	}
 
 	gameJoined(): void {
-		this._element!.classList.remove('is-loading');
-		this._element!.style.display = 'none';
+		this.#element!.classList.remove('is-loading');
+		this.#element!.style.display = 'none';
 	}
 }

@@ -53,7 +53,7 @@ func main() {
 	go hub.Run()
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("connection successful")
+		log.Println("Connection successful.")
 		connection, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("Failed to upgrade: ", err)
@@ -69,7 +69,7 @@ func main() {
 	r.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
 		response, err := json.Marshal(clientConfig)
 		if err != nil {
-			http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
+			http.Error(w, "Failed to marshal config JSON", http.StatusInternalServerError)
 			return
 		}
 

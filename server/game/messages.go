@@ -82,7 +82,7 @@ type Message struct {
 	Payload     interface{} `json:"payload"`
 	PlayerColor string      `json:"playerColor"`
 	Type        string      `json:"type"`
-	GameId      string      `json:"gameId"`
+	SessionId   string      `json:"sessionId"`
 	TimeStamp   string      `json:"serverTimeStamp"`
 }
 
@@ -136,39 +136,39 @@ type TimeoutToServer struct {
 	Timeout bool `json:"timeout"`
 }
 
-func sendGameJoinedMessage(gameMeta *GameMeta, playerColor string) []byte {
+func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 	message := Message{
 		Type:        GameJoinedFromServerType.String(),
-		GameId:      gameMeta.GameId,
+		SessionId:   session.SessionId,
 		PlayerColor: playerColor,
 		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: GameJoinedFromServer{
-			Fen:        gameMeta.getFen(),
-			ValidMoves: ValidMovesMap(gameMeta.Game),
-			WhosNext:   gameMeta.whoseMoveIsIt(),
+			Fen:        session.getFen(),
+			ValidMoves: ValidMovesMap(session.Game),
+			WhosNext:   session.whoseMoveIsIt(),
 		},
 	}
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
 	return jsonData
 }
 
-func sendGameStartedMessage(gameMeta *GameMeta, playerColor string) []byte {
-	whiteTimeLeft, blackTimeLeft := gameMeta.White.Clock.TimeLeft, gameMeta.Black.Clock.TimeLeft
+func sendGameStartedMessage(session *Session, playerColor string) []byte {
+	whiteTimeLeft, blackTimeLeft := session.White.Clock.TimeLeft, session.Black.Clock.TimeLeft
 	message := Message{
 		Type:        GameStartedFromServerType.String(),
-		GameId:      gameMeta.GameId,
+		SessionId:   session.SessionId,
 		PlayerColor: playerColor,
 		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: GameStartedFromServer{
-			Fen:           gameMeta.getFen(),
-			ValidMoves:    ValidMovesMap(gameMeta.Game),
-			WhosNext:      gameMeta.whoseMoveIsIt(),
+			Fen:           session.getFen(),
+			ValidMoves:    ValidMovesMap(session.Game),
+			WhosNext:      session.whoseMoveIsIt(),
 			WhiteTimeLeft: whiteTimeLeft,
 			BlackTimeLeft: blackTimeLeft,
 		},
@@ -176,16 +176,16 @@ func sendGameStartedMessage(gameMeta *GameMeta, playerColor string) []byte {
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
 	return jsonData
 }
 
-func sendMoveMessage(gameMeta *GameMeta, playerColor string) []byte {
+func sendMoveMessage(session *Session, playerColor string) []byte {
 	isCheckmated := ""
-	switch gameMeta.Game.Outcome() {
+	switch session.Game.Outcome() {
 	case "0-1":
 		isCheckmated = "white"
 	case "1-0":
@@ -194,45 +194,45 @@ func sendMoveMessage(gameMeta *GameMeta, playerColor string) []byte {
 
 	message := Message{
 		Type:        MoveFromServerType.String(),
-		GameId:      gameMeta.GameId,
+		SessionId:   session.SessionId,
 		PlayerColor: playerColor,
 		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: MoveFromServer{
-			Fen:           gameMeta.getFen(),
-			ValidMoves:    ValidMovesMap(gameMeta.Game),
-			WhosNext:      gameMeta.whoseMoveIsIt(),
+			Fen:           session.getFen(),
+			ValidMoves:    ValidMovesMap(session.Game),
+			WhosNext:      session.whoseMoveIsIt(),
 			IsCheckmated:  isCheckmated,
-			WhiteTimeLeft: gameMeta.White.Clock.TimeLeft,
-			BlackTimeLeft: gameMeta.Black.Clock.TimeLeft,
+			WhiteTimeLeft: session.White.Clock.TimeLeft,
+			BlackTimeLeft: session.Black.Clock.TimeLeft,
 		},
 	}
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
 	return jsonData
 }
 
-func sendTimeoutMessage(gameMeta *GameMeta, playerColor string, loser string) []byte {
+func sendTimeoutMessage(session *Session, playerColor string, loser string) []byte {
 	message := Message{
 		Type:        TimeoutFromServerType.String(),
-		GameId:      gameMeta.GameId,
+		SessionId:   session.SessionId,
 		PlayerColor: playerColor,
 		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: TimeoutFromServer{
-			Fen:        gameMeta.getFen(),
-			ValidMoves: ValidMovesMap(gameMeta.Game),
-			WhosNext:   gameMeta.whoseMoveIsIt(),
+			Fen:        session.getFen(),
+			ValidMoves: ValidMovesMap(session.Game),
+			WhosNext:   session.whoseMoveIsIt(),
 			Loser:      loser,
 		},
 	}
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
@@ -250,7 +250,7 @@ func sendAbandonedMessage() []byte {
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error converting message to JSON: ", err)
+		log.Println("Error converting message to JSON: ", err)
 		return []byte{}
 	}
 
@@ -258,97 +258,77 @@ func sendAbandonedMessage() []byte {
 }
 
 // Receive
-func handleAbandonedMessage(game *GameMeta) {
-	for _, player := range game.GetPlayers() {
-		select {
-		case player.WriteChan <- sendAbandonedMessage():
-		default:
-			close(player.WriteChan)
-		}
+func handleAbandonedMessage(session *Session) {
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendAbandonedMessage()
 	}
 }
 
-func handleMoveMessage(message Message, game *GameMeta) {
+func handleMoveMessage(message Message, session *Session) {
+	// log.Println("handleMoveMessage")
 	payload := message.Payload.(MoveToServer)
-	err := tryPlayMove(payload, game.Game)
+	err := tryPlayMove(payload, session.Game)
 	if err != nil {
 		log.Println("Cannot make move: ", err)
 		return
 	}
 
-	if game.White.Clock.IsRunning {
-		game.White.Clock.TimeLeft -= time.Since(game.White.Clock.TimeStamp).Seconds()
-		game.White.Clock.IsRunning = false
-		game.Black.Clock.IsRunning = true
+	if session.White.Clock.IsRunning {
+		session.White.Clock.TimeLeft -= time.Since(session.White.Clock.TimeStamp).Seconds()
+		session.White.Clock.IsRunning = false
+		session.Black.Clock.IsRunning = true
 	} else {
-		game.Black.Clock.TimeLeft -= time.Since(game.Black.Clock.TimeStamp).Seconds()
-		game.White.Clock.IsRunning = true
-		game.Black.Clock.IsRunning = false
+		session.Black.Clock.TimeLeft -= time.Since(session.Black.Clock.TimeStamp).Seconds()
+		session.White.Clock.IsRunning = true
+		session.Black.Clock.IsRunning = false
 	}
-	game.White.Clock.TimeStamp = time.Now()
-	game.Black.Clock.TimeStamp = time.Now()
+	session.White.Clock.TimeStamp = time.Now()
+	session.Black.Clock.TimeStamp = time.Now()
 
-	for _, player := range game.GetPlayers() {
-		select {
-		case player.WriteChan <- sendMoveMessage(game, player.Color):
-		default:
-			close(player.WriteChan)
-		}
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendMoveMessage(session, player.Color)
 	}
 }
 
-func handlePremoveMessage(message Message, game *GameMeta) {
+func handlePremoveMessage(message Message, session *Session) {
+	// log.Println("handlePremoveMessage")
 	payload := message.Payload.(PremoveToServer)
-	err := tryPlayPremove(payload, game.Game)
+	err := tryPlayPremove(payload, session.Game)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)
 		return
 	}
 
 	// play move on board and respond with updated fail/illegal premove response or updated fen
-	for _, player := range game.GetPlayers() {
-		select {
-		case player.WriteChan <- sendMoveMessage(game, player.Color):
-		default:
-			close(player.WriteChan)
-		}
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendMoveMessage(session, player.Color)
 	}
 }
 
-func handleGameStartedMessage(config *c.ClientConfig, game *GameMeta) {
-	fmt.Println("game started")
-	game.White.Clock = Clock{
+func handleGameStartedMessage(config *c.ClientConfig, session *Session) {
+	session.White.Clock = Clock{
 		TimeLeft:  config.StartingTime,
 		TimeStamp: time.Now(),
 	}
-	game.Black.Clock = Clock{
+	session.Black.Clock = Clock{
 		TimeLeft:  config.StartingTime,
 		TimeStamp: time.Now(),
 	}
 
-	if game.whoseMoveIsIt() == "white" {
-		game.White.Clock.IsRunning = true
+	if session.whoseMoveIsIt() == "white" {
+		session.White.Clock.IsRunning = true
 	} else {
-		game.Black.Clock.IsRunning = true
+		session.Black.Clock.IsRunning = true
 	}
 
-	for _, player := range game.GetPlayers() {
-		m := sendGameStartedMessage(game, player.Color)
-		select {
-		case player.WriteChan <- m:
-		default:
-			close(player.WriteChan)
-		}
+	for _, player := range session.GetPlayers() {
+		m := sendGameStartedMessage(session, player.Color)
+		player.WriteChan <- m
 	}
 }
 
-func handleTimeoutMessage(game *GameMeta) {
-	for _, player := range game.GetPlayers() {
-		m := sendTimeoutMessage(game, player.Color, game.whoseMoveIsIt())
-		select {
-		case player.WriteChan <- m:
-		default:
-			close(player.WriteChan)
-		}
+func handleTimeoutMessage(session *Session) {
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
 	}
 }

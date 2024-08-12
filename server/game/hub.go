@@ -31,7 +31,7 @@ func NewHub(config *c.ClientConfig) *Hub {
 	}
 }
 
-func (h *Hub) Run(quit chan bool) {
+func (h *Hub) Run() {
 	for {
 		select {
 		case player := <-h.RegisterChan:
@@ -44,10 +44,8 @@ func (h *Hub) Run(quit chan bool) {
 
 			h.onMessage(message)
 			// todo: unregister
-		// case <-time.After(2 * time.Second):
-		// 	log.Println("No message received by Hub after 2 seconds...")
-		case <-quit:
-			log.Println("Quit!")
+			// case <-time.After(2 * time.Second):
+			// 	log.Println("No message received by Hub after 2 seconds...")
 		}
 	}
 }
@@ -117,8 +115,6 @@ func (h *Hub) onMessage(message Message) {
 		handleTimeoutMessage(session)
 	case AbandonedToServerType.String():
 		handleAbandonedMessage(session)
-	// case NewGameToServerType.String():
-	// 	handleNewGameMessage(session)
 	default:
 		log.Println(message)
 		return

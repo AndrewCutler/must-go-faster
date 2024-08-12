@@ -28,8 +28,6 @@ const (
 
 	AbandonedFromServerType
 	AbandonedToServerType
-
-	// NewGameToServerType
 )
 
 func (m MessageType) String() string {
@@ -56,8 +54,6 @@ func (m MessageType) String() string {
 		return "TimeoutToServerType"
 	case AbandonedToServerType:
 		return "AbandonedToServerType"
-	// case NewGameToServerType:
-	// 	return "NewGameToServerType"
 	default:
 		return ""
 	}
@@ -263,26 +259,10 @@ func sendAbandonedMessage() []byte {
 
 // Receive
 func handleAbandonedMessage(session *Session) {
-	// log.Println("handleAbandonedMessage")
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendAbandonedMessage()
-		// select {
-		// case player.WriteChan <- sendAbandonedMessage():
-		// default:
-		// 	// close(player.WriteChan)
-		// }
 	}
 }
-
-// func handleNewGameMessage(session *Session) {
-// 	// have to end session and join a new one?
-// 	// close connection and have client request new one
-// 	// so actually we should close the connection when the game ends
-// 	// (no rematches)
-// 	log.Println("New game request.")
-// 	log.Println("Session:", session)
-
-// }
 
 func handleMoveMessage(message Message, session *Session) {
 	// log.Println("handleMoveMessage")
@@ -307,11 +287,6 @@ func handleMoveMessage(message Message, session *Session) {
 
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendMoveMessage(session, player.Color)
-		// select {
-		// case player.WriteChan <- sendMoveMessage(session, player.Color):
-		// default:
-		// 	// close(player.WriteChan)
-		// }
 	}
 }
 
@@ -327,11 +302,6 @@ func handlePremoveMessage(message Message, session *Session) {
 	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendMoveMessage(session, player.Color)
-		// select {
-		// case player.WriteChan <- sendMoveMessage(session, player.Color):
-		// default:
-		// 	// close(player.WriteChan)
-		// }
 	}
 }
 
@@ -354,23 +324,11 @@ func handleGameStartedMessage(config *c.ClientConfig, session *Session) {
 	for _, player := range session.GetPlayers() {
 		m := sendGameStartedMessage(session, player.Color)
 		player.WriteChan <- m
-		// select {
-		// case player.WriteChan <- m:
-		// default:
-		// 	// close(player.WriteChan)
-		// }
 	}
 }
 
 func handleTimeoutMessage(session *Session) {
-	// should I only send to opponent?
 	for _, player := range session.GetPlayers() {
-		m := sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
-		player.WriteChan <- m
-		// select {
-		// case player.WriteChan <- m:
-		// default:
-		// 	// close(player.WriteChan)
-		// }
+		player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
 	}
 }

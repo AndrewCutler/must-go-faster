@@ -18,7 +18,6 @@ import (
 )
 
 func main() {
-	quit := make(chan bool)
 	config, err := c.GetConfig()
 	if err != nil {
 		log.Panicln("Cannot get config: ", err)
@@ -51,7 +50,7 @@ func main() {
 	}
 
 	hub := game.NewHub(clientConfig)
-	go hub.Run(quit)
+	go hub.Run()
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Connection successful.")
@@ -63,14 +62,14 @@ func main() {
 
 		player := &game.Player{Connection: connection, Hub: hub, WriteChan: make(chan []byte)}
 		player.Hub.RegisterChan <- player
-		go player.ReadMessage(quit)
-		go player.WriteMessage(quit)
+		go player.ReadMessage()
+		go player.WriteMessage()
 	})
 
 	r.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
 		response, err := json.Marshal(clientConfig)
 		if err != nil {
-			http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
+			http.Error(w, "Failed to marshal config JSON", http.StatusInternalServerError)
 			return
 		}
 

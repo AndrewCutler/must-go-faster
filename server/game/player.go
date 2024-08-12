@@ -24,17 +24,14 @@ type Player struct {
 	Clock      Clock
 }
 
-func (p *Player) ReadMessage(quit chan bool) {
+func (p *Player) ReadMessage() {
 	defer func() {
 		log.Println()
-		log.Println("DEFER Closing in ReadMessage for player ", p.Color)
+		log.Println("Closing in ReadMessage for player ", p.Color)
 		p.Connection.Close()
-		// quit <- true
 	}()
 
 	for {
-		// MessageType: 1, TextMessage
-		// MessageType: 2, GoingAwayMessage
 		messageType, content, err := p.Connection.ReadMessage()
 		log.Println("playerColor ", p.Color, "messageType: ", messageType)
 
@@ -45,17 +42,13 @@ func (p *Player) ReadMessage(quit chan bool) {
 			// game is over, send game abandoned message to winner and remove from active games
 			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
 			delete(p.Hub.InProgressSessions, p.SessionId)
-			// do we need to close for other player too?
 			close(p.WriteChan)
 			return
 		}
 
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 			log.Println("playerColor ", p.Color, " normal closure")
-			// handle game over here
-			// remove from InProgressSessions
 			delete(p.Hub.InProgressSessions, p.SessionId)
-			// do we need to close for other player too?
 			close(p.WriteChan)
 			return
 		}
@@ -63,7 +56,6 @@ func (p *Player) ReadMessage(quit chan bool) {
 		if err != nil {
 			log.Println("playerColor ", p.Color, "Cannot read message: ", err)
 			delete(p.Hub.InProgressSessions, p.SessionId)
-			// do we need to close for other player too?
 			close(p.WriteChan)
 			return
 		}
@@ -90,12 +82,11 @@ func (p *Player) ReadMessage(quit chan bool) {
 	}
 }
 
-func (p *Player) WriteMessage(quit chan bool) {
+func (p *Player) WriteMessage() {
 	defer func() {
 		log.Println()
-		log.Println("DEFER Closing in WriteMessage for player ", p.Color)
+		log.Println("Closing in WriteMessage for player ", p.Color)
 		p.Connection.Close()
-		// quit <- true
 	}()
 
 	for message := range p.WriteChan {
@@ -160,9 +151,6 @@ func deserialize(content string, messageType string) (interface{}, error) {
 		}
 
 		return payload, nil
-		// case "NewGameToServerType":
-		// 	log.Println("NewGameToServerType")
-		// 	return nil, nil
 	}
 
 	return nil, errors.New("cannot deserialize unknown message type")

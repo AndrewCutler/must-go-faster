@@ -173,7 +173,7 @@ export class MustGoFaster {
 		const payload = (this.#message! as FromMessage<MoveFromServer>)
 			.payload!;
 		console.log('move: ', { move: this.#message });
-		let gameStatus: GameStatus | 'lost' | 'won' = 'ongoing';
+		let gameStatus: GameStatus = 'ongoing';
 		if (payload.isCheckmated) {
 			gameStatus =
 				payload.isCheckmated === this.#playerColor ? 'lost' : 'won';

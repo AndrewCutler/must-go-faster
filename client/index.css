@@ -70,7 +70,6 @@ body {
 }
 
 #countdown-container {
-	display: none;
 	background-color: transparent;
 	padding: 2rem;
 	font-size: 6rem;

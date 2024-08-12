@@ -24,25 +24,29 @@ export class BoardElement implements IElement {
 
 export class CountdownContainerElement implements IElement {
 	#element: HTMLElement | undefined;
+	readonly #selector: string = '#countdown-container';
 
 	get element(): HTMLElement | undefined {
 		return this.#element;
 	}
 
 	constructor() {
-		const element = document.querySelector<HTMLDivElement>(
-			'#countdown-container',
-		);
-		if (!element) throw new Error('Cannot find #countdown-container');
+		const parent = document.querySelector('#board-container')!;
+		const element = document.createElement('div');
+		element.id = this.#selector.replace('#', '');
+		const span = document.createElement('span');
+		span.innerText = 'Get ready...';
+		span.style.fontSize = '2rem';
+		(span.style as any)['-webkit-text-stroke'] = '1px black';
+
+		element.appendChild(span);
+		parent.prepend(element);
+
 		this.#element = element;
 	}
 
-	show(): void {
-		this.#element!.style.display = 'block';
-	}
-
 	hide(): void {
-		this.#element!.style.display = 'none';
+		this.#element!.remove();
 	}
 
 	setCountdownText(text: number): void {
@@ -52,14 +56,15 @@ export class CountdownContainerElement implements IElement {
 
 export class TimerElement implements IElement {
 	#element: HTMLElement | undefined;
+	readonly #selector = '#timer';
 
 	get element(): HTMLElement | undefined {
 		return this.#element;
 	}
 
 	constructor() {
-		const element = document.querySelector<HTMLDivElement>('#timer');
-		if (!element) throw new Error('Cannot find #timer');
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}`);
 		this.#element = element;
 	}
 
@@ -69,6 +74,7 @@ export class TimerElement implements IElement {
 	}
 }
 
+// todo: bulma
 export class GameStatusModalElement implements IElement {
 	readonly #selector: string = '#game-status-modal';
 	#element: HTMLElement | undefined;
@@ -105,16 +111,6 @@ export class GameStatusModalElement implements IElement {
 
 		this.#element = element;
 		this.#headerElement = headerElement;
-		// don't do this; have to render it instead
-		// const element =
-		// 	document.querySelector<HTMLDivElement>(this.#selector);
-		// if (!element) throw new Error(`Cannot find ${this.#selector}`);
-		// const headerElement =
-		// 	document.querySelector<HTMLDivElement>('#modal-header');
-		// if (!headerElement) throw new Error('Cannot find #modal-header');
-		// const playAgainButton =
-		// 	document.querySelector<HTMLDivElement>('#play-again-button');
-		// if (!playAgainButton) throw new Error('Cannot find #play-again-button');
 		this.#playAgainButtonElement = playAgainButton;
 		this.#playAgainButtonElement.addEventListener('click', function () {
 			self.playAgain(sendMessageCallback);
@@ -126,14 +122,8 @@ export class GameStatusModalElement implements IElement {
 			'<div>' + (time > 0 ? time : 0).toFixed(1) + 's</div>';
 	}
 
-	show(): void {
-		// this.#element!.style.display = 'block';
-	}
-
 	hide(): void {
-		// should be destroyed, not hidden
-		this.#element!.style.display = 'none';
-		document.querySelector(this.#selector)!.remove();
+		this.#element!.remove();
 	}
 
 	setOutcome(
@@ -156,13 +146,23 @@ export class GameMetaElement implements IElement {
 		return this.#element;
 	}
 
-	constructor() {
+	constructor({
+		playerColor,
+		whosNext,
+	}: {
+		playerColor: PlayerColor;
+		whosNext: PlayerColor;
+	}) {
 		const element = document.querySelector<HTMLDivElement>('#game-meta');
 		if (!element) throw new Error('Cannot find #game-meta');
 		this.#element = element;
+		this.show({
+			playerColor,
+			whosNext,
+		});
 	}
 
-	show({
+	private show({
 		playerColor,
 		whosNext,
 	}: {

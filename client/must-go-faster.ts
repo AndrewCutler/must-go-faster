@@ -78,8 +78,8 @@ export class MustGoFaster {
 
 	connect(): void {
 		const ws = new WebSocket('ws://10.0.0.73:8000/connect', []);
-        console.log('Creating WebSocket.');
-        
+		console.log('Creating WebSocket.');
+
 		ws.onopen = function (openEvent) {
 			console.log('WebSocket opened.', { event: openEvent });
 			new BoardElement()!.enable();
@@ -230,7 +230,6 @@ export class MustGoFaster {
 	private async showCountdownToStartGame(): Promise<void> {
 		return new Promise((resolve) => {
 			const countdownDisplay = new CountdownContainerElement();
-			countdownDisplay.show();
 			let currentSecond = 5;
 			const self = this;
 			const countdownInterval = window.setInterval(function () {
@@ -323,8 +322,6 @@ export class MustGoFaster {
 		}
 		// have to add draws
 		const modal = new GameStatusModalElement(sendNewGameMessage);
-        // this should be obsolete if rendering happens in ctor
-		modal.show();
 		modal.setOutcome(gameStatus, method);
 	}
 
@@ -334,8 +331,7 @@ export class MustGoFaster {
 		this.#timeLeft = this.#config?.startingTime;
 
 		const payload = message.payload as GameJoinedFromServer;
-		const gameMeta = new GameMetaElement();
-		gameMeta.show({
+		const gameMeta = new GameMetaElement({
 			playerColor: this.#playerColor,
 			whosNext: payload.whosNext,
 		});

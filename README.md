@@ -18,3 +18,4 @@
         so whoever goes second will send this message after the first player makes a move,
         so the server responds with __two__ GameStartedFromServerMessages
 6. When oppoent moves, his piece moves but is not highlighted
+7. Clean up styling; get rid of inline styling and use classes, and be consistent

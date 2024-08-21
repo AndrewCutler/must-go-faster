@@ -158,6 +158,9 @@ export class MustGoFaster {
 		const message = this.#message as FromMessage<GameStartedFromServer>;
 		this.setupBoard(message);
 
+		const { payload: { whiteTimeLeft, blackTimeLeft } = {} } = message;
+		this.initializeClock(whiteTimeLeft!, blackTimeLeft!);
+
 		await this.showCountdownToStartGame();
 	}
 
@@ -188,10 +191,6 @@ export class MustGoFaster {
 
 		this.#whiteTimeLeft = payload.whiteTimeLeft;
 		this.#blackTimeLeft = payload.blackTimeLeft;
-		// this.#whiteTimeLeft =
-		// 	this.#playerColor === 'white'
-		// 		? payload.whiteTimeLeft
-		// 		: payload.blackTimeLeft;
 
 		this.toggleClock(payload.whosNext);
 
@@ -258,6 +257,18 @@ export class MustGoFaster {
 				}
 			}, 1000);
 		});
+	}
+
+	private initializeClock(
+		whiteTimeLeft: number,
+		blackTimeLeft: number,
+	): void {
+		window.clearInterval(this.#whiteTimerInterval);
+		window.clearInterval(this.#blackTimerInterval);
+
+		const timerDiv = new TimerElement()!;
+
+		timerDiv.setTime(whiteTimeLeft, blackTimeLeft);
 	}
 
 	private toggleClock(whosNext: PlayerColor): void {

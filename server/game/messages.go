@@ -136,16 +136,18 @@ type TimeoutToServer struct {
 	Timeout bool `json:"timeout"`
 }
 
-func sendGameJoinedMessage(session *Session, playerColor string) []byte {
+func sendGameJoinedMessage(session *Session, playerColor string, startingTime float64) []byte {
 	message := Message{
 		Type:        GameJoinedFromServerType.String(),
 		SessionId:   session.SessionId,
 		PlayerColor: playerColor,
 		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: GameJoinedFromServer{
-			Fen:        session.getFen(),
-			ValidMoves: ValidMovesMap(session.Game),
-			WhosNext:   session.whoseMoveIsIt(),
+			Fen:           session.getFen(),
+			ValidMoves:    ValidMovesMap(session.Game),
+			WhosNext:      session.whoseMoveIsIt(),
+			WhiteTimeLeft: startingTime,
+			BlackTimeLeft: startingTime,
 		},
 	}
 

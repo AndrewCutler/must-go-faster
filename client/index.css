@@ -40,9 +40,27 @@ body {
 
 #timer {
 	display: flex;
+	/* flex-direction: column; */
 	align-items: center;
 	justify-content: center;
 	min-width: 60px;
+}
+
+#timer > div {
+	border: 2px solid hsl(220deg 14.02% 20.98%);
+	border-radius: 5%;
+}
+
+#white-clock {
+    background: rgb(197, 197, 197);
+    color: black;
+	padding: 0.25em;
+	border-bottom: 1px solid hsl(220deg 14.02% 20.98%);
+}
+
+#black-clock {
+	padding: 0.25em;
+	border-top: 1px solid hsl(220deg 14.02% 20.98%);
 }
 
 #game-meta {

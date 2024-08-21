@@ -18,7 +18,6 @@ import {
 	ToMessage,
 	FromMessage,
 	FromPayload,
-	NewGameToServer,
 } from './models';
 
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -35,8 +34,10 @@ import {
 export class MustGoFaster {
 	#sessionId: string | undefined;
 	#playerColor: PlayerColor | undefined;
-	#timeLeft: number | undefined;
-	#timerInterval: number | undefined;
+	#whiteTimeLeft: number | undefined;
+	#blackTimeLeft: number | undefined;
+	#whiteTimerInterval: number | undefined;
+	#blackTimerInterval: number | undefined;
 	#config: Config | undefined;
 	#connection: WebSocket | undefined;
 	#board: ChessgroundApi | undefined;
@@ -178,14 +179,19 @@ export class MustGoFaster {
 			gameStatus =
 				payload.isCheckmated === this.#playerColor ? 'lost' : 'won';
 			this.gameOver(gameStatus, 'checkmate');
-			this.#timeLeft = 0;
+			// todo: something else
+			this.#whiteTimeLeft = 0;
+			this.#blackTimeLeft = 0;
+
 			return;
 		}
 
-		this.#timeLeft =
-			this.#playerColor === 'white'
-				? payload.whiteTimeLeft
-				: payload.blackTimeLeft;
+		this.#whiteTimeLeft = payload.whiteTimeLeft;
+		this.#blackTimeLeft = payload.blackTimeLeft;
+		// this.#whiteTimeLeft =
+		// 	this.#playerColor === 'white'
+		// 		? payload.whiteTimeLeft
+		// 		: payload.blackTimeLeft;
 
 		this.toggleClock(payload.whosNext);
 
@@ -255,46 +261,79 @@ export class MustGoFaster {
 	}
 
 	private toggleClock(whosNext: PlayerColor): void {
-		// clear previous interval
-		window.clearInterval(this.#timerInterval);
+		// clear previous intervals
+		window.clearInterval(this.#whiteTimerInterval);
+		window.clearInterval(this.#blackTimerInterval);
 
 		const timerDiv = new TimerElement()!;
 
 		const runClock = whosNext === this.#playerColor;
 		if (!runClock) {
-			timerDiv.setTime(this.#timeLeft!);
+			timerDiv.setTime(this.#whiteTimeLeft!, this.#blackTimeLeft!);
+
 			return;
 		}
 
 		const start = new Date();
 		const self = this;
-		this.#timerInterval = window.setInterval(function () {
-			if (!self.#timeLeft) {
-				console.log('no time left', self.#timeLeft);
-				return;
-			}
-			const diff = new Date().getTime() - start.getTime();
-			const gameClock = self.#timeLeft - diff / 1_000;
-
-			if (gameClock <= 0) {
-				window.clearInterval(self.#timerInterval);
-				// send message to server to end game/find out the outcome
-				if (self.#connection) {
-					const timeout: ToMessage<TimeoutToServer> = {
-						type: 'TimeoutToServerType',
-						sessionId: self.#sessionId!,
-						playerColor: self.#playerColor!,
-						payload: {
-							timeout: true,
-						},
-					};
-					self.sendMessage(timeout);
+		// todo: refactor
+		if (this.#playerColor === 'white') {
+			this.#whiteTimerInterval = window.setInterval(function () {
+				if (!self.#whiteTimeLeft) {
+					console.log('no time left', self.#whiteTimeLeft);
+					return;
 				}
-				return;
-			}
+				const diff = new Date().getTime() - start.getTime();
+				const gameClock = self.#whiteTimeLeft - diff / 1_000;
 
-			timerDiv.setTime(gameClock);
-		}, 10);
+				if (gameClock <= 0) {
+					window.clearInterval(self.#whiteTimerInterval);
+					// send message to server to end game/find out the outcome
+					if (self.#connection) {
+						const timeout: ToMessage<TimeoutToServer> = {
+							type: 'TimeoutToServerType',
+							sessionId: self.#sessionId!,
+							playerColor: self.#playerColor!,
+							payload: {
+								timeout: true,
+							},
+						};
+						self.sendMessage(timeout);
+					}
+					return;
+				}
+
+				timerDiv.setTime(gameClock, self.#blackTimeLeft!);
+			}, 10);
+		} else {
+			this.#blackTimerInterval = window.setInterval(function () {
+				if (!self.#blackTimeLeft) {
+					console.log('no time left', self.#blackTimeLeft);
+					return;
+				}
+				const diff = new Date().getTime() - start.getTime();
+				const gameClock = self.#blackTimeLeft - diff / 1_000;
+
+				if (gameClock <= 0) {
+					window.clearInterval(self.#blackTimerInterval);
+					// send message to server to end game/find out the outcome
+					if (self.#connection) {
+						const timeout: ToMessage<TimeoutToServer> = {
+							type: 'TimeoutToServerType',
+							sessionId: self.#sessionId!,
+							playerColor: self.#playerColor!,
+							payload: {
+								timeout: true,
+							},
+						};
+						self.sendMessage(timeout);
+					}
+					return;
+				}
+
+				timerDiv.setTime(self.#whiteTimeLeft!, gameClock);
+			}, 10);
+		}
 	}
 
 	private toValidMoves(moves: { [key: string]: string[] }): cg.Dests {
@@ -328,7 +367,8 @@ export class MustGoFaster {
 	private setupBoard(message: FromMessage<GameStartedFromServer>) {
 		this.#sessionId = message.sessionId;
 		this.#playerColor = message.playerColor;
-		this.#timeLeft = this.#config?.startingTime;
+		this.#whiteTimeLeft = this.#config?.startingTime;
+		this.#blackTimeLeft = this.#config?.startingTime;
 
 		const payload = message.payload as GameJoinedFromServer;
 		const gameMeta = new GameMetaElement({

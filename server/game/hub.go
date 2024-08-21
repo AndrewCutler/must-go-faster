@@ -91,8 +91,8 @@ func (h *Hub) onRegister(player *Player) {
 		h.InProgressSessions[session.SessionId] = session
 
 		log.Println("Broadcasting game joined for player", player.Color)
-		player.WriteChan <- sendGameJoinedMessage(session, player.Color)
-		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color)
+		player.WriteChan <- sendGameJoinedMessage(session, player.Color, h.Config.StartingTime)
+		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color, h.Config.StartingTime)
 	}
 }
 

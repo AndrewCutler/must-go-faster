@@ -56,6 +56,8 @@ export class CountdownContainerElement implements IElement {
 
 export class TimerElement implements IElement {
 	#element: HTMLElement | undefined;
+	#whiteClockElement: HTMLElement | undefined;
+	#blackClockElement: HTMLElement | undefined;
 	readonly #selector = '#timer';
 
 	get element(): HTMLElement | undefined {
@@ -66,11 +68,21 @@ export class TimerElement implements IElement {
 		const element = document.querySelector<HTMLDivElement>(this.#selector);
 		if (!element) throw new Error(`Cannot find ${this.#selector}`);
 		this.#element = element;
+		const whiteClockElement =
+			document.querySelector<HTMLDivElement>('#white-clock');
+		if (!whiteClockElement) throw new Error('Cannot find #white-clock');
+		this.#whiteClockElement = whiteClockElement;
+		const blackClockElement =
+			document.querySelector<HTMLDivElement>('#black-clock');
+		if (!blackClockElement) throw new Error('Cannot find #black-clock');
+		this.#blackClockElement = blackClockElement;
 	}
 
-	setTime(time: number): void {
-		this.#element!.innerHTML =
-			'<div>' + (time > 0 ? time : 0).toFixed(1) + 's</div>';
+	setTime(whiteTime: number, blackTime: number): void {
+		this.#whiteClockElement!.innerHTML =
+			'<div>' + (whiteTime > 0 ? whiteTime : 0).toFixed(1) + 's</div>';
+		this.#blackClockElement!.innerHTML =
+			'<div>' + (blackTime > 0 ? blackTime : 0).toFixed(1) + 's</div>';
 	}
 }
 

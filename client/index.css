@@ -40,7 +40,6 @@ body {
 
 #timer {
 	display: flex;
-	/* flex-direction: column; */
 	align-items: center;
 	justify-content: center;
 	min-width: 60px;
@@ -52,8 +51,8 @@ body {
 }
 
 #white-clock {
-    background: rgb(197, 197, 197);
-    color: black;
+	background: rgb(197, 197, 197);
+	color: black;
 	padding: 0.25em;
 	border-bottom: 1px solid hsl(220deg 14.02% 20.98%);
 }

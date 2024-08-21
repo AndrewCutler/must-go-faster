@@ -182,7 +182,6 @@ export class MustGoFaster {
 			gameStatus =
 				payload.isCheckmated === this.#playerColor ? 'lost' : 'won';
 			this.gameOver(gameStatus, 'checkmate');
-			// todo: something else
 			this.#whiteTimeLeft = 0;
 			this.#blackTimeLeft = 0;
 

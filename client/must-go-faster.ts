@@ -267,17 +267,10 @@ export class MustGoFaster {
 
 		const timerDiv = new TimerElement()!;
 
-		const runClock = whosNext === this.#playerColor;
-		if (!runClock) {
-			timerDiv.setTime(this.#whiteTimeLeft!, this.#blackTimeLeft!);
-
-			return;
-		}
-
 		const start = new Date();
 		const self = this;
 		// todo: refactor
-		if (this.#playerColor === 'white') {
+		if (whosNext === 'white') {
 			this.#whiteTimerInterval = window.setInterval(function () {
 				if (!self.#whiteTimeLeft) {
 					console.log('no time left', self.#whiteTimeLeft);

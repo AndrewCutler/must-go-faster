@@ -174,13 +174,20 @@ export class MustGoFaster {
 	}
 
 	private updateBoardWithMove(): void {
-		const payload = (this.#message! as FromMessage<MoveFromServer>)
-			.payload!;
+		const {
+			isCheckmated,
+			whiteTimeLeft,
+			blackTimeLeft,
+			whosNext,
+			fen,
+			validMoves,
+			move: { from, to },
+		} = (this.#message! as FromMessage<MoveFromServer>).payload!;
 		console.log('move: ', { move: this.#message });
 		let gameStatus: GameStatus = 'ongoing';
-		if (payload.isCheckmated) {
-			gameStatus =
-				payload.isCheckmated === this.#playerColor ? 'lost' : 'won';
+        
+		if (isCheckmated) {
+			gameStatus = isCheckmated === this.#playerColor ? 'lost' : 'won';
 			this.gameOver(gameStatus, 'checkmate');
 			this.#whiteTimeLeft = 0;
 			this.#blackTimeLeft = 0;
@@ -188,10 +195,10 @@ export class MustGoFaster {
 			return;
 		}
 
-		this.#whiteTimeLeft = payload.whiteTimeLeft;
-		this.#blackTimeLeft = payload.blackTimeLeft;
+		this.#whiteTimeLeft = whiteTimeLeft;
+		this.#blackTimeLeft = blackTimeLeft;
 
-		this.toggleClock(payload.whosNext);
+		this.toggleClock(whosNext);
 
 		if (this.#board!.state.premovable.current) {
 			// send premove message which checks if premove is valid
@@ -202,11 +209,12 @@ export class MustGoFaster {
 		}
 
 		this.#board!.set({
-			fen: payload.fen,
-			turnColor: payload.whosNext,
+			fen,
+			turnColor: whosNext,
 			movable: {
-				dests: this.toValidMoves(payload.validMoves),
+				dests: this.toValidMoves(validMoves),
 			},
+			lastMove: [from, to],
 		});
 	}
 

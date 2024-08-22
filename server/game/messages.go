@@ -109,6 +109,7 @@ type MoveFromServer struct {
 	ValidMoves    map[string][]string `json:"validMoves"`
 	WhosNext      string              `json:"whosNext"`
 	IsCheckmated  string              `json:"isCheckmated"`
+	Move          Move                `json:"move"`
 }
 
 type TimeoutFromServer struct {
@@ -185,7 +186,7 @@ func sendGameStartedMessage(session *Session, playerColor string) []byte {
 	return jsonData
 }
 
-func sendMoveMessage(session *Session, playerColor string) []byte {
+func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 	isCheckmated := ""
 	switch session.Game.Outcome() {
 	case "0-1":
@@ -206,6 +207,7 @@ func sendMoveMessage(session *Session, playerColor string) []byte {
 			IsCheckmated:  isCheckmated,
 			WhiteTimeLeft: session.White.Clock.TimeLeft,
 			BlackTimeLeft: session.Black.Clock.TimeLeft,
+			Move:          move,
 		},
 	}
 
@@ -269,7 +271,8 @@ func handleAbandonedMessage(session *Session) {
 func handleMoveMessage(message Message, session *Session) {
 	// log.Println("handleMoveMessage")
 	payload := message.Payload.(MoveToServer)
-	err := tryPlayMove(payload, session.Game)
+	move, err := tryPlayMove(payload, session.Game)
+	fmt.Println(move)
 	if err != nil {
 		log.Println("Cannot make move: ", err)
 		return
@@ -288,14 +291,15 @@ func handleMoveMessage(message Message, session *Session) {
 	session.Black.Clock.TimeStamp = time.Now()
 
 	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendMoveMessage(session, player.Color)
+		player.WriteChan <- sendMoveMessage(session, player.Color, move)
 	}
 }
 
 func handlePremoveMessage(message Message, session *Session) {
 	// log.Println("handlePremoveMessage")
 	payload := message.Payload.(PremoveToServer)
-	err := tryPlayPremove(payload, session.Game)
+	premove, err := tryPlayPremove(payload, session.Game)
+	fmt.Println(premove)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)
 		return
@@ -303,7 +307,7 @@ func handlePremoveMessage(message Message, session *Session) {
 
 	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendMoveMessage(session, player.Color)
+		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
 	}
 }
 

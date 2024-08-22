@@ -13,9 +13,5 @@
 2. Make game over modal presentable
 3. Increment
 4. Show material count
-5. Various bugs with channels and messages.
-    * GameStartedToServerType is sent when player's clock starts,
-        so whoever goes second will send this message after the first player makes a move,
-        so the server responds with __two__ GameStartedFromServerMessages
-6. When oppoent moves, his piece moves but is not highlighted
-7. Clean up styling; get rid of inline styling and use classes, and be consistent
+5. The clock is wrong; time jumps up after opponent move?
+6. Clean up styling; get rid of inline styling and use classes, and be consistent

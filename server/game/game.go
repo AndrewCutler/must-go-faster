@@ -57,20 +57,20 @@ func ValidMovesMap(g *chess.Game) map[string][]string {
 	return result
 }
 
-func tryPlayMove(m MoveToServer, g *chess.Game) error {
+func tryPlayMove(m MoveToServer, g *chess.Game) (Move, error) {
 	log.Println("move: ", m)
 	if err := g.MoveStr(m.Move.From + m.Move.To); err != nil {
-		return err
+		return m.Move, err
 	}
 
-	return nil
+	return m.Move, nil
 }
 
-func tryPlayPremove(m PremoveToServer, g *chess.Game) error {
+func tryPlayPremove(m PremoveToServer, g *chess.Game) (Move, error) {
 	log.Println("premove: ", m)
 	if err := g.MoveStr(m.Premove.From + m.Premove.To); err != nil {
-		return err
+		return m.Premove, err
 	}
 
-	return nil
+	return m.Premove, nil
 }

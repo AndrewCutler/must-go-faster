@@ -69,6 +69,7 @@ export type MoveFromServer = {
 	whosNext: PlayerColor;
 	validMoves: { [key: string]: string[] };
 	isCheckmated: PlayerColor;
+    move: Move;
 };
 
 export type TimeoutFromServer = {

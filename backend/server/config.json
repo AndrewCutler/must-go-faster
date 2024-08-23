@@ -1,0 +1,7 @@
+{
+	"baseUrl": "10.0.0.73",
+	"port": "8000",
+	"development": true,
+	"chainablePremove": true,
+	"startingTime": 5000
+}

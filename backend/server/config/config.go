@@ -18,7 +18,7 @@ type ClientConfig struct {
 }
 
 func GetConfig() (*Config, error) {
-	file, err := os.Open("config/config.json")
+	file, err := os.Open("config.json")
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func GetConfig() (*Config, error) {
 }
 
 func GetClientConfig() (*ClientConfig, error) {
-	file, err := os.Open("config/config.json")
+	file, err := os.Open("config.json")
 	if err != nil {
 		return nil, err
 	}

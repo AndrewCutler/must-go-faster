@@ -77,7 +77,7 @@ func main() {
 		w.Write(response)
 	})
 
-	spa := handlers.SpaHandler{StaticPath: "../client", IndexPath: "index.html"}
+	spa := handlers.SpaHandler{StaticPath: "../../client", IndexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)
 	srv := &http.Server{
 		Handler:      r,

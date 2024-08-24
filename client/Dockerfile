@@ -8,7 +8,9 @@ RUN npm install
 
 COPY . .
 
-ENV BASE_URL=http://host.docker.internal:8000
+ARG BASE_URL
+
+ENV BASE_URL=${BASE_URL}
 
 RUN npm run build
 

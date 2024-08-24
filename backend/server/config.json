@@ -1,6 +1,6 @@
 {
-	"baseUrl": "10.0.0.73",
-	"port": "8000",
+	"baseUrl": "0.0.0.0",
+	"port": "8080",
 	"development": true,
 	"chainablePremove": true,
 	"startingTime": 5000

@@ -22,6 +22,7 @@ func main() {
 	if err != nil {
 		log.Panicln("Cannot get config: ", err)
 	}
+	fmt.Println(config)
 	clientConfig, err := c.GetClientConfig()
 	if err != nil {
 		log.Panicln("Cannot get client config: ", err)
@@ -51,6 +52,10 @@ func main() {
 
 	hub := game.NewHub(clientConfig)
 	go hub.Run()
+
+	r.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Testing"))
+	})
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Connection successful.")

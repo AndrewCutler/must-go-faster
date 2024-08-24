@@ -72,6 +72,8 @@ func main() {
 	})
 
 	r.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
+		// todo: don't use *
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		response, err := json.Marshal(clientConfig)
 		if err != nil {
 			http.Error(w, "Failed to marshal config JSON", http.StatusInternalServerError)

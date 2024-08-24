@@ -1,5 +1,6 @@
 // webpack.config.js
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = (env) => ({
 	entry: './index.ts', // Entry point of your application
@@ -8,6 +9,13 @@ module.exports = (env) => ({
 	watchOptions: {
 		ignored: /node_modules/,
 	},
+	plugins: [
+		new webpack.DefinePlugin({
+			'process.env.BASE_URL': JSON.stringify(
+				process.env.BASE_URL || 'http://10.0.0.73:8000',
+			),
+		}),
+	],
 	module: {
 		rules: [
 			{

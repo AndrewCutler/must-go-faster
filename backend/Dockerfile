@@ -1,5 +1,4 @@
 FROM golang:1.21
-# FROM golang:1.21 AS build
 
 WORKDIR /app
 
@@ -11,13 +10,7 @@ RUN go mod download
 
 RUN go build -o ./server/main ./server/
 
-RUN mv ./server/config.json .
-
-# FROM alpine:latest
-
-# WORKDIR /root/
-
-# COPY --from=build /app/main .
+RUN mv ./server/docker.config.json ./config.json
 
 EXPOSE 8080
 

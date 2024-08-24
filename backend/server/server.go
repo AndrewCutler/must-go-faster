@@ -22,7 +22,6 @@ func main() {
 	if err != nil {
 		log.Panicln("Cannot get config: ", err)
 	}
-	fmt.Println(config)
 	clientConfig, err := c.GetClientConfig()
 	if err != nil {
 		log.Panicln("Cannot get client config: ", err)
@@ -54,7 +53,8 @@ func main() {
 	go hub.Run()
 
 	r.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Testing"))
+		ip := r.RemoteAddr
+		w.Write([]byte(fmt.Sprintf("Ping received from IP %s", ip)))
 	})
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +82,7 @@ func main() {
 		w.Write(response)
 	})
 
+	// TODO: why is a spa necessary? just use nginx docker image for frontend
 	spa := handlers.SpaHandler{StaticPath: "../../client", IndexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)
 	srv := &http.Server{

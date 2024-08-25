@@ -21,9 +21,9 @@ window.onload = function () {
 function getConfig(
 	mustGoFaster: MustGoFaster,
 ): Promise<{ config: Config; mustGoFaster: MustGoFaster }> {
-    // TODO: https
-	const baseUrl = process.env.BASE_URL;
-	return fetch(`http://${baseUrl}/config`).then(async function (r) {
+    // TODO: 
+	const baseUrl = process.env.API_BASE_URL;
+	return fetch(`${baseUrl}/config`).then(async function (r) {
 		try {
 			const config = await r.json();
 			return { config, mustGoFaster: mustGoFaster };

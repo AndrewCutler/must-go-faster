@@ -78,8 +78,8 @@ export class MustGoFaster {
 	}
 
 	connect(): void {
-        const baseUrl = process.env.BASE_URL;
-		const ws = new WebSocket(`ws://${baseUrl}/connect`, []);
+        const baseUrl = process.env.WS_BASE_URL;
+		const ws = new WebSocket(`${baseUrl}/connect`, []);
 		console.log('Creating WebSocket.');
 
 		ws.onopen = function (openEvent) {

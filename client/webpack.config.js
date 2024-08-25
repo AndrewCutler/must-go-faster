@@ -11,8 +11,11 @@ module.exports = (env) => ({
 	},
 	plugins: [
 		new webpack.DefinePlugin({
-			'process.env.BASE_URL': JSON.stringify(
-				process.env.BASE_URL || 'http://10.0.0.73:8000',
+			'process.env.API_BASE_URL': JSON.stringify(
+				process.env.API_BASE_URL || 'http://10.0.0.73:8000',
+			),
+			'process.env.WS_BASE_URL': JSON.stringify(
+				process.env.WS_BASE_URL || 'ws://10.0.0.73:8000',
 			),
 		}),
 	],

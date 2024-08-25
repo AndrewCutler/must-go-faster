@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	c "server/config"
@@ -17,10 +18,14 @@ import (
 )
 
 func main() {
-	config, err := c.GetConfig()
-	if err != nil {
-		log.Panicln("Cannot get config: ", err)
-	}
+	baseurl := os.Getenv("BASE_URL")
+	port := os.Getenv("PORT")
+	allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
+
+	log.Println("baseurl: ", baseurl)
+	log.Println("port: ", port)
+	log.Println("allowedOriginsEnv: ", allowedOriginsEnv)
+
 	clientConfig, err := c.GetClientConfig()
 	if err != nil {
 		log.Panicln("Cannot get client config: ", err)
@@ -34,7 +39,9 @@ func main() {
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
 			allowed := false
-			for _, curr := range config.AllowedOrigins {
+			allowedOrigins := strings.Split(allowedOriginsEnv, ",")
+			for _, curr := range allowedOrigins {
+				fmt.Println("curr: ", curr)
 				if curr == origin {
 					allowed = true
 					break
@@ -90,10 +97,9 @@ func main() {
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}
-	devenv := os.Getenv("DEVELOPMENT")
-	log.Println(devenv)
-	if devenv == "true" {
-		srv.Addr = config.BaseUrl + ":" + config.Port
+
+	if baseurl != "" && port != "" {
+		srv.Addr = baseurl + ":" + port
 	}
 
 	log.Fatal(srv.ListenAndServe())

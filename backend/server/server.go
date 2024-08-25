@@ -85,8 +85,9 @@ func main() {
 	spa := handlers.SpaHandler{StaticPath: "../../client", IndexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)
 	srv := &http.Server{
-		Handler:      r,
-		Addr:         config.BaseUrl + ":" + config.Port,
+		Handler: r,
+		// testing
+		// Addr:         config.BaseUrl + ":" + config.Port,
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}

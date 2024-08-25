@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./backend
+    image: server-test # todo: name
+    ports:
+      - '8000:8080'
+    networks:
+      - mustgofaster
+
+  client:
+    build:
+      context: ./client
+      args:
+        BASE_URL: host.docker.internal:8000
+      # todo: .env file
+    image: client-test # todo: name
+    environment:
+      - BASE_URL=host.docker.internal:8000
+    ports:
+      - '4200:80'
+    networks:
+      - mustgofaster
+    depends_on:
+      - server
+
+networks:
+  mustgofaster:
+    driver: bridge

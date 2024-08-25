@@ -7,7 +7,7 @@ window.onload = function () {
 		.then(getConfig)
 		.then(function ({ config, mustGoFaster }): void {
 			mustGoFaster.setConfig(config);
-            const button = new ConnectButtonElement();
+			const button = new ConnectButtonElement();
 			button.element!.addEventListener('click', function () {
 				button.waitForOpponent();
 				mustGoFaster.connect();
@@ -21,8 +21,9 @@ window.onload = function () {
 function getConfig(
 	mustGoFaster: MustGoFaster,
 ): Promise<{ config: Config; mustGoFaster: MustGoFaster }> {
-	// todo: pull from config
-	return fetch('http://10.0.0.73:8000/config').then(async function (r) {
+    // TODO: https
+	const baseUrl = process.env.BASE_URL;
+	return fetch(`http://${baseUrl}/config`).then(async function (r) {
 		try {
 			const config = await r.json();
 			return { config, mustGoFaster: mustGoFaster };

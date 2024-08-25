@@ -2,9 +2,6 @@ package game
 
 import (
 	"log"
-	"math/rand"
-	"os"
-	"path/filepath"
 
 	c "server/config"
 
@@ -124,39 +121,43 @@ func (h *Hub) onMessage(message Message) {
 
 // todo: consider using https://github.com/notnil/chess?tab=readme-ov-file#scan-pgn
 func getGameFEN() (string, error) {
-	// todo: grab from database or something
-	dir := "./pgns"
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return "", err
-	}
+	dummy := "8/p4R2/4r1pk/2p4p/3r3P/6K1/8/8 w - - 1 41"
 
-	var result string
-	for isGameAcceptable := false; !isGameAcceptable; {
-		// for testing with same game every time
-		// fileName := files[1].Name()
-		// for random file read
-		fileName := files[rand.Intn(len(files))].Name()
-		path := filepath.Join(dir, fileName)
-		file, err := os.Open(path)
-		if err != nil {
-			return "", err
-		}
+	return dummy, nil
 
-		pgn, err := chess.PGN(file)
-		if err != nil {
-			return "", err
-		}
+	// // todo: grab from database or something
+	// dir := "./pgns"
+	// files, err := os.ReadDir(dir)
+	// if err != nil {
+	// 	return "", err
+	// }
 
-		game := chess.NewGame(pgn)
-		moveLength := len(game.MoveHistory())
+	// var result string
+	// for isGameAcceptable := false; !isGameAcceptable; {
+	// 	// for testing with same game every time
+	// 	// fileName := files[1].Name()
+	// 	// for random file read
+	// 	fileName := files[rand.Intn(len(files))].Name()
+	// 	path := filepath.Join(dir, fileName)
+	// 	file, err := os.Open(path)
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
 
-		// only use games of at least 20 full moves
-		if moveLength > 40 {
-			isGameAcceptable = true
-			result = game.MoveHistory()[moveLength-20].PrePosition.String()
-		}
-	}
+	// 	pgn, err := chess.PGN(file)
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
 
-	return result, nil
+	// 	game := chess.NewGame(pgn)
+	// 	moveLength := len(game.MoveHistory())
+
+	// 	// only use games of at least 20 full moves
+	// 	if moveLength > 40 {
+	// 		isGameAcceptable = true
+	// 		result = game.MoveHistory()[moveLength-20].PrePosition.String()
+	// 	}
+	// }
+
+	// return result, nil
 }

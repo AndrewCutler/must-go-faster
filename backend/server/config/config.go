@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
-	BaseUrl     string `json:"baseUrl"`
-	Port        string `json:"port"`
-	Development bool   `json:"development"`
+	BaseUrl        string   `json:"baseUrl"`
+	Port           string   `json:"port"`
+	Development    bool     `json:"development"`
+	AllowedOrigins []string `json:allowedOrigins`
 }
 
 type ClientConfig struct {

@@ -3,5 +3,6 @@
 	"port": "8080",
 	"development": true,
 	"chainablePremove": true,
-	"startingTime": 5000
+	"startingTime": 5000,
+    "allowedOrigins": ["http://localhost:4200"]
 }

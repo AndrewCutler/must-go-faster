@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	c "server/config"
@@ -35,17 +34,15 @@ func main() {
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
-			if os.Getenv("DEVELOPMENT") == "true" && strings.HasPrefix(origin, "http://"+config.BaseUrl) {
-				return true
-			}
-			if strings.HasPrefix(origin, "https://"+config.BaseUrl) {
-				return true
-			}
-			if os.Getenv("DEVELOPMENT") == "true" && strings.HasPrefix(origin, "chrome-extension://") {
-				return true
+			allowed := false
+			for _, curr := range config.AllowedOrigins {
+				if curr == origin {
+					allowed = true
+					break
+				}
 			}
 
-			return false
+			return allowed
 		},
 	}
 

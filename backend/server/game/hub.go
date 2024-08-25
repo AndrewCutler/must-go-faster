@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"path/filepath"
 
 	c "server/config"
 
@@ -132,10 +133,12 @@ func getGameFEN() (string, error) {
 
 	var result string
 	for isGameAcceptable := false; !isGameAcceptable; {
-		// testing with same game every time
+		// for testing with same game every time
 		// fileName := files[1].Name()
+		// for random file read
 		fileName := files[rand.Intn(len(files))].Name()
-		file, err := os.Open(dir + "\\" + fileName)
+		path := filepath.Join(dir, fileName)
+		file, err := os.Open(path)
 		if err != nil {
 			return "", err
 		}

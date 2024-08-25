@@ -26,7 +26,6 @@ func main() {
 		log.Panicln("Cannot get client config: ", err)
 	}
 
-	os.Setenv("DEVELOPMENT", fmt.Sprintf("%t", config.Development))
 	r := mux.NewRouter()
 
 	var upgrader = websocket.Upgrader{

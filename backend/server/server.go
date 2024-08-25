@@ -91,6 +91,11 @@ func main() {
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}
+	devenv := os.Getenv("DEVELOPMENT")
+	log.Println(devenv)
+	if devenv == "true" {
+		srv.Addr = config.BaseUrl + ":" + config.Port
+	}
 
 	log.Fatal(srv.ListenAndServe())
 }

@@ -3,8 +3,6 @@ package game
 import (
 	"log"
 
-	c "server/config"
-
 	"github.com/google/uuid"
 	"github.com/notnil/chess"
 )
@@ -15,17 +13,15 @@ type Hub struct {
 	ReadChan                 chan Message
 	RegisterChan             chan *Player
 	UnregisterChan           chan *Player
-	Config                   *c.ClientConfig
 }
 
-func NewHub(config *c.ClientConfig) *Hub {
+func NewHub() *Hub {
 	return &Hub{
 		ReadChan:                 make(chan Message),
 		RegisterChan:             make(chan *Player),
 		UnregisterChan:           make(chan *Player),
 		InProgressSessions:       make(map[string]*Session),
 		AwaitingOpponentSessions: make(map[string]*Session),
-		Config:                   config,
 	}
 }
 
@@ -89,8 +85,8 @@ func (h *Hub) onRegister(player *Player) {
 		h.InProgressSessions[session.SessionId] = session
 
 		log.Println("Broadcasting game joined for player", player.Color)
-		player.WriteChan <- sendGameJoinedMessage(session, player.Color, h.Config.StartingTime)
-		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color, h.Config.StartingTime)
+		player.WriteChan <- sendGameJoinedMessage(session, player.Color)
+		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color)
 	}
 }
 
@@ -104,7 +100,7 @@ func (h *Hub) onMessage(message Message) {
 
 	switch message.Type {
 	case GameStartedToServerType.String():
-		handleGameStartedMessage(h.Config, session)
+		handleGameStartedMessage(session)
 	case MoveToServerType.String():
 		handleMoveMessage(message, session)
 	case PremoveToServerType.String():

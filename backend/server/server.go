@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	c "server/config"
 	"server/game"
 	handlers "server/handlers"
 
@@ -21,15 +19,6 @@ func main() {
 	baseurl := os.Getenv("BASE_URL")
 	port := os.Getenv("PORT")
 	allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
-
-	log.Println("baseurl: ", baseurl)
-	log.Println("port: ", port)
-	log.Println("allowedOriginsEnv: ", allowedOriginsEnv)
-
-	clientConfig, err := c.GetClientConfig()
-	if err != nil {
-		log.Panicln("Cannot get client config: ", err)
-	}
 
 	r := mux.NewRouter()
 
@@ -52,7 +41,7 @@ func main() {
 		},
 	}
 
-	hub := game.NewHub(clientConfig)
+	hub := game.NewHub()
 	go hub.Run()
 
 	r.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
@@ -74,26 +63,11 @@ func main() {
 		go player.WriteMessage()
 	})
 
-	r.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
-		// todo: don't use *
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		response, err := json.Marshal(clientConfig)
-		if err != nil {
-			http.Error(w, "Failed to marshal config JSON", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response)
-	})
-
 	// TODO: why is a spa necessary? just use nginx docker image for frontend
 	spa := handlers.SpaHandler{StaticPath: "../../client", IndexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)
 	srv := &http.Server{
-		Handler: r,
-		// testing
-		// Addr:         config.BaseUrl + ":" + config.Port,
+		Handler:      r,
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}

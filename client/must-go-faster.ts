@@ -1,7 +1,6 @@
 import { Chessground } from 'chessground';
 import {
 	ChessgroundConfig,
-	Config,
 	GameJoinedFromServer,
 	GameStartedFromServer,
 	GameStartedToServer,
@@ -38,14 +37,9 @@ export class MustGoFaster {
 	#blackTimeLeft: number | undefined;
 	#whiteTimerInterval: number | undefined;
 	#blackTimerInterval: number | undefined;
-	#config: Config | undefined;
 	#connection: WebSocket | undefined;
 	#board: ChessgroundApi | undefined;
 	#message: Message | undefined;
-
-	setConfig(value: Config) {
-		this.#config = value;
-	}
 
 	constructor() {
 		console.log('Initializing MustGoFaster.');
@@ -379,8 +373,8 @@ export class MustGoFaster {
 	private setupBoard(message: FromMessage<GameStartedFromServer>) {
 		this.#sessionId = message.sessionId;
 		this.#playerColor = message.playerColor;
-		this.#whiteTimeLeft = this.#config?.startingTime;
-		this.#blackTimeLeft = this.#config?.startingTime;
+		this.#whiteTimeLeft = 30;
+		this.#blackTimeLeft = 30;
 
 		const payload = message.payload as GameJoinedFromServer;
 		const gameMeta = new GameMetaElement({

@@ -1,12 +1,12 @@
 services:
   server:
-    # build:
-    #   context: ./backend
-    #   # todo: .env file
-    #   args:
-    #     BASE_URL: 0.0.0.0
-    #     PORT: 8000
-    #     ALLOWED_ORIGINS: http://localhost:4200
+    build:
+      context: ./backend
+      # todo: .env file
+      args:
+        BASE_URL: 0.0.0.0
+        PORT: 8000
+        ALLOWED_ORIGINS: http://localhost:4200
     image: server-test # todo: name
     environment:
       BASE_URL: 0.0.0.0

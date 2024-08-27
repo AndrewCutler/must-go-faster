@@ -1,12 +1,9 @@
 import { MustGoFaster } from './must-go-faster';
-import { Config } from './models';
 import { ConnectButtonElement } from './dom';
 
 window.onload = function () {
 	initialize()
-		.then(getConfig)
-		.then(function ({ config, mustGoFaster }): void {
-			mustGoFaster.setConfig(config);
+		.then(function (mustGoFaster): void {
 			const button = new ConnectButtonElement();
 			button.element!.addEventListener('click', function () {
 				button.waitForOpponent();
@@ -17,22 +14,6 @@ window.onload = function () {
 			console.error('Initialization error: ', error);
 		});
 };
-
-function getConfig(
-	mustGoFaster: MustGoFaster,
-): Promise<{ config: Config; mustGoFaster: MustGoFaster }> {
-    // TODO: 
-	const baseUrl = process.env.API_BASE_URL;
-	return fetch(`${baseUrl}/config`).then(async function (r) {
-		try {
-			const config = await r.json();
-			return { config, mustGoFaster: mustGoFaster };
-		} catch (error) {
-			console.error(error);
-			return { config: undefined, mustGoFaster: mustGoFaster };
-		}
-	});
-}
 
 function initialize(): Promise<MustGoFaster> {
 	return new Promise<MustGoFaster>(function (resolve, reject) {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	c "server/config"
 	"time"
 )
 
@@ -137,7 +136,7 @@ type TimeoutToServer struct {
 	Timeout bool `json:"timeout"`
 }
 
-func sendGameJoinedMessage(session *Session, playerColor string, startingTime float64) []byte {
+func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 	message := Message{
 		Type:        GameJoinedFromServerType.String(),
 		SessionId:   session.SessionId,
@@ -147,8 +146,8 @@ func sendGameJoinedMessage(session *Session, playerColor string, startingTime fl
 			Fen:           session.getFen(),
 			ValidMoves:    ValidMovesMap(session.Game),
 			WhosNext:      session.whoseMoveIsIt(),
-			WhiteTimeLeft: startingTime,
-			BlackTimeLeft: startingTime,
+			WhiteTimeLeft: 30,
+			BlackTimeLeft: 30,
 		},
 	}
 
@@ -311,13 +310,13 @@ func handlePremoveMessage(message Message, session *Session) {
 	}
 }
 
-func handleGameStartedMessage(config *c.ClientConfig, session *Session) {
+func handleGameStartedMessage(session *Session) {
 	session.White.Clock = Clock{
-		TimeLeft:  config.StartingTime,
+		TimeLeft:  30,
 		TimeStamp: time.Now(),
 	}
 	session.Black.Clock = Clock{
-		TimeLeft:  config.StartingTime,
+		TimeLeft:  30,
 		TimeStamp: time.Now(),
 	}
 

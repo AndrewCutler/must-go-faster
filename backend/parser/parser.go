@@ -29,8 +29,7 @@ func splitGames(filename string, dest string) {
 	for maxConcurrent > 0 {
 		for scanner.Scan() {
 			line := scanner.Text()
-			// grab pgns for all games that don't include eval, for easier parsing
-			if strings.HasPrefix(line, "1. ") && !strings.Contains(line, "eval") {
+			if strings.HasPrefix(line, "1. ") {
 				pgnId := uuid.New().String()
 				go func() {
 					second := time.Now().Second() % 10
@@ -53,7 +52,7 @@ func splitGames(filename string, dest string) {
 				waitGroup.Add(1)
 				go func() {
 					defer waitGroup.Done()
-					path := filepath.Join(dest, pgnId, ".pgn")
+					path := filepath.Join(dest, pgnId+".pgn")
 					if err := os.WriteFile(path, []byte(line), 0644); err != nil {
 						log.Println(err)
 					}

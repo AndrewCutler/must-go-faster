@@ -2,6 +2,9 @@ package game
 
 import (
 	"log"
+	"math/rand"
+	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
 	"github.com/notnil/chess"
@@ -117,43 +120,42 @@ func (h *Hub) onMessage(message Message) {
 
 // todo: consider using https://github.com/notnil/chess?tab=readme-ov-file#scan-pgn
 func getGameFEN() (string, error) {
-	dummy := "8/p4R2/4r1pk/2p4p/3r3P/6K1/8/8 w - - 1 41"
+	// unless this app has actual users,
+	// we're gonna just store the PGNs in the repository
+	// and pull one at random
+	dir := "./pgns"
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return "", err
+	}
 
-	return dummy, nil
+	var result string
+	for isGameAcceptable := false; !isGameAcceptable; {
+		// for testing with same game every time
+		// fileName := files[1].Name()
 
-	// // todo: grab from database or something
-	// dir := "./pgns"
-	// files, err := os.ReadDir(dir)
-	// if err != nil {
-	// 	return "", err
-	// }
+		// for random file read
+		fileName := files[rand.Intn(len(files))].Name()
+		path := filepath.Join(dir, fileName)
+		file, err := os.Open(path)
+		if err != nil {
+			return "", err
+		}
 
-	// var result string
-	// for isGameAcceptable := false; !isGameAcceptable; {
-	// 	// for testing with same game every time
-	// 	// fileName := files[1].Name()
-	// 	// for random file read
-	// 	fileName := files[rand.Intn(len(files))].Name()
-	// 	path := filepath.Join(dir, fileName)
-	// 	file, err := os.Open(path)
-	// 	if err != nil {
-	// 		return "", err
-	// 	}
+		pgn, err := chess.PGN(file)
+		if err != nil {
+			return "", err
+		}
 
-	// 	pgn, err := chess.PGN(file)
-	// 	if err != nil {
-	// 		return "", err
-	// 	}
+		game := chess.NewGame(pgn)
+		moveLength := len(game.MoveHistory())
 
-	// 	game := chess.NewGame(pgn)
-	// 	moveLength := len(game.MoveHistory())
+		// only use games of at least 20 full moves
+		if moveLength > 40 {
+			isGameAcceptable = true
+			result = game.MoveHistory()[moveLength-20].PrePosition.String()
+		}
+	}
 
-	// 	// only use games of at least 20 full moves
-	// 	if moveLength > 40 {
-	// 		isGameAcceptable = true
-	// 		result = game.MoveHistory()[moveLength-20].PrePosition.String()
-	// 	}
-	// }
-
-	// return result, nil
+	return result, nil
 }

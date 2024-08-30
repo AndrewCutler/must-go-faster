@@ -277,17 +277,7 @@ func handleMoveMessage(message Message, session *Session) {
 		return
 	}
 
-	if session.White.Clock.IsRunning {
-		session.White.Clock.TimeLeft -= time.Since(session.White.Clock.TimeStamp).Seconds()
-		session.White.Clock.IsRunning = false
-		session.Black.Clock.IsRunning = true
-	} else {
-		session.Black.Clock.TimeLeft -= time.Since(session.Black.Clock.TimeStamp).Seconds()
-		session.White.Clock.IsRunning = true
-		session.Black.Clock.IsRunning = false
-	}
-	session.White.Clock.TimeStamp = time.Now()
-	session.Black.Clock.TimeStamp = time.Now()
+	updateClocks(session)
 
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendMoveMessage(session, player.Color, move)
@@ -303,6 +293,8 @@ func handlePremoveMessage(message Message, session *Session) {
 		log.Println("Cannot make premove: ", err)
 		return
 	}
+
+	updateClocks(session)
 
 	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range session.GetPlayers() {
@@ -336,4 +328,18 @@ func handleTimeoutMessage(session *Session) {
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
 	}
+}
+
+func updateClocks(session *Session) {
+	if session.White.Clock.IsRunning {
+		session.White.Clock.TimeLeft -= time.Since(session.White.Clock.TimeStamp).Seconds()
+		session.White.Clock.IsRunning = false
+		session.Black.Clock.IsRunning = true
+	} else {
+		session.Black.Clock.TimeLeft -= time.Since(session.Black.Clock.TimeStamp).Seconds()
+		session.White.Clock.IsRunning = true
+		session.Black.Clock.IsRunning = false
+	}
+	session.White.Clock.TimeStamp = time.Now()
+	session.Black.Clock.TimeStamp = time.Now()
 }

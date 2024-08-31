@@ -7,7 +7,8 @@ services:
         BASE_URL: 0.0.0.0
         PORT: 8000
         ALLOWED_ORIGINS: http://localhost:4200
-    image: server-test # todo: name
+    image: must-go-faster-api
+    container_name: backend
     environment:
       BASE_URL: 0.0.0.0
       PORT: 8000
@@ -23,7 +24,8 @@ services:
       args:
         BASE_URL: host.docker.internal:8000
       # todo: .env file
-    image: client-test # todo: name
+    image: must-go-faster
+    container_name: client
     environment:
       - BASE_URL=host.docker.internal:8000
     ports:

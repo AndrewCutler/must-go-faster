@@ -27,6 +27,7 @@ import {
 	CountdownContainerElement,
 	GameMetaElement,
 	GameStatusModalElement,
+	GettingStartedElement,
 	TimerElement,
 } from './dom';
 
@@ -40,6 +41,8 @@ export class MustGoFaster {
 	#connection: WebSocket | undefined;
 	#board: ChessgroundApi | undefined;
 	#message: Message | undefined;
+	#wsBaseUrl: string | undefined;
+	#apiBaseUrl: string | undefined;
 
 	constructor() {
 		console.log('Initializing MustGoFaster.');
@@ -69,11 +72,14 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		});
+		this.#wsBaseUrl = process.env.WS_BASE_URL;
+		this.#apiBaseUrl = process.env.API_BASE_URL;
+
+		this.ping();
 	}
 
 	connect(): void {
-        const baseUrl = process.env.WS_BASE_URL;
-		const ws = new WebSocket(`${baseUrl}/connect`, []);
+		const ws = new WebSocket(`${this.#wsBaseUrl!}/connect`, []);
 		console.log('Creating WebSocket.');
 
 		ws.onopen = function (openEvent) {
@@ -102,6 +108,17 @@ export class MustGoFaster {
 		};
 
 		this.#connection = ws;
+	}
+
+	private async ping() {
+		const gettingStarted = new GettingStartedElement();
+		try {
+			await fetch(`${this.#apiBaseUrl!}/ping`);
+		} catch (error) {
+			console.error(error);
+		} finally {
+			gettingStarted.hide();
+		}
 	}
 
 	private async handleMessage(message: FromMessage<FromPayload>) {
@@ -180,7 +197,7 @@ export class MustGoFaster {
 		} = (this.#message! as FromMessage<MoveFromServer>).payload!;
 		console.log('move: ', { move: this.#message });
 		let gameStatus: GameStatus = 'ongoing';
-        
+
 		if (isCheckmated) {
 			gameStatus = isCheckmated === this.#playerColor ? 'lost' : 'won';
 			this.gameOver(gameStatus, 'checkmate');

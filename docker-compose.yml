@@ -2,7 +2,6 @@ services:
   server:
     build:
       context: ./backend
-      # todo: .env file
       args:
         BASE_URL: 0.0.0.0
         PORT: 8000
@@ -22,12 +21,14 @@ services:
     build:
       context: ./client
       args:
-        BASE_URL: host.docker.internal:8000
+        API_BASE_URL: http://10.0.0.73:8000
+        WS_BASE_URL: ws://10.0.0.73:8000
       # todo: .env file
     image: must-go-faster
     container_name: client
     environment:
-      - BASE_URL=host.docker.internal:8000
+      API_BASE_URL: http://host.docker.internal:8000
+      WS_BASE_URL: ws://host.docker.internal:8000
     ports:
       - '4200:80'
     networks:

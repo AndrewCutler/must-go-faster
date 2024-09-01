@@ -16,9 +16,9 @@ import (
 )
 
 func main() {
+	log.Println("Server starting.")
 	baseurl := os.Getenv("BASE_URL")
 	port := os.Getenv("PORT")
-	allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
 
 	r := mux.NewRouter()
 
@@ -27,27 +27,17 @@ func main() {
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
-			allowed := false
-			allowedOrigins := strings.Split(allowedOriginsEnv, ",")
-			for _, curr := range allowedOrigins {
-				fmt.Println("curr: ", curr)
-				if curr == origin {
-					allowed = true
-					break
-				}
-			}
-
-			return allowed
+			return checkCORS(origin)
 		},
 	}
 
 	hub := game.NewHub()
 	go hub.Run()
 
-	r.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/ping", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr
 		w.Write([]byte(fmt.Sprintf("Ping received from IP %s", ip)))
-	})
+	}))
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Connection successful.")
@@ -77,4 +67,39 @@ func main() {
 	}
 
 	log.Fatal(srv.ListenAndServe())
+}
+
+func withCORS(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		allowed := checkCORS(origin)
+
+		if !allowed {
+			message := fmt.Sprintf("Request from unallowed origin rejected: %s", origin)
+			log.Println(message)
+			http.Error(w, message, http.StatusForbidden)
+			return
+		}
+
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Credentials", "true")
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+		next(w, r)
+	}
+}
+
+func checkCORS(origin string) bool {
+	allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
+	allowed := false
+	allowedOrigins := strings.Split(allowedOriginsEnv, ",")
+	for _, curr := range allowedOrigins {
+		if curr == origin {
+			allowed = true
+			break
+		}
+	}
+
+	return allowed
 }

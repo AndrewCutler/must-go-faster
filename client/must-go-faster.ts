@@ -27,6 +27,7 @@ import {
 	CountdownContainerElement,
 	GameMetaElement,
 	GameStatusModalElement,
+	GettingStartedElement,
 	TimerElement,
 } from './dom';
 
@@ -110,9 +111,14 @@ export class MustGoFaster {
 	}
 
 	private async ping() {
-		console.log('pinging...');
-		await fetch(`${this.#apiBaseUrl!}/ping`);
-		console.log('pinged.');
+		const gettingStarted = new GettingStartedElement();
+		try {
+			await fetch(`${this.#apiBaseUrl!}/ping`);
+		} catch (error) {
+			console.error(error);
+		} finally {
+			gettingStarted.hide();
+		}
 	}
 
 	private async handleMessage(message: FromMessage<FromPayload>) {

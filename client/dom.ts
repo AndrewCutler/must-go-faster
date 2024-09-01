@@ -22,6 +22,25 @@ export class BoardElement implements IElement {
 	}
 }
 
+export class GettingStartedElement implements IElement {
+	#element: HTMLElement | undefined;
+	readonly #selector: string = '#getting-started';
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error('Cannot find #getting-started');
+		this.#element = element;
+	}
+
+	hide(): void {
+		this.#element!.remove();
+	}
+}
+
 export class CountdownContainerElement implements IElement {
 	#element: HTMLElement | undefined;
 	readonly #selector: string = '#countdown-container';

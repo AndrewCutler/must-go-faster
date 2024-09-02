@@ -6,14 +6,15 @@ interface IElement {
 
 export class BoardElement implements IElement {
 	#element: HTMLElement | undefined;
+	readonly #selector: string = '#board';
 
 	get element(): HTMLElement | undefined {
 		return this.#element;
 	}
 
 	constructor() {
-		const element = document.getElementById('board');
-		if (!element) throw new Error('Cannot find #board');
+		const element = document.querySelector<HTMLElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
 		this.#element = element;
 	}
 
@@ -171,6 +172,7 @@ export class GameStatusModalElement implements IElement {
 }
 
 export class GameMetaElement implements IElement {
+	readonly #selector: string = '#game-meta';
 	#element: HTMLElement | undefined;
 
 	get element(): HTMLElement | undefined {
@@ -184,8 +186,8 @@ export class GameMetaElement implements IElement {
 		playerColor: PlayerColor;
 		whosNext: PlayerColor;
 	}) {
-		const element = document.querySelector<HTMLDivElement>('#game-meta');
-		if (!element) throw new Error('Cannot find #game-meta');
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
 		this.#element = element;
 		this.show({
 			playerColor,
@@ -225,6 +227,7 @@ export class GameMetaElement implements IElement {
 }
 
 export class ConnectButtonElement implements IElement {
+	readonly #selector = '#connect-button';
 	#element: HTMLElement | undefined;
 
 	get element(): HTMLElement | undefined {
@@ -232,9 +235,10 @@ export class ConnectButtonElement implements IElement {
 	}
 
 	constructor() {
-		const element =
-			document.querySelector<HTMLButtonElement>('#connect-button');
-		if (!element) throw new Error('Cannot find #connect-button');
+		const element = document.querySelector<HTMLButtonElement>(
+			this.#selector,
+		);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
 		this.#element = element;
 	}
 
@@ -245,5 +249,44 @@ export class ConnectButtonElement implements IElement {
 	gameJoined(): void {
 		this.#element!.classList.remove('is-loading');
 		this.#element!.style.display = 'none';
+	}
+}
+
+export class PlayerTypeElement implements IElement {
+	#element: HTMLElement | undefined;
+	readonly #selector = '#player-type-dropdown';
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	toggleActive(): void {
+		if (this.#element!.classList.contains('is-active')) {
+			this.#element!.classList.remove('is-active');
+		} else {
+			this.#element!.classList.add('is-active');
+		}
+	}
+
+	setSelection(value: string): void {
+		const valueElement = document.querySelector<HTMLSpanElement>(
+			'#player-type-dropdown-value',
+		)!;
+		switch (value) {
+			case 'computer':
+				valueElement.innerText = 'Computer';
+				break;
+			case 'human':
+				valueElement.innerText = 'Human';
+				break;
+			default:
+				throw new Error(`Invalid player type: ${value}.`);
+		}
 	}
 }

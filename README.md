@@ -14,3 +14,5 @@
 10. Use [air in Docker](github.com/cosmtrek/air)
 11. Frontend errors when server is not responsive
 12. Acknowledgement packets
+13. Allow playing against computer
+14. Allow canceling of find a game requests

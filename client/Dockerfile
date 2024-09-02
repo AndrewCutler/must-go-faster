@@ -21,4 +21,5 @@ FROM nginx:latest
 COPY --from=build /app/build/ /usr/share/nginx/html/build
 COPY --from=build /app/css/ /usr/share/nginx/html/css
 COPY --from=build /app/index.html /usr/share/nginx/html/
+COPY --from=build /app/favicon.ico /usr/share/nginx/html/
 

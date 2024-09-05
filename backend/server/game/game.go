@@ -13,10 +13,11 @@ type Move struct {
 }
 
 type Session struct {
-	Game      *chess.Game
-	White     *Player
-	Black     *Player
-	SessionId string
+	Game              *chess.Game
+	White             *Player
+	Black             *Player
+	SessionId         string
+	IsAgainstComputer bool
 }
 
 func (s *Session) getFen() string {

@@ -40,6 +40,9 @@ func main() {
 	}))
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
+		queryParams := r.URL.Query()
+		opponentType := queryParams.Get("opponentType")
+
 		log.Println("Connection successful.")
 		connection, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -48,7 +51,10 @@ func main() {
 		}
 
 		player := &game.Player{Connection: connection, Hub: hub, WriteChan: make(chan []byte)}
-		player.Hub.RegisterChan <- player
+		player.Hub.RegisterChan <- game.Registration{
+			Player:       player,
+			OpponentType: opponentType,
+		}
 		go player.ReadMessage()
 		go player.WriteMessage()
 	})

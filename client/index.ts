@@ -19,11 +19,11 @@ window.onload = function () {
 				switch ((target as any)?.id) {
 					case 'player-type-computer':
 						playerTypeButton.setSelection('computer');
-						// mustGoFaster.setOpponentType('computer');
+						mustGoFaster.setOpponentType('computer');
 						break;
 					case 'player-type-human':
 						playerTypeButton.setSelection('human');
-						// mustGoFaster.setOpponentType('human');
+						mustGoFaster.setOpponentType('human');
 						break;
 					default:
 						break;

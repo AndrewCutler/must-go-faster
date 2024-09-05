@@ -5,6 +5,8 @@ export type PlayerColor = 'white' | 'black';
 
 export type GameStatus = 'ongoing' | 'lost' | 'won' | 'draw';
 
+export type OpponentType = 'computer' | 'human';
+
 export type MessageType =
 	| 'GameJoinedFromServerType'
 	| 'GameStartedFromServerType'
@@ -69,7 +71,7 @@ export type MoveFromServer = {
 	whosNext: PlayerColor;
 	validMoves: { [key: string]: string[] };
 	isCheckmated: PlayerColor;
-    move: Move;
+	move: Move;
 };
 
 export type TimeoutFromServer = {

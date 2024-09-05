@@ -268,6 +268,7 @@ func handleAbandonedMessage(session *Session) {
 }
 
 func handleMoveMessage(message Message, session *Session) {
+	log.Println("computer?: ", session.IsAgainstComputer)
 	// log.Println("handleMoveMessage")
 	payload := message.Payload.(MoveToServer)
 	move, err := tryPlayMove(payload, session.Game)
@@ -285,6 +286,7 @@ func handleMoveMessage(message Message, session *Session) {
 }
 
 func handlePremoveMessage(message Message, session *Session) {
+	log.Println("computer?: ", session.IsAgainstComputer)
 	// log.Println("handlePremoveMessage")
 	payload := message.Payload.(PremoveToServer)
 	premove, err := tryPlayPremove(payload, session.Game)
@@ -303,6 +305,7 @@ func handlePremoveMessage(message Message, session *Session) {
 }
 
 func handleGameStartedMessage(session *Session) {
+	log.Println("computer?: ", session.IsAgainstComputer)
 	session.White.Clock = Clock{
 		TimeLeft:  30,
 		TimeStamp: time.Now(),

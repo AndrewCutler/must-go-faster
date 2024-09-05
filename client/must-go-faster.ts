@@ -17,6 +17,7 @@ import {
 	ToMessage,
 	FromMessage,
 	FromPayload,
+	OpponentType,
 } from './models';
 
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -43,10 +44,12 @@ export class MustGoFaster {
 	#message: Message | undefined;
 	#wsBaseUrl: string | undefined;
 	#apiBaseUrl: string | undefined;
+	#opponentType: OpponentType;
 
 	constructor() {
 		console.log('Initializing MustGoFaster.');
 		this.connect = this.connect.bind(this);
+		this.#opponentType = 'computer';
 		const initialConfig: ChessgroundConfig = {
 			movable: {
 				free: false,
@@ -79,7 +82,7 @@ export class MustGoFaster {
 	}
 
 	connect(): void {
-		const ws = new WebSocket(`${this.#wsBaseUrl!}/connect`, []);
+		const ws = new WebSocket(`${this.#wsBaseUrl!}/connect?opponentType=${this.#opponentType}`, []);
 		console.log('Creating WebSocket.');
 
 		ws.onopen = function (openEvent) {
@@ -108,6 +111,10 @@ export class MustGoFaster {
 		};
 
 		this.#connection = ws;
+	}
+
+	setOpponentType(type: OpponentType): void {
+		this.#opponentType = type;
 	}
 
 	private async ping() {

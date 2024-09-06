@@ -45,6 +45,7 @@ func main() {
 
 		log.Println("Connection successful.")
 		connection, err := upgrader.Upgrade(w, r, nil)
+
 		if err != nil {
 			log.Println("Failed to upgrade: ", err)
 			return

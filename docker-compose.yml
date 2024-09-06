@@ -1,12 +1,7 @@
 services:
   server:
-    build:
-      context: ./backend
-      args:
-        BASE_URL: 0.0.0.0
-        PORT: 8000
-        ALLOWED_ORIGINS: http://localhost:4200
-    image: must-go-faster-api
+    image: cosmtrek/air
+    working_dir: /app
     container_name: backend
     environment:
       BASE_URL: 0.0.0.0
@@ -16,6 +11,8 @@ services:
       - '8000:8000'
     networks:
       - mustgofaster
+    volumes:
+      - ./backend/server/:/app
 
   client:
     build:

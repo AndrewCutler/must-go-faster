@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var fileDir = "./files/"
+// var fileDir = "./files/"
 
 type FileMeta struct {
 	Name      string

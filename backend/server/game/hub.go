@@ -54,7 +54,11 @@ func (h *Hub) Run() {
 
 func (h *Hub) onRegister(player *Player, opponentType string) {
 	// todo: randomize colors
-	log.Println(opponentType)
+	isWhite := true
+	if rand.Intn(100) < 50 {
+		isWhite = false
+	}
+	log.Println("isWhite:", isWhite)
 	if opponentType == "computer" {
 		fen, err := getGameFEN()
 		if err != nil {
@@ -72,18 +76,23 @@ func (h *Hub) onRegister(player *Player, opponentType string) {
 
 		sessionId := uuid.New().String()
 		player.SessionId = sessionId
-		player.Color = "white"
 		session := Session{
-			White:             player,
 			SessionId:         sessionId,
 			Game:              game,
 			IsAgainstComputer: true,
 		}
+		if isWhite {
+			player.Color = "white"
+			session.White = player
+		} else {
+			player.Color = "black"
+			session.Black = player
+		}
+
 		h.InProgressSessions[session.SessionId] = &session
 
 		log.Println("Broadcasting game joined for player", player.Color)
 		player.WriteChan <- sendGameJoinedMessage(&session, player.Color)
-		log.Println("Creating new pending game for player", player.Color)
 	} else {
 		if len(h.AwaitingOpponentSessions) == 0 {
 			fen, err := getGameFEN()
@@ -102,24 +111,34 @@ func (h *Hub) onRegister(player *Player, opponentType string) {
 
 			sessionId := uuid.New().String()
 			player.SessionId = sessionId
-			player.Color = "white"
 			session := Session{
-				White:     player,
 				SessionId: sessionId,
 				Game:      game,
+			}
+			if isWhite {
+				player.Color = "white"
+				session.White = player
+			} else {
+				player.Color = "black"
+				session.Black = player
 			}
 			h.AwaitingOpponentSessions[sessionId] = &session
 			log.Println("Creating new pending game for player", player.Color)
 		} else {
-			// set session state to ready
 			var session *Session
 			for key := range h.AwaitingOpponentSessions {
 				session = h.AwaitingOpponentSessions[key]
 				break
 			}
-			session.Black = player
+
 			player.SessionId = session.SessionId
-			player.Color = "black"
+			if session.Black == nil {
+				session.Black = player
+				player.Color = "black"
+			} else {
+				session.White = player
+				player.Color = "white"
+			}
 			delete(h.AwaitingOpponentSessions, session.SessionId)
 			h.InProgressSessions[session.SessionId] = session
 

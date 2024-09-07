@@ -161,7 +161,13 @@ func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 }
 
 func sendGameStartedMessage(session *Session, playerColor string) []byte {
-	whiteTimeLeft, blackTimeLeft := session.White.Clock.TimeLeft, session.Black.Clock.TimeLeft
+	whiteTimeLeft, blackTimeLeft := 0.0, 0.0
+	if session.White != nil {
+		whiteTimeLeft = session.White.Clock.TimeLeft
+	}
+	if session.Black != nil {
+		blackTimeLeft = session.Black.Clock.TimeLeft
+	}
 	message := Message{
 		Type:        GameStartedFromServerType.String(),
 		SessionId:   session.SessionId,
@@ -194,6 +200,14 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 		isCheckmated = "black"
 	}
 
+	whiteTimeLeft, blackTimeLeft := 0.0, 0.0
+	if session.White != nil {
+		whiteTimeLeft = session.White.Clock.TimeLeft
+	}
+	if session.Black != nil {
+		blackTimeLeft = session.Black.Clock.TimeLeft
+	}
+
 	message := Message{
 		Type:        MoveFromServerType.String(),
 		SessionId:   session.SessionId,
@@ -204,8 +218,8 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 			ValidMoves:    ValidMovesMap(session.Game),
 			WhosNext:      session.whoseMoveIsIt(),
 			IsCheckmated:  isCheckmated,
-			WhiteTimeLeft: session.White.Clock.TimeLeft,
-			BlackTimeLeft: session.Black.Clock.TimeLeft,
+			WhiteTimeLeft: whiteTimeLeft,
+			BlackTimeLeft: blackTimeLeft,
 			Move:          move,
 		},
 	}
@@ -305,23 +319,49 @@ func handlePremoveMessage(message Message, session *Session) {
 }
 
 func handleGameStartedMessage(session *Session) {
-	log.Println("computer?: ", session.IsAgainstComputer)
-	session.White.Clock = Clock{
-		TimeLeft:  30,
-		TimeStamp: time.Now(),
-	}
-	session.Black.Clock = Clock{
-		TimeLeft:  30,
-		TimeStamp: time.Now(),
-	}
+	if session.IsAgainstComputer {
+		session.Computer = Clock{
+			TimeLeft:  30,
+			TimeStamp: time.Now(),
+		}
 
-	if session.whoseMoveIsIt() == "white" {
-		session.White.Clock.IsRunning = true
+		//  white or black may be undefined if that is the computer's color
+		if session.White == nil {
+			session.Black.Clock = Clock{
+				TimeLeft:  30,
+				TimeStamp: time.Now(),
+			}
+			if session.whoseMoveIsIt() == "black" {
+				session.Black.Clock.IsRunning = true
+			}
+		} else {
+			session.White.Clock = Clock{
+				TimeLeft:  30,
+				TimeStamp: time.Now(),
+			}
+			if session.whoseMoveIsIt() == "white" {
+				session.White.Clock.IsRunning = true
+			}
+		}
 	} else {
-		session.Black.Clock.IsRunning = true
+		session.White.Clock = Clock{
+			TimeLeft:  30,
+			TimeStamp: time.Now(),
+		}
+		session.Black.Clock = Clock{
+			TimeLeft:  30,
+			TimeStamp: time.Now(),
+		}
+
+		if session.whoseMoveIsIt() == "white" {
+			session.White.Clock.IsRunning = true
+		} else {
+			session.Black.Clock.IsRunning = true
+		}
 	}
 
 	for _, player := range session.GetPlayers() {
+		log.Println("player: ", player)
 		m := sendGameStartedMessage(session, player.Color)
 		player.WriteChan <- m
 	}
@@ -334,15 +374,27 @@ func handleTimeoutMessage(session *Session) {
 }
 
 func updateClocks(session *Session) {
-	if session.White.Clock.IsRunning {
-		session.White.Clock.TimeLeft -= time.Since(session.White.Clock.TimeStamp).Seconds()
-		session.White.Clock.IsRunning = false
-		session.Black.Clock.IsRunning = true
+	if session.IsAgainstComputer {
+		if session.White != nil && session.White.Clock.IsRunning {
+			session.White.Clock.TimeLeft -= time.Since(session.White.Clock.TimeStamp).Seconds()
+			session.White.Clock.IsRunning = false
+			session.White.Clock.TimeStamp = time.Now()
+		} else if session.Black != nil && session.Black.Clock.IsRunning {
+			session.Black.Clock.TimeLeft -= time.Since(session.Black.Clock.TimeStamp).Seconds()
+			session.Black.Clock.IsRunning = false
+			session.Black.Clock.TimeStamp = time.Now()
+		}
 	} else {
-		session.Black.Clock.TimeLeft -= time.Since(session.Black.Clock.TimeStamp).Seconds()
-		session.White.Clock.IsRunning = true
-		session.Black.Clock.IsRunning = false
+		if session.White.Clock.IsRunning {
+			session.White.Clock.TimeLeft -= time.Since(session.White.Clock.TimeStamp).Seconds()
+			session.White.Clock.IsRunning = false
+			session.Black.Clock.IsRunning = true
+		} else {
+			session.Black.Clock.TimeLeft -= time.Since(session.Black.Clock.TimeStamp).Seconds()
+			session.White.Clock.IsRunning = true
+			session.Black.Clock.IsRunning = false
+		}
+		session.White.Clock.TimeStamp = time.Now()
+		session.Black.Clock.TimeStamp = time.Now()
 	}
-	session.White.Clock.TimeStamp = time.Now()
-	session.Black.Clock.TimeStamp = time.Now()
 }

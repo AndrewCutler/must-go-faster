@@ -16,6 +16,7 @@ type Session struct {
 	Game              *chess.Game
 	White             *Player
 	Black             *Player
+	Computer          Clock
 	SessionId         string
 	IsAgainstComputer bool
 }
@@ -27,7 +28,16 @@ func (s *Session) getFen() string {
 }
 
 func (s *Session) GetPlayers() []*Player {
-	return []*Player{s.White, s.Black}
+	var players []*Player
+
+	if s.White != nil {
+		players = append(players, s.White)
+	}
+	if s.Black != nil {
+		players = append(players, s.Black)
+	}
+
+	return players
 }
 
 func (s *Session) whoseMoveIsIt() string {

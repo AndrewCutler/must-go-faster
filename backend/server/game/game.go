@@ -13,18 +13,24 @@ type Move struct {
 }
 
 type Session struct {
-	Game              *chess.Game
-	White             *Player
-	Black             *Player
-	Computer          Clock
-	SessionId         string
-	IsAgainstComputer bool
+	Game      *chess.Game
+	White     *Player
+	Black     *Player
+	SessionId string
 }
 
 func (s *Session) getFen() string {
 	fen := s.Game.Position().String()
 
 	return fen
+}
+
+func (s *Session) isAgainstComputer() bool {
+	return s.White.IsComputer || s.Black.IsComputer
+}
+
+func (s *Session) getTimeLefts() (float64, float64) {
+	return s.White.Clock.TimeLeft, s.Black.Clock.TimeLeft
 }
 
 func (s *Session) GetPlayers() []*Player {

@@ -51,10 +51,16 @@ func main() {
 			return
 		}
 
-		player := &game.Player{Connection: connection, Hub: hub, WriteChan: make(chan []byte)}
+		player := &game.Player{Connection: game.WebSocketConnection{Conn: connection}, Hub: hub, WriteChan: make(chan []byte), IsComputer: false}
+		var computer *game.Player
+		if opponentType == "computer" {
+			computer = &game.Player{Connection: game.NewFakeConnection(), Hub: hub, WriteChan: make(chan []byte), IsComputer: true}
+			go computer.ReadMessage()
+			// go computer.WriteMessage()
+		}
 		player.Hub.RegisterChan <- game.Registration{
-			Player:       player,
-			OpponentType: opponentType,
+			Player:   player,
+			Computer: computer,
 		}
 		go player.ReadMessage()
 		go player.WriteMessage()

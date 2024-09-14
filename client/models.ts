@@ -25,6 +25,7 @@ export type MessageType =
 export type Message = {
 	sessionId: string;
 	playerColor: PlayerColor;
+	isAgainstComputer: boolean;
 	type: MessageType;
 };
 

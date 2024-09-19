@@ -39,7 +39,6 @@ func (h *Hub) Run() {
 		case registration := <-h.RegisterChan:
 			h.onRegister(registration.Player, registration.Computer)
 		case message, ok := <-h.ReadChan:
-			// log.Println("Is against computer: ", message.IsAgainstComputer)
 			// 	log.Println("message, ok: ", message, ok)
 			if !ok {
 				log.Println("ReadChan is closed.")
@@ -51,7 +50,6 @@ func (h *Hub) Run() {
 			// case <-time.After(2 * time.Second):
 			// 	log.Println("No message received by Hub after 2 seconds...")
 		}
-		// }
 	}
 }
 

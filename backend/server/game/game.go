@@ -2,6 +2,7 @@ package game
 
 import (
 	"log"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -128,6 +129,32 @@ func PlayComputer(player *Player, computer *Player) {
 			}
 			if strings.Contains(value, "MoveFromServerType") {
 				log.Println("MoveFromServerType")
+				session, ok := player.Hub.InProgressSessions[player.SessionId]
+				if !ok {
+					log.Println("Cannot find session with id: ", player.SessionId)
+					return
+				}
+				// server crashes on player move that ends game
+
+				// create random move times, but weight towards faster moves
+				// randomTimes := make([]time.Duration, time.Duration(rand.Intn(1000)+4000)*time.Millisecond)
+				// for i := 0; i < 4; {
+				// 	randomTimes = append(randomTimes, time.Duration(rand.Intn(3000))*time.Millisecond)
+				// }
+				// t := randomTimes[rand.Intn(len(randomTimes))]
+
+				t := time.Duration(rand.Intn(3000) * int(time.Millisecond))
+				time.Sleep(t)
+
+				moves := session.Game.ValidMoves()
+				nextMove := moves[rand.Intn(len(moves))]
+				session.Game.Move(nextMove)
+				move := Move{
+					From: nextMove.S1().String(),
+					To:   nextMove.S2().String(),
+				}
+
+				player.WriteChan <- sendMoveMessage(session, player.Color, move)
 			}
 			if strings.Contains(value, "MoveToServerType") {
 				log.Println("MoveToServerType")

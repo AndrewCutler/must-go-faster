@@ -62,7 +62,7 @@ func main() {
 			computer = &game.Player{Hub: player.Hub, WriteChan: make(chan []byte), IsComputer: true}
 			go game.PlayComputer(player, computer)
 		}
-		// else {
+
 		player.Hub.RegisterChan <- game.Registration{
 			Player:   player,
 			Computer: computer,
@@ -70,7 +70,6 @@ func main() {
 
 		go player.ReadMessage()
 		go player.WriteMessage()
-		// }
 	})
 
 	// TODO: why is a spa necessary? just use nginx docker image for frontend

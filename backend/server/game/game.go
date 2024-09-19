@@ -112,45 +112,47 @@ func PlayComputer(player *Player, computer *Player) {
 	}()
 
 	for v := range computer.WriteChan {
-		log.Println("message: ", string(v))
 		value := string(v)
 
-		if value == "start" {
-			fen, err := getGameFEN()
-			if err != nil {
-				log.Println("Cannot get game fen: ", err)
-				return
-			}
+		log.Println("value: ", value)
+		// todo: instead of switching on values, have different selects for message types
+		// if value == "start" {
+		// 	fen, err := getGameFEN()
+		// 	if err != nil {
+		// 		log.Println("Cannot get game fen: ", err)
+		// 		return
+		// 	}
 
-			f, err := chess.FEN(fen)
-			if err != nil {
-				log.Println("Cannot parse game fen: ", err)
-				return
-			}
+		// 	f, err := chess.FEN(fen)
+		// 	if err != nil {
+		// 		log.Println("Cannot parse game fen: ", err)
+		// 		return
+		// 	}
 
-			game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
-			session := Session{
-				SessionId:         player.SessionId,
-				Game:              game,
-				IsAgainstComputer: true,
-			}
+		// 	game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
+		// 	session := Session{
+		// 		SessionId:         player.SessionId,
+		// 		Game:              game,
+		// 		IsAgainstComputer: true,
+		// 	}
 
-			if player.Color == "white" {
-				computer.Color = "black"
-				session.White = player
-				session.Black = computer
-			} else {
-				computer.Color = "white"
-				session.Black = player
-				session.White = computer
-			}
-			computer.SessionId = session.SessionId
+		// 	if player.Color == "white" {
+		// 		computer.Color = "black"
+		// 		session.White = player
+		// 		session.Black = computer
+		// 	} else {
+		// 		computer.Color = "white"
+		// 		session.Black = player
+		// 		session.White = computer
+		// 	}
+		// 	computer.SessionId = session.SessionId
 
-			player.Hub.InProgressSessions[session.SessionId] = &session
+		// 	player.Hub.InProgressSessions[session.SessionId] = &session
 
-			log.Println("Broadcasting game joined for computer player", player.Color)
-			player.WriteChan <- sendGameJoinedMessage(&session, player.Color)
-		}
+		// 	log.Println("Broadcasting game joined for player", player.Color)
+		// 	// log.Println("Broadcasting game joined for computer player", computer.Color)
+		// 	player.WriteChan <- sendGameJoinedMessage(&session, player.Color)
+		// }
 	}
 
 	// select {

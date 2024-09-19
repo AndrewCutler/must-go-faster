@@ -39,7 +39,7 @@ func (h *Hub) Run() {
 		case registration := <-h.RegisterChan:
 			h.onRegister(registration.Player, registration.Computer)
 		case message, ok := <-h.ReadChan:
-			log.Println("Is against computer: ", message.IsAgainstComputer)
+			// log.Println("Is against computer: ", message.IsAgainstComputer)
 			// 	log.Println("message, ok: ", message, ok)
 			if !ok {
 				log.Println("ReadChan is closed.")
@@ -58,7 +58,44 @@ func (h *Hub) Run() {
 func (h *Hub) onRegister(player *Player, computer *Player) {
 	if computer != nil {
 		// testing
-		computer.WriteChan <- []byte("start")
+		fen, err := getGameFEN()
+		if err != nil {
+			log.Println("Cannot get game fen: ", err)
+			return
+		}
+
+		f, err := chess.FEN(fen)
+		if err != nil {
+			log.Println("Cannot parse game fen: ", err)
+			return
+		}
+
+		game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
+		sessionId := uuid.New().String()
+		player.SessionId = sessionId
+		session := Session{
+			SessionId:         player.SessionId,
+			Game:              game,
+			IsAgainstComputer: true,
+		}
+
+		if player.Color == "white" {
+			computer.Color = "black"
+			session.White = player
+			session.Black = computer
+		} else {
+			computer.Color = "white"
+			session.Black = player
+			session.White = computer
+		}
+		computer.SessionId = session.SessionId
+
+		player.Hub.InProgressSessions[session.SessionId] = &session
+
+		log.Println("Broadcasting game joined for player", player.Color)
+		player.WriteChan <- sendGameJoinedMessage(&session, player.Color)
+		log.Println("Broadcasting game joined for computer player", computer.Color)
+		computer.WriteChan <- sendGameJoinedMessage(&session, computer.Color)
 	} else {
 		if len(h.AwaitingOpponentSessions) == 0 {
 			fen, err := getGameFEN()
@@ -119,7 +156,7 @@ func (h *Hub) onRegister(player *Player, computer *Player) {
 }
 
 func (h *Hub) onMessage(message Message) {
-	log.Printf("onMessage message for player %s: %s\n", message.PlayerColor, message)
+	log.Println("onMessage message: ", message)
 	session, ok := h.InProgressSessions[message.SessionId]
 	if !ok {
 		log.Printf("Session not found; sessionId: %s\n", message.SessionId)

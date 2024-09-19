@@ -284,14 +284,14 @@ func handleMoveMessage(message Message, session *Session) {
 
 	updateClocks(session)
 
-	if session.isAgainstComputer() {
-		computer := session.GetComputer()
-		computer.WriteChan <- sendMoveMessage(session, computer.Color, move)
-	} else {
-		for _, player := range session.GetPlayers() {
-			player.WriteChan <- sendMoveMessage(session, player.Color, move)
-		}
+	// if session.isAgainstComputer() {
+	// 	computer := session.GetComputer()
+	// 	computer.WriteChan <- sendMoveMessage(session, computer.Color, move)
+	// } else {
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendMoveMessage(session, player.Color, move)
 	}
+	// }
 }
 
 func handlePremoveMessage(message Message, session *Session) {
@@ -307,14 +307,14 @@ func handlePremoveMessage(message Message, session *Session) {
 	updateClocks(session)
 
 	// play move on board and respond with updated fail/illegal premove response or updated fen
-	if session.isAgainstComputer() {
-		computer := session.GetComputer()
-		computer.WriteChan <- sendMoveMessage(session, computer.Color, premove)
-	} else {
-		for _, player := range session.GetPlayers() {
-			player.WriteChan <- sendMoveMessage(session, player.Color, premove)
-		}
+	// if session.isAgainstComputer() {
+	// 	computer := session.GetComputer()
+	// 	computer.WriteChan <- sendMoveMessage(session, computer.Color, premove)
+	// } else {
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
 	}
+	// }
 }
 
 func handleGameStartedMessage(session *Session) {
@@ -333,26 +333,26 @@ func handleGameStartedMessage(session *Session) {
 		session.Black.Clock.IsRunning = true
 	}
 
-	if session.isAgainstComputer() {
-		computer := session.GetComputer()
-		computer.WriteChan <- sendGameStartedMessage(session, computer.Color)
-	} else {
-		for _, player := range session.GetPlayers() {
-			m := sendGameStartedMessage(session, player.Color)
-			player.WriteChan <- m
-		}
+	// if session.isAgainstComputer() {
+	// 	computer := session.GetComputer()
+	// 	computer.WriteChan <- sendGameStartedMessage(session, computer.Color)
+	// } else {
+	for _, player := range session.GetPlayers() {
+		m := sendGameStartedMessage(session, player.Color)
+		player.WriteChan <- m
 	}
+	// }
 }
 
 func handleTimeoutMessage(session *Session) {
-	if session.isAgainstComputer() {
-		computer := session.GetComputer()
-		computer.WriteChan <- sendTimeoutMessage(session, computer.Color, session.whoseMoveIsIt())
-	} else {
-		for _, player := range session.GetPlayers() {
-			player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
-		}
+	// if session.isAgainstComputer() {
+	// 	computer := session.GetComputer()
+	// 	computer.WriteChan <- sendTimeoutMessage(session, computer.Color, session.whoseMoveIsIt())
+	// } else {
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
 	}
+	// }
 }
 
 func updateClocks(session *Session) {

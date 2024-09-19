@@ -3,6 +3,7 @@ package game
 import (
 	"log"
 	"strings"
+	"time"
 
 	"github.com/notnil/chess"
 )
@@ -111,111 +112,84 @@ func PlayComputer(player *Player, computer *Player) {
 		log.Println("Exiting PlayComputer")
 	}()
 
-	for v := range computer.WriteChan {
-		value := string(v)
+	for {
+		select {
+		case v := <-computer.WriteChan:
+			value := string(v)
 
-		log.Println("value: ", value)
-		// todo: instead of switching on values, have different selects for message types
-		// if value == "start" {
-		// 	fen, err := getGameFEN()
-		// 	if err != nil {
-		// 		log.Println("Cannot get game fen: ", err)
-		// 		return
+			log.Println("value: ", value)
+
+			// lazy way to check message type
+			if strings.Contains(value, "GameStartedToServerType") {
+				log.Println("GameStartedToServerType")
+			}
+			if strings.Contains(value, "GameStartedFromServerType") {
+				log.Println("GameStartedFromServerType")
+			}
+			if strings.Contains(value, "MoveFromServerType") {
+				log.Println("MoveFromServerType")
+			}
+			if strings.Contains(value, "MoveToServerType") {
+				log.Println("MoveToServerType")
+			}
+			if strings.Contains(value, "PremoveFromServerType") {
+				log.Println("PremoveFromServerType")
+			}
+			if strings.Contains(value, "PremoveToServerType") {
+				log.Println("PremoveToServerType")
+			}
+			if strings.Contains(value, "TimeoutFromServerType") {
+				log.Println("TimeoutFromServerType")
+			}
+			if strings.Contains(value, "TimeoutToServerType") {
+				log.Println("TimeoutToServerType")
+			}
+			if strings.Contains(value, "AbandonedFromServerType") {
+				log.Println("AbandonedFromServerType")
+			}
+			if strings.Contains(value, "AbandonedToServerType") {
+				log.Println("AbandonedToServerType")
+			}
+		case <-time.After(time.Minute):
+			close(computer.WriteChan)
+			return
+		}
+
+		// for v := range computer.WriteChan {
+		// 	value := string(v)
+
+		// 	log.Println("value: ", value)
+
+		// 	// lazy way to check message type
+		// 	if strings.Contains(value, "GameStartedToServerType") {
+		// 		log.Println("GameStartedToServerType")
 		// 	}
-
-		// 	f, err := chess.FEN(fen)
-		// 	if err != nil {
-		// 		log.Println("Cannot parse game fen: ", err)
-		// 		return
+		// 	if strings.Contains(value, "GameStartedFromServerType") {
+		// 		log.Println("GameStartedFromServerType")
 		// 	}
-
-		// 	game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
-		// 	session := Session{
-		// 		SessionId:         player.SessionId,
-		// 		Game:              game,
-		// 		IsAgainstComputer: true,
+		// 	if strings.Contains(value, "MoveFromServerType") {
+		// 		log.Println("MoveFromServerType")
 		// 	}
-
-		// 	if player.Color == "white" {
-		// 		computer.Color = "black"
-		// 		session.White = player
-		// 		session.Black = computer
-		// 	} else {
-		// 		computer.Color = "white"
-		// 		session.Black = player
-		// 		session.White = computer
+		// 	if strings.Contains(value, "MoveToServerType") {
+		// 		log.Println("MoveToServerType")
 		// 	}
-		// 	computer.SessionId = session.SessionId
-
-		// 	player.Hub.InProgressSessions[session.SessionId] = &session
-
-		// 	log.Println("Broadcasting game joined for player", player.Color)
-		// 	// log.Println("Broadcasting game joined for computer player", computer.Color)
-		// 	player.WriteChan <- sendGameJoinedMessage(&session, player.Color)
-		// }
+		// 	if strings.Contains(value, "PremoveFromServerType") {
+		// 		log.Println("PremoveFromServerType")
+		// 	}
+		// 	if strings.Contains(value, "PremoveToServerType") {
+		// 		log.Println("PremoveToServerType")
+		// 	}
+		// 	if strings.Contains(value, "TimeoutFromServerType") {
+		// 		log.Println("TimeoutFromServerType")
+		// 	}
+		// 	if strings.Contains(value, "TimeoutToServerType") {
+		// 		log.Println("TimeoutToServerType")
+		// 	}
+		// 	if strings.Contains(value, "AbandonedFromServerType") {
+		// 		log.Println("AbandonedFromServerType")
+		// 	}
+		// 	if strings.Contains(value, "AbandonedToServerType") {
+		// 		log.Println("AbandonedToServerType")
+		// 	}
 	}
-
-	// select {
-	// case <-session.GetComputer().WriteChan:
-	// 	log.Println("Message sent to computer player")
-	// 	// TODO: add conditions such that this does not run infinitely.
-	// 	// e.g. channels for GameStartedWithComputer, MoveToComputer, etc.
-	// 	// start game
-	// 	// if player.SessionId == "" {
-	// 	// 	player.SessionId = uuid.New().String()
-	// 	// }
-	// 	// session := player.Hub.InProgressSessions[player.SessionId]
-	// 	// if session == nil {
-	// 	// 	log.Println("No session with id ", player.SessionId)
-	// 	// 	fen, err := getGameFEN()
-	// 	// 	if err != nil {
-	// 	// 		log.Println("Cannot get game fen: ", err)
-	// 	// 		return
-	// 	// 	}
-
-	// 	// 	f, err := chess.FEN(fen)
-	// 	// 	if err != nil {
-	// 	// 		log.Println("Cannot parse game fen: ", err)
-	// 	// 		return
-	// 	// 	}
-
-	// 	// 	game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
-	// 	// 	session := Session{
-	// 	// 		SessionId: player.SessionId,
-	// 	// 		Game:      game,
-	// 	// 	}
-	// 	// 	computer := &Player{Hub: player.Hub, WriteChan: make(chan []byte), IsComputer: true}
-
-	// 	// 	if player.Color == "white" {
-	// 	// 		computer.Color = "black"
-	// 	// 		session.White = player
-	// 	// 		session.Black = computer
-	// 	// 	} else {
-	// 	// 		computer.Color = "white"
-	// 	// 		session.Black = player
-	// 	// 		session.White = computer
-	// 	// 	}
-	// 	// 	computer.SessionId = session.SessionId
-	// 	// 	player.Computer = computer
-
-	// 	// 	player.Hub.InProgressSessions[session.SessionId] = &session
-
-	// 	// 	log.Println("Broadcasting game joined for computer player", player.Color)
-	// 	// 	player.Connection.WriteMessage(websocket.TextMessage, sendGameJoinedMessage(&session, player.Color))
-	// 	// } else {
-	// 	if session.whoseMoveIsIt() != player.Color {
-	// 		log.Println("sending computer move...")
-	// 		time.Sleep(3 * time.Second)
-
-	// 		moves := session.Game.ValidMoves()
-	// 		move := moves[rand.Intn(len(moves))]
-	// 		session.Game.Move(move)
-	// 		_move := Move{From: move.S1().String(), To: move.S2().String()}
-	// 		player.Connection.WriteMessage(websocket.TextMessage, sendMoveMessage(session, player.Color, _move))
-	// 	}
-	// 	// }
-	// default:
-	// 	log.Println("default PlayComputer")
-	// }
-	// }
 }

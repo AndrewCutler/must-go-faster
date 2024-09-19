@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -18,37 +17,6 @@ type Connection interface {
 	IsComputer() bool
 }
 
-type FakeConnection struct {
-}
-
-func (f FakeConnection) Close() error {
-	return nil
-}
-
-func (f FakeConnection) ReadMessage() (int, []byte, error) {
-	return 0, []byte{}, nil
-}
-
-func (f FakeConnection) NextWriter(messageType int) (io.WriteCloser, error) {
-	return nil, nil
-}
-
-func (f FakeConnection) IsComputer() bool {
-	return true
-}
-
-func NewFakeConnection() Connection {
-	return FakeConnection{}
-}
-
-type WebSocketConnection struct {
-	*websocket.Conn
-}
-
-func (c WebSocketConnection) IsComputer() bool {
-	return false
-}
-
 type Clock struct {
 	TimeLeft  float64
 	TimeStamp time.Time
@@ -56,9 +24,8 @@ type Clock struct {
 }
 
 type Player struct {
-	SessionId string
-	// Connection *websocket.Conn
-	Connection Connection
+	SessionId  string
+	Connection *websocket.Conn
 	WriteChan  chan []byte
 	Hub        *Hub
 	Color      string
@@ -68,101 +35,60 @@ type Player struct {
 
 func (p *Player) ReadMessage() {
 	defer func() {
-		log.Println("Closing in ReadMessage for player ", p.Color, " who is computer: ", p.Connection.IsComputer())
+		log.Println("Closing in ReadMessage for player ", p.Color)
 		p.Connection.Close()
 	}()
 
 	for {
-		// check for fake connection values
-		log.Println("ReadMessage is computer connection: ", p.Connection.IsComputer())
-		if p.Connection.IsComputer() {
-			// do stuff differently
-			session := p.Hub.InProgressSessions[p.SessionId]
-			if session == nil {
-				log.Println("no session!")
-				// return
-			} else {
-				if session.Black.IsComputer {
-					// white made move; move for computer
-					log.Println("white moved!")
-					moves := session.Game.ValidMoves()
-					computerMove := moves[rand.Intn(len(moves))]
-					session.Game.Move(computerMove)
-					_computerMove := Move{
-						From: computerMove.S1().String(),
-						To:   computerMove.S2().String(),
-					}
-					time.Sleep(time.Second * 3)
-					for _, player := range session.GetPlayers() {
-						player.WriteChan <- sendMoveMessage(session, "black", _computerMove)
-					}
-				} else {
-					// black made move; move for computer
-					log.Println("black moved!")
-					moves := session.Game.ValidMoves()
-					computerMove := moves[rand.Intn(len(moves))]
-					session.Game.Move(computerMove)
-					_computerMove := Move{
-						From: computerMove.S1().String(),
-						To:   computerMove.S2().String(),
-					}
-					time.Sleep(time.Second * 3)
-					for _, player := range session.GetPlayers() {
-						player.WriteChan <- sendMoveMessage(session, "white", _computerMove)
-					}
-				}
-			}
-		} else {
-			messageType, content, err := p.Connection.ReadMessage()
-			log.Println("playerColor ", p.Color, "messageType: ", messageType)
+		messageType, content, err := p.Connection.ReadMessage()
+		log.Println("playerColor ", p.Color, "messageType: ", messageType)
 
-			// this will fire for the player who is doing the abandonment
-			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-				log.Println("playerColor ", p.Color, " close going away error: ", err)
+		// this will fire for the player who is doing the abandonment
+		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
+			log.Println("playerColor ", p.Color, " close going away error: ", err)
 
-				// game is over, send game abandoned message to winner and remove from active games
-				p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
-				delete(p.Hub.InProgressSessions, p.SessionId)
-				close(p.WriteChan)
-				return
-			}
-
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-				log.Println("playerColor ", p.Color, " normal closure")
-				delete(p.Hub.InProgressSessions, p.SessionId)
-				close(p.WriteChan)
-				return
-			}
-
-			if err != nil {
-				log.Println("playerColor ", p.Color, "Cannot read message: ", err)
-				delete(p.Hub.InProgressSessions, p.SessionId)
-				close(p.WriteChan)
-				return
-			}
-
-			typeOnly := struct {
-				Type        string `json:"type"`
-				PlayerColor string `json:"-"`
-				Payload     string `json:"-"`
-			}{
-				Type: "",
-			}
-			if err := json.Unmarshal(content, &typeOnly); err != nil {
-				log.Println("Cannot unmarshal message type: ", string(content))
-				return
-			}
-
-			message, payload, err := deserialize(string(content), typeOnly.Type)
-			if err != nil {
-				log.Printf("Deserialization failed for type %s: %s\n", typeOnly.Type, err)
-				return
-			}
-
-			// todo: don't deserialize message and payload separately and then return new Message from original deserialized message.
-			// just do something like message.Payload = payload and return message
-			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Payload: payload, Type: typeOnly.Type, IsAgainstComputer: message.IsAgainstComputer, PlayerColor: message.PlayerColor}
+			// game is over, send game abandoned message to winner and remove from active games
+			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
+			delete(p.Hub.InProgressSessions, p.SessionId)
+			close(p.WriteChan)
+			return
 		}
+
+		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+			log.Println("playerColor ", p.Color, " normal closure")
+			delete(p.Hub.InProgressSessions, p.SessionId)
+			close(p.WriteChan)
+			return
+		}
+
+		if err != nil {
+			log.Println("playerColor ", p.Color, "Cannot read message: ", err)
+			delete(p.Hub.InProgressSessions, p.SessionId)
+			close(p.WriteChan)
+			return
+		}
+
+		typeOnly := struct {
+			Type        string `json:"type"`
+			PlayerColor string `json:"-"`
+			Payload     string `json:"-"`
+		}{
+			Type: "",
+		}
+		if err := json.Unmarshal(content, &typeOnly); err != nil {
+			log.Println("Cannot unmarshal message type: ", string(content))
+			return
+		}
+
+		message, payload, err := deserialize(string(content), typeOnly.Type)
+		if err != nil {
+			log.Printf("Deserialization failed for type %s: %s\n", typeOnly.Type, err)
+			return
+		}
+
+		// todo: don't deserialize message and payload separately and then return new Message from original deserialized message.
+		// just do something like message.Payload = payload and return message
+		p.Hub.ReadChan <- Message{SessionId: p.SessionId, Payload: payload, Type: typeOnly.Type, IsAgainstComputer: message.IsAgainstComputer, PlayerColor: message.PlayerColor}
 	}
 }
 

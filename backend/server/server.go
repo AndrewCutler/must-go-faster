@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -51,19 +52,25 @@ func main() {
 			return
 		}
 
-		player := &game.Player{Connection: game.WebSocketConnection{Conn: connection}, Hub: hub, WriteChan: make(chan []byte), IsComputer: false}
-		var computer *game.Player
-		if opponentType == "computer" {
-			computer = &game.Player{Connection: game.NewFakeConnection(), Hub: hub, WriteChan: make(chan []byte), IsComputer: true}
-			go computer.ReadMessage()
-			// go computer.WriteMessage()
+		color := "white"
+		if rand.Intn(100) < 50 {
+			color = "black"
 		}
+		var computer *game.Player
+		player := &game.Player{Connection: connection, Hub: hub, WriteChan: make(chan []byte), IsComputer: false, Color: color}
+		if opponentType == "computer" {
+			computer = &game.Player{Hub: player.Hub, WriteChan: make(chan []byte), IsComputer: true}
+			go game.PlayComputer(player, computer)
+		}
+		// else {
 		player.Hub.RegisterChan <- game.Registration{
 			Player:   player,
 			Computer: computer,
 		}
+
 		go player.ReadMessage()
 		go player.WriteMessage()
+		// }
 	})
 
 	// TODO: why is a spa necessary? just use nginx docker image for frontend

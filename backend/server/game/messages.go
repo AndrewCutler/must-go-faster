@@ -267,9 +267,11 @@ func sendAbandonedMessage() []byte {
 
 // Receive
 func handleAbandonedMessage(session *Session) {
+	// kill session if against computer
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendAbandonedMessage()
 	}
+
 }
 
 func handleMoveMessage(message Message, session *Session) {
@@ -282,46 +284,13 @@ func handleMoveMessage(message Message, session *Session) {
 
 	updateClocks(session)
 
-	// play random computer move here
-	// if session.isAgainstComputer() {
-	// 	if session.White != nil && message.PlayerColor == "white" {
-	// 		// white made move; move for computer
-	// 		log.Println("white moved!")
-	// 		moves := session.Game.ValidMoves()
-	// 		computerMove := moves[rand.Intn(len(moves))]
-	// 		session.Game.Move(computerMove)
-	// 		_computerMove := Move{
-	// 			From: computerMove.S1().String(),
-	// 			To:   computerMove.S2().String(),
-	// 		}
-	// 		time.Sleep(time.Second * 3)
-	// 		for _, player := range session.GetPlayers() {
-	// 			player.WriteChan <- sendMoveMessage(session, "black", _computerMove)
-	// 		}
-
-	// 		return
-	// 	}
-	// 	if session.Black != nil && message.PlayerColor == "black" {
-	// 		// black made move; move for computer
-	// 		log.Println("black moved!")
-	// 		moves := session.Game.ValidMoves()
-	// 		computerMove := moves[rand.Intn(len(moves))]
-	// 		session.Game.Move(computerMove)
-	// 		_computerMove := Move{
-	// 			From: computerMove.S1().String(),
-	// 			To:   computerMove.S2().String(),
-	// 		}
-	// 		time.Sleep(time.Second * 3)
-	// 		for _, player := range session.GetPlayers() {
-	// 			player.WriteChan <- sendMoveMessage(session, "white", _computerMove)
-	// 		}
-
-	// 		return
-	// 	}
-	// }
-
-	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendMoveMessage(session, player.Color, move)
+	if session.isAgainstComputer() {
+		computer := session.GetComputer()
+		computer.WriteChan <- sendMoveMessage(session, computer.Color, move)
+	} else {
+		for _, player := range session.GetPlayers() {
+			player.WriteChan <- sendMoveMessage(session, player.Color, move)
+		}
 	}
 }
 
@@ -337,45 +306,18 @@ func handlePremoveMessage(message Message, session *Session) {
 
 	updateClocks(session)
 
-	// why is playerColor empty on message?
-	// play random computer move here
-	if session.isAgainstComputer() {
-		if session.White != nil && message.PlayerColor == "white" {
-			// white made move; move for computer
-			log.Println("white moved!")
-		}
-		if session.Black != nil && message.PlayerColor == "black" {
-			// black made move; move for computer
-			log.Println("black moved!")
-		}
-	}
-
 	// play move on board and respond with updated fail/illegal premove response or updated fen
-	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
+	if session.isAgainstComputer() {
+		computer := session.GetComputer()
+		computer.WriteChan <- sendMoveMessage(session, computer.Color, premove)
+	} else {
+		for _, player := range session.GetPlayers() {
+			player.WriteChan <- sendMoveMessage(session, player.Color, premove)
+		}
 	}
 }
 
 func handleGameStartedMessage(session *Session) {
-	// if session.isAgainstComputer() {
-	// 	if session.White.IsComputer {
-	// 		session.Black.Clock = Clock{
-	// 			TimeLeft:  30,
-	// 			TimeStamp: time.Now(),
-	// 		}
-	// 		if session.whoseMoveIsIt() == "black" {
-	// 			session.Black.Clock.IsRunning = true
-	// 		}
-	// 	} else {
-	// 		session.White.Clock = Clock{
-	// 			TimeLeft:  30,
-	// 			TimeStamp: time.Now(),
-	// 		}
-	// 		if session.whoseMoveIsIt() == "white" {
-	// 			session.White.Clock.IsRunning = true
-	// 		}
-	// 	}
-	// } else {
 	session.White.Clock = Clock{
 		TimeLeft:  30,
 		TimeStamp: time.Now(),
@@ -390,17 +332,26 @@ func handleGameStartedMessage(session *Session) {
 	} else {
 		session.Black.Clock.IsRunning = true
 	}
-	// }
 
-	for _, player := range session.GetPlayers() {
-		m := sendGameStartedMessage(session, player.Color)
-		player.WriteChan <- m
+	if session.isAgainstComputer() {
+		computer := session.GetComputer()
+		computer.WriteChan <- sendGameStartedMessage(session, computer.Color)
+	} else {
+		for _, player := range session.GetPlayers() {
+			m := sendGameStartedMessage(session, player.Color)
+			player.WriteChan <- m
+		}
 	}
 }
 
 func handleTimeoutMessage(session *Session) {
-	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
+	if session.isAgainstComputer() {
+		computer := session.GetComputer()
+		computer.WriteChan <- sendTimeoutMessage(session, computer.Color, session.whoseMoveIsIt())
+	} else {
+		for _, player := range session.GetPlayers() {
+			player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
+		}
 	}
 }
 

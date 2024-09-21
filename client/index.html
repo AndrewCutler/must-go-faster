@@ -20,7 +20,7 @@
 		<link rel="stylesheet" href="css/index.css" />
 	</head>
 	<body>
-        <div id="getting-started">Getting started...</div>
+		<div id="getting-started">Getting started...</div>
 		<div id="test-board"></div>
 		<div id="container">
 			<div id="board-container">
@@ -37,6 +37,38 @@
 				<!-- board ui -->
 				<div id="board"></div>
 				<div id="connect-button-container">
+					<div class="dropdown" id="player-type-dropdown">
+						<div class="dropdown-trigger">
+							<button class="button">
+								<span id="player-type-dropdown-value"
+									>Computer</span
+								>
+								<span class="icon is-small">
+									<i class="fas fa-angle-down"></i>
+								</span>
+							</button>
+						</div>
+						<div
+							class="dropdown-menu"
+							id="player-type-menu"
+							role="menu"
+						>
+							<div class="dropdown-content">
+								<div
+									class="dropdown-item"
+									id="player-type-computer"
+								>
+									Computer
+								</div>
+								<div
+									class="dropdown-item"
+									id="player-type-human"
+								>
+									Human
+								</div>
+							</div>
+						</div>
+					</div>
 					<button class="button is-dark" id="connect-button">
 						Find a game
 					</button>

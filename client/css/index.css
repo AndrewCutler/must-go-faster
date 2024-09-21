@@ -118,7 +118,7 @@ body {
 
 #connect-button-container {
 	display: flex;
-	justify-content: flex-end;
+	justify-content: space-between;
 	margin-top: 1rem;
 }
 
@@ -174,4 +174,8 @@ body {
 	height: 400px;
 	position: absolute;
 	border: 18px solid black;
+}
+
+.dropdown-menu:hover {
+	cursor: pointer;
 }

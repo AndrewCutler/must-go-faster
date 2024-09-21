@@ -78,11 +78,12 @@ func MessageTypeFromString(s string) (MessageType, error) {
 }
 
 type Message struct {
-	Payload     interface{} `json:"payload"`
-	PlayerColor string      `json:"playerColor"`
-	Type        string      `json:"type"`
-	SessionId   string      `json:"sessionId"`
-	TimeStamp   string      `json:"serverTimeStamp"`
+	Payload           interface{} `json:"payload"`
+	PlayerColor       string      `json:"playerColor"`
+	Type              string      `json:"type"`
+	SessionId         string      `json:"sessionId"`
+	TimeStamp         string      `json:"serverTimeStamp"`
+	IsAgainstComputer bool        `json:"isAgainstComputer"`
 }
 
 type GameJoinedFromServer struct {
@@ -138,10 +139,11 @@ type TimeoutToServer struct {
 
 func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 	message := Message{
-		Type:        GameJoinedFromServerType.String(),
-		SessionId:   session.SessionId,
-		PlayerColor: playerColor,
-		TimeStamp:   time.Now().Format(time.RFC3339),
+		Type:              GameJoinedFromServerType.String(),
+		SessionId:         session.SessionId,
+		PlayerColor:       playerColor,
+		TimeStamp:         time.Now().Format(time.RFC3339),
+		IsAgainstComputer: session.isAgainstComputer(),
 		Payload: GameJoinedFromServer{
 			Fen:           session.getFen(),
 			ValidMoves:    ValidMovesMap(session.Game),
@@ -161,7 +163,8 @@ func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 }
 
 func sendGameStartedMessage(session *Session, playerColor string) []byte {
-	whiteTimeLeft, blackTimeLeft := session.White.Clock.TimeLeft, session.Black.Clock.TimeLeft
+	whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
+
 	message := Message{
 		Type:        GameStartedFromServerType.String(),
 		SessionId:   session.SessionId,
@@ -194,6 +197,8 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 		isCheckmated = "black"
 	}
 
+	whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
+
 	message := Message{
 		Type:        MoveFromServerType.String(),
 		SessionId:   session.SessionId,
@@ -204,8 +209,8 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 			ValidMoves:    ValidMovesMap(session.Game),
 			WhosNext:      session.whoseMoveIsIt(),
 			IsCheckmated:  isCheckmated,
-			WhiteTimeLeft: session.White.Clock.TimeLeft,
-			BlackTimeLeft: session.Black.Clock.TimeLeft,
+			WhiteTimeLeft: whiteTimeLeft,
+			BlackTimeLeft: blackTimeLeft,
 			Move:          move,
 		},
 	}
@@ -262,16 +267,16 @@ func sendAbandonedMessage() []byte {
 
 // Receive
 func handleAbandonedMessage(session *Session) {
+	// kill session if against computer
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendAbandonedMessage()
 	}
+
 }
 
 func handleMoveMessage(message Message, session *Session) {
-	// log.Println("handleMoveMessage")
 	payload := message.Payload.(MoveToServer)
 	move, err := tryPlayMove(payload, session.Game)
-	fmt.Println(move)
 	if err != nil {
 		log.Println("Cannot make move: ", err)
 		return
@@ -296,7 +301,6 @@ func handlePremoveMessage(message Message, session *Session) {
 
 	updateClocks(session)
 
-	// play move on board and respond with updated fail/illegal premove response or updated fen
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
 	}

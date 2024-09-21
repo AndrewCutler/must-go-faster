@@ -10,18 +10,23 @@ import (
 	"github.com/notnil/chess"
 )
 
+type Registration struct {
+	Player   *Player
+	Computer *Player
+}
+
 type Hub struct {
 	InProgressSessions       map[string]*Session
 	AwaitingOpponentSessions map[string]*Session
 	ReadChan                 chan Message
-	RegisterChan             chan *Player
+	RegisterChan             chan Registration
 	UnregisterChan           chan *Player
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		ReadChan:                 make(chan Message),
-		RegisterChan:             make(chan *Player),
+		RegisterChan:             make(chan Registration),
 		UnregisterChan:           make(chan *Player),
 		InProgressSessions:       make(map[string]*Session),
 		AwaitingOpponentSessions: make(map[string]*Session),
@@ -31,9 +36,10 @@ func NewHub() *Hub {
 func (h *Hub) Run() {
 	for {
 		select {
-		case player := <-h.RegisterChan:
-			h.onRegister(player)
+		case registration := <-h.RegisterChan:
+			h.onRegister(registration.Player, registration.Computer)
 		case message, ok := <-h.ReadChan:
+			// 	log.Println("message, ok: ", message, ok)
 			if !ok {
 				log.Println("ReadChan is closed.")
 				return
@@ -47,54 +53,21 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) onRegister(player *Player) {
-	// todo: randomize colors
-	if len(h.AwaitingOpponentSessions) == 0 {
-		fen, err := getGameFEN()
-		if err != nil {
-			log.Println("Cannot get game fen: ", err)
-			return
-		}
-
-		f, err := chess.FEN(fen)
-		if err != nil {
-			log.Println("Cannot parse game fen: ", err)
-			return
-		}
-
-		game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
-
-		sessionId := uuid.New().String()
-		player.SessionId = sessionId
-		player.Color = "white"
-		session := Session{
-			White:     player,
-			SessionId: sessionId,
-			Game:      game,
-		}
-		h.AwaitingOpponentSessions[sessionId] = &session
-		log.Println("Creating new pending game for player", player.Color)
+func (h *Hub) onRegister(player *Player, computer *Player) {
+	if computer != nil {
+		joinComputerGame(player, computer)
 	} else {
-		// set session state to ready
-		var session *Session
-		for key := range h.AwaitingOpponentSessions {
-			session = h.AwaitingOpponentSessions[key]
-			break
+		if len(h.AwaitingOpponentSessions) == 0 {
+			createNewGame(h, player)
+		} else {
+			joinPendingGame(h, player)
 		}
-		session.Black = player
-		player.SessionId = session.SessionId
-		player.Color = "black"
-		delete(h.AwaitingOpponentSessions, session.SessionId)
-		h.InProgressSessions[session.SessionId] = session
-
-		log.Println("Broadcasting game joined for player", player.Color)
-		player.WriteChan <- sendGameJoinedMessage(session, player.Color)
-		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color)
 	}
 }
 
 func (h *Hub) onMessage(message Message) {
-	log.Printf("onMessage message for player %s: %s\n", message.PlayerColor, message)
+	// todo: lots of fields on message that may or may not be unnecessary
+	log.Println("onMessage message: ", message)
 	session, ok := h.InProgressSessions[message.SessionId]
 	if !ok {
 		log.Printf("Session not found; sessionId: %s\n", message.SessionId)
@@ -158,4 +131,106 @@ func getGameFEN() (string, error) {
 	}
 
 	return result, nil
+}
+
+func joinComputerGame(player *Player, computer *Player) {
+	fen, err := getGameFEN()
+	if err != nil {
+		log.Println("Cannot get game fen: ", err)
+		return
+	}
+
+	f, err := chess.FEN(fen)
+	if err != nil {
+		log.Println("Cannot parse game fen: ", err)
+		return
+	}
+
+	game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
+	sessionId := uuid.New().String()
+	player.SessionId = sessionId
+	session := Session{
+		SessionId:         player.SessionId,
+		Game:              game,
+		IsAgainstComputer: true,
+	}
+
+	// make human player always have first move
+	// so computer never needs logic to move first
+	if session.whoseMoveIsIt() == "white" {
+		player.Color = "white"
+		computer.Color = "black"
+		session.White = player
+		session.Black = computer
+	} else {
+		player.Color = "black"
+		computer.Color = "white"
+		session.Black = player
+		session.White = computer
+	}
+	computer.SessionId = session.SessionId
+
+	player.Hub.InProgressSessions[session.SessionId] = &session
+
+	log.Println("Broadcasting game joined for player", player.Color)
+	player.WriteChan <- sendGameJoinedMessage(&session, player.Color)
+	log.Println("Broadcasting game joined for computer player", computer.Color)
+	computer.WriteChan <- sendGameJoinedMessage(&session, computer.Color)
+}
+
+func createNewGame(hub *Hub, player *Player) {
+	fen, err := getGameFEN()
+	if err != nil {
+		log.Println("Cannot get game fen: ", err)
+		return
+	}
+
+	f, err := chess.FEN(fen)
+	if err != nil {
+		log.Println("Cannot parse game fen: ", err)
+		return
+	}
+
+	game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
+
+	sessionId := uuid.New().String()
+	player.SessionId = sessionId
+	session := Session{
+		SessionId: sessionId,
+		Game:      game,
+	}
+	if player.Color == "white" {
+		session.White = player
+	} else {
+		session.Black = player
+	}
+	hub.AwaitingOpponentSessions[sessionId] = &session
+	log.Println("Creating new pending game for player", player.Color)
+}
+
+func joinPendingGame(hub *Hub, player *Player) {
+	var session *Session
+	for key := range hub.AwaitingOpponentSessions {
+		session = hub.AwaitingOpponentSessions[key]
+		break
+	}
+
+	player.SessionId = session.SessionId
+	if session.Black == nil {
+		session.Black = player
+		player.Color = "black"
+	} else {
+		session.White = player
+		player.Color = "white"
+	}
+	delete(hub.AwaitingOpponentSessions, session.SessionId)
+	hub.InProgressSessions[session.SessionId] = session
+
+	log.Println("Broadcasting game joined for player", player.Color)
+	player.WriteChan <- sendGameJoinedMessage(session, player.Color)
+	if player.Color == "white" {
+		session.Black.WriteChan <- sendGameJoinedMessage(session, session.Black.Color)
+	} else {
+		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color)
+	}
 }

@@ -17,6 +17,7 @@ import {
 	ToMessage,
 	FromMessage,
 	FromPayload,
+	OpponentType,
 } from './models';
 
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -43,10 +44,13 @@ export class MustGoFaster {
 	#message: Message | undefined;
 	#wsBaseUrl: string | undefined;
 	#apiBaseUrl: string | undefined;
+	#opponentType: OpponentType;
+	#isAgainstComputer = false;
 
 	constructor() {
 		console.log('Initializing MustGoFaster.');
 		this.connect = this.connect.bind(this);
+		this.#opponentType = 'computer';
 		const initialConfig: ChessgroundConfig = {
 			movable: {
 				free: false,
@@ -79,7 +83,10 @@ export class MustGoFaster {
 	}
 
 	connect(): void {
-		const ws = new WebSocket(`${this.#wsBaseUrl!}/connect`, []);
+		const ws = new WebSocket(
+			`${this.#wsBaseUrl!}/connect?opponentType=${this.#opponentType}`,
+			[],
+		);
 		console.log('Creating WebSocket.');
 
 		ws.onopen = function (openEvent) {
@@ -108,6 +115,10 @@ export class MustGoFaster {
 		};
 
 		this.#connection = ws;
+	}
+
+	setOpponentType(type: OpponentType): void {
+		this.#opponentType = type;
 	}
 
 	private async ping() {
@@ -169,6 +180,7 @@ export class MustGoFaster {
 		console.log('start: ', { response: this.#message });
 		const message = this.#message as FromMessage<GameStartedFromServer>;
 		this.setupBoard(message);
+		this.#isAgainstComputer = this.#message!.isAgainstComputer;
 
 		const { payload: { whiteTimeLeft, blackTimeLeft } = {} } = message;
 		this.initializeClock(whiteTimeLeft!, blackTimeLeft!);
@@ -266,6 +278,7 @@ export class MustGoFaster {
 								type: 'GameStartedToServerType',
 								sessionId: self.#sessionId!,
 								playerColor: self.#playerColor!,
+								isAgainstComputer: self.#isAgainstComputer,
 							};
 						self.sendMessage(gameStartedRequest);
 					}
@@ -317,6 +330,7 @@ export class MustGoFaster {
 							type: 'TimeoutToServerType',
 							sessionId: self.#sessionId!,
 							playerColor: self.#playerColor!,
+							isAgainstComputer: self.#isAgainstComputer,
 							payload: {
 								timeout: true,
 							},
@@ -345,6 +359,7 @@ export class MustGoFaster {
 							type: 'TimeoutToServerType',
 							sessionId: self.#sessionId!,
 							playerColor: self.#playerColor!,
+							isAgainstComputer: self.#isAgainstComputer,
 							payload: {
 								timeout: true,
 							},
@@ -428,6 +443,7 @@ export class MustGoFaster {
 				type: 'PremoveToServerType',
 				sessionId: this.#sessionId!,
 				playerColor: this.#playerColor!,
+				isAgainstComputer: this.#isAgainstComputer,
 				payload: {
 					premove: move,
 				},
@@ -458,6 +474,7 @@ export class MustGoFaster {
 					playerColor: self.#playerColor!,
 					sessionId: self.#sessionId!,
 					type: 'MoveToServerType',
+					isAgainstComputer: self.#isAgainstComputer,
 				};
 				self.sendMessage(moveMessage);
 			}

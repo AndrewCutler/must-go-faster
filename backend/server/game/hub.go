@@ -155,11 +155,15 @@ func joinComputerGame(player *Player, computer *Player) {
 		IsAgainstComputer: true,
 	}
 
-	if player.Color == "white" {
+	// make human player always have first move
+	// so computer never needs logic to move first
+	if session.whoseMoveIsIt() == "white" {
+		player.Color = "white"
 		computer.Color = "black"
 		session.White = player
 		session.Black = computer
 	} else {
+		player.Color = "black"
 		computer.Color = "white"
 		session.Black = player
 		session.White = computer

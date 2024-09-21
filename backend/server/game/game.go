@@ -134,7 +134,6 @@ func PlayComputer(player *Player, computer *Player) {
 					log.Println("Cannot find session with id: ", player.SessionId)
 					return
 				}
-				// server crashes on player move that ends game
 
 				// create random move times, but weight towards faster moves
 				// randomTimes := make([]time.Duration, time.Duration(rand.Intn(1000)+4000)*time.Millisecond)
@@ -143,8 +142,16 @@ func PlayComputer(player *Player, computer *Player) {
 				// }
 				// t := randomTimes[rand.Intn(len(randomTimes))]
 
-				t := time.Duration(rand.Intn(3000) * int(time.Millisecond))
-				time.Sleep(t)
+				// stalemate doesn't work
+				// computer doesn't play first move
+				// premoved checkmate doesn't render in UI
+
+				if session.Game.Outcome() != chess.NoOutcome {
+					// handle stalemate here
+					delete(player.Hub.InProgressSessions, player.SessionId)
+					close(computer.WriteChan)
+					return
+				}
 
 				moves := session.Game.ValidMoves()
 				nextMove := moves[rand.Intn(len(moves))]
@@ -153,6 +160,9 @@ func PlayComputer(player *Player, computer *Player) {
 					From: nextMove.S1().String(),
 					To:   nextMove.S2().String(),
 				}
+
+				t := time.Duration(rand.Intn(3000) * int(time.Millisecond))
+				time.Sleep(t)
 
 				player.WriteChan <- sendMoveMessage(session, player.Color, move)
 			}

@@ -3,19 +3,11 @@ package game
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
-
-type Connection interface {
-	Close() error
-	ReadMessage() (int, []byte, error)
-	NextWriter(messageType int) (io.WriteCloser, error)
-	IsComputer() bool
-}
 
 type Clock struct {
 	TimeLeft  float64

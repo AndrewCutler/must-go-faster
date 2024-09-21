@@ -22,19 +22,6 @@ type Session struct {
 	SessionId         string
 }
 
-func (s *Session) GetComputer() Player {
-	if s.White != nil && s.White.IsComputer {
-		return *s.White
-	}
-
-	if s.Black != nil && s.Black.IsComputer {
-		return *s.Black
-	}
-
-	// todo: nil check
-	return Player{}
-}
-
 func (s *Session) getFen() string {
 	fen := s.Game.Position().String()
 

@@ -148,12 +148,24 @@ func PlayComputer(player *Player, computer *Player) {
 					To:   nextMove.S2().String(),
 				}
 
+				c := session.White
+				if player.Color == "white" {
+					c = session.Black
+				}
+
 				t := time.Duration(rand.Intn(3000) * int(time.Millisecond))
+				if c.Clock.TimeLeft-t.Seconds() <= 0 {
+					t = time.Duration(c.Clock.TimeLeft * float64(time.Second))
+				}
 				time.Sleep(t)
 
 				updateClocks(session)
 
-				player.WriteChan <- sendMoveMessage(session, player.Color, move)
+				if c.Clock.TimeLeft <= 0 {
+					player.WriteChan <- sendTimeoutMessage(session, player.Color, c.Color)
+				} else {
+					player.WriteChan <- sendMoveMessage(session, player.Color, move)
+				}
 			}
 			// if strings.Contains(value, "MoveToServerType") {
 			// 	log.Println("MoveToServerType")

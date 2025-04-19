@@ -1,38 +1,44 @@
 services:
-  server:
-    image: cosmtrek/air
-    working_dir: /app
-    container_name: backend
-    environment:
-      BASE_URL: 0.0.0.0
-      PORT: 8000
-      ALLOWED_ORIGINS: http://localhost:4200
-    ports:
-      - '8000:8000'
-    networks:
-      - mustgofaster
-    volumes:
-      - ./backend/server/:/app
+    server:
+        image: cosmtrek/air
+        working_dir: /app
+        container_name: backend
+        environment:
+            BASE_URL: 0.0.0.0
+            PORT: 8000
+            ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:4200}
+        ports:
+            - '8000:8000'
+        networks:
+            - mustgofaster
+        volumes:
+            - ./backend/server/:/app
 
-  client:
-    build:
-      context: ./client
-      args:
-        API_BASE_URL: http://10.0.0.73:8000
-        WS_BASE_URL: ws://10.0.0.73:8000
-      # todo: .env file
-    image: must-go-faster
-    container_name: client
-    environment:
-      API_BASE_URL: http://host.docker.internal:8000
-      WS_BASE_URL: ws://host.docker.internal:8000
-    ports:
-      - '4200:80'
-    networks:
-      - mustgofaster
-    depends_on:
-      - server
+    client:
+        build:
+            context: ./client
+            target: development
+            args:
+                API_BASE_URL: ${API_BASE_URL:-http://10.0.0.73:8000}
+                WS_BASE_URL: ${WS_BASE_URL:-ws://10.0.0.73:8000}
+                NODE_ENV: ${NODE_ENV:-development}
+        image: must-go-faster
+        container_name: client
+        environment:
+            API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:8000}
+            WS_BASE_URL: ${WS_BASE_URL:-ws://host.docker.internal:8000}
+            NODE_ENV: ${NODE_ENV:-development}
+        ports:
+            - '4200:4200'
+        networks:
+            - mustgofaster
+        depends_on:
+            - server
+        volumes:
+            - ./client:/app
+            - /app/node_modules
+            - /app/build
 
 networks:
-  mustgofaster:
-    driver: bridge
+    mustgofaster:
+        driver: bridge

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"server/constants"
 )
 
 type MessageType int
@@ -148,8 +150,8 @@ func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 			Fen:           session.getFen(),
 			ValidMoves:    ValidMovesMap(session.Game),
 			WhosNext:      session.whoseMoveIsIt(),
-			WhiteTimeLeft: 30,
-			BlackTimeLeft: 30,
+			WhiteTimeLeft: constants.GameClockDuration,
+			BlackTimeLeft: constants.GameClockDuration,
 		},
 	}
 
@@ -308,11 +310,11 @@ func handlePremoveMessage(message Message, session *Session) {
 
 func handleGameStartedMessage(session *Session) {
 	session.White.Clock = Clock{
-		TimeLeft:  30,
+		TimeLeft:  constants.GameClockDuration,
 		TimeStamp: time.Now(),
 	}
 	session.Black.Clock = Clock{
-		TimeLeft:  30,
+		TimeLeft:  constants.GameClockDuration,
 		TimeStamp: time.Now(),
 	}
 

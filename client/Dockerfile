@@ -1,3 +1,35 @@
+# Build stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+ARG NODE_ENV=development
+RUN npm run build
+
+# Development stage
+FROM node:18-alpine AS development
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN apk add --no-cache nginx
+RUN mkdir -p /var/log/nginx /var/cache/nginx
+RUN chmod +x dev.sh
+COPY nginx.conf /etc/nginx/http.d/default.conf
+EXPOSE 4200
+CMD ["./dev.sh"]
+
+# Production stage
+FROM nginx:alpine AS production
+COPY --from=builder /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+
 FROM node:20 AS build
 
 WORKDIR /app

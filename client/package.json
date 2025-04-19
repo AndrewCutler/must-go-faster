@@ -1,8 +1,9 @@
 {
 	"main": "index.ts",
 	"scripts": {
-		"watch": "webpack --env=watch=true",
-		"build": "webpack"
+		"watch": "webpack --watch --env=watch=true",
+		"build": "webpack",
+		"start": "webpack --watch --env=watch=true"
 	},
 	"devDependencies": {
 		"css-loader": "^6.10.0",

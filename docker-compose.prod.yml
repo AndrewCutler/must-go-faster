@@ -1,0 +1,17 @@
+services:
+    server:
+        environment:
+            ALLOWED_ORIGINS: ${PROD_ALLOWED_ORIGINS:-http://localhost:80}
+
+    client:
+        build:
+            target: production
+            args:
+                NODE_ENV: production
+        environment:
+            NODE_ENV: production
+        ports:
+            - '80:80'
+        volumes:
+            - ./client/build:/usr/share/nginx/html
+        command: nginx -g 'daemon off;' 

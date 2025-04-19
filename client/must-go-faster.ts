@@ -19,6 +19,7 @@ import {
 	FromPayload,
 	OpponentType,
 } from './models';
+import { GAME_CLOCK_DURATION } from './constants';
 
 import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
@@ -405,8 +406,8 @@ export class MustGoFaster {
 	private setupBoard(message: FromMessage<GameStartedFromServer>) {
 		this.#sessionId = message.sessionId;
 		this.#playerColor = message.playerColor;
-		this.#whiteTimeLeft = 30;
-		this.#blackTimeLeft = 30;
+		this.#whiteTimeLeft = GAME_CLOCK_DURATION;
+		this.#blackTimeLeft = GAME_CLOCK_DURATION;
 
 		const payload = message.payload as GameJoinedFromServer;
 		const gameMeta = new GameMetaElement({

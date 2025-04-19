@@ -1,7 +1,7 @@
 {
 	"main": "index.ts",
 	"scripts": {
-		"watch": "webpack --env=watch=true",
+		"watch": "webpack --watch --env=watch=true",
 		"build": "webpack"
 	},
 	"devDependencies": {

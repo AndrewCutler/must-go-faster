@@ -1,7 +1,14 @@
 import { MustGoFaster } from './must-go-faster';
 import { ConnectButtonElement, PlayerTypeElement } from './dom';
+import { GAME_CLOCK_DURATION } from './constants';
+
 
 window.onload = function () {
+	document.querySelector('#white-clock')!.textContent =
+		GAME_CLOCK_DURATION.toString();
+	document.querySelector('#black-clock')!.textContent =
+		GAME_CLOCK_DURATION.toString();
+        
 	try {
 		const mustGoFaster = new MustGoFaster();
 		const connectButton = new ConnectButtonElement();

@@ -1,8 +1,9 @@
 # Must Go Faster
 
 ## How to run
+
 1. `cd` into root directory
-2. `docker compose up` (currently frontend changes require new image builds)
+2. `docker compose up`
 
 ### TODO
 

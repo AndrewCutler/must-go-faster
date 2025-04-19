@@ -49,7 +49,7 @@ export class MustGoFaster {
 	#isAgainstComputer = false;
 
 	constructor() {
-		console.log('Initializing MustGoFaster.');
+		// console.log('Initializing MustGoFaster.');
 		this.connect = this.connect.bind(this);
 		this.#opponentType = 'computer';
 		const initialConfig: ChessgroundConfig = {
@@ -88,10 +88,10 @@ export class MustGoFaster {
 			`${this.#wsBaseUrl!}/connect?opponentType=${this.#opponentType}`,
 			[],
 		);
-		console.log('Creating WebSocket.');
+		// console.log('Creating WebSocket.');
 
 		ws.onopen = function (openEvent) {
-			console.log('WebSocket opened.', { event: openEvent });
+			// console.log('WebSocket opened.', { event: openEvent });
 			new BoardElement()!.enable();
 		};
 
@@ -100,7 +100,7 @@ export class MustGoFaster {
 		};
 
 		ws.onclose = function (closeEvent) {
-			console.log('WebSocket closed.', { event: closeEvent });
+			// console.log('WebSocket closed.', { event: closeEvent });
 		};
 
 		const self = this;
@@ -136,7 +136,7 @@ export class MustGoFaster {
 	private async handleMessage(message: FromMessage<FromPayload>) {
 		this.#message = message;
 
-		console.log('Handle message: ', { message });
+		// console.log('Handle message: ', { message });
 		switch (message.type) {
 			case 'GameJoinedFromServerType':
 				await this.setupGame();
@@ -178,7 +178,7 @@ export class MustGoFaster {
 	}
 
 	private async setupGame(): Promise<void> {
-		console.log('start: ', { response: this.#message });
+		// console.log('start: ', { response: this.#message });
 		const message = this.#message as FromMessage<GameStartedFromServer>;
 		this.setupBoard(message);
 		this.#isAgainstComputer = this.#message!.isAgainstComputer;
@@ -208,7 +208,11 @@ export class MustGoFaster {
 			validMoves,
 			move: { from, to },
 		} = (this.#message! as FromMessage<MoveFromServer>).payload!;
-		console.log('move: ', { move: this.#message });
+		// console.log('move: ', { move: this.#message });
+		console.log(
+			(this.#message as any).payload?.whiteTimeLeft,
+			(this.#message as any).payload?.blackTimeLeft,
+		);
 		let gameStatus: GameStatus = 'ongoing';
 
 		if (isCheckmated) {
@@ -310,21 +314,18 @@ export class MustGoFaster {
 		window.clearInterval(this.#blackTimerInterval);
 
 		const timerDiv = new TimerElement()!;
-
-		const start = new Date();
+		const start = performance.now();
 		const self = this;
-		// todo: refactor
+
 		if (whosNext === 'white') {
-			this.#whiteTimerInterval = window.setInterval(function () {
+			function updateWhiteTimer(): void {
 				if (!self.#whiteTimeLeft) {
-					console.log('no time left', self.#whiteTimeLeft);
 					return;
 				}
-				const diff = new Date().getTime() - start.getTime();
+				const diff = performance.now() - start;
 				const gameClock = self.#whiteTimeLeft - diff / 1_000;
 
 				if (gameClock <= 0) {
-					window.clearInterval(self.#whiteTimerInterval);
 					// send message to server to end game/find out the outcome
 					if (self.#connection) {
 						const timeout: ToMessage<TimeoutToServer> = {
@@ -342,18 +343,19 @@ export class MustGoFaster {
 				}
 
 				timerDiv.setTime(gameClock, self.#blackTimeLeft!);
-			}, 10);
+				self.#whiteTimerInterval =
+					requestAnimationFrame(updateWhiteTimer);
+			}
+			this.#whiteTimerInterval = requestAnimationFrame(updateWhiteTimer);
 		} else {
-			this.#blackTimerInterval = window.setInterval(function () {
+			function updateBlackTimer(): void {
 				if (!self.#blackTimeLeft) {
-					console.log('no time left', self.#blackTimeLeft);
 					return;
 				}
-				const diff = new Date().getTime() - start.getTime();
+				const diff = performance.now() - start;
 				const gameClock = self.#blackTimeLeft - diff / 1_000;
 
 				if (gameClock <= 0) {
-					window.clearInterval(self.#blackTimerInterval);
 					// send message to server to end game/find out the outcome
 					if (self.#connection) {
 						const timeout: ToMessage<TimeoutToServer> = {
@@ -371,7 +373,10 @@ export class MustGoFaster {
 				}
 
 				timerDiv.setTime(self.#whiteTimeLeft!, gameClock);
-			}, 10);
+				self.#blackTimerInterval =
+					requestAnimationFrame(updateBlackTimer);
+			}
+			this.#blackTimerInterval = requestAnimationFrame(updateBlackTimer);
 		}
 	}
 
@@ -388,7 +393,7 @@ export class MustGoFaster {
 		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 	): void {
-		console.log('gameOver: ', { gameStatus, method });
+		// console.log('gameOver: ', { gameStatus, method });
 		if (this.#connection) {
 			this.#connection.close(1000, 'Game over.');
 			this.#connection = undefined;
@@ -438,7 +443,7 @@ export class MustGoFaster {
 	}
 
 	private sendPremoveMessage(move: Move): void {
-		console.log('sendPremoveMessage: ', { premove: move });
+		// console.log('sendPremoveMessage: ', { premove: move });
 		if (this.#connection) {
 			const premove: ToMessage<PremoveToServer> = {
 				type: 'PremoveToServerType',
@@ -462,7 +467,7 @@ export class MustGoFaster {
 			to: cg.Key,
 			meta: cg.MoveMetadata,
 		): void {
-			console.log('Handle move: ', { from, to });
+			// console.log('Handle move: ', { from, to });
 			// handle promotion here; autopromote to queen for now
 			to = self.checkIsPromotion(to);
 			// premove is set here
@@ -479,7 +484,7 @@ export class MustGoFaster {
 				};
 				self.sendMessage(moveMessage);
 			}
-			console.log({ state: self.#board!.state });
+			// console.log({ state: self.#board!.state });
 			self.#board!.set({
 				turnColor: self.#playerColor === 'white' ? 'black' : 'white',
 				movable: {

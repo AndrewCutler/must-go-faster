@@ -38,8 +38,8 @@ export class MustGoFaster {
 	#playerColor: PlayerColor | undefined;
 	#whiteTimeLeft: number | undefined;
 	#blackTimeLeft: number | undefined;
-	#whiteTimerInterval: number | undefined;
-	#blackTimerInterval: number | undefined;
+	#whiteTimer: number | undefined;
+	#blackTimer: number | undefined;
 	#connection: WebSocket | undefined;
 	#board: ChessgroundApi | undefined;
 	#message: Message | undefined;
@@ -49,7 +49,7 @@ export class MustGoFaster {
 	#isAgainstComputer = false;
 
 	constructor() {
-		// console.log('Initializing MustGoFaster.');
+		console.log('Initializing MustGoFaster.');
 		this.connect = this.connect.bind(this);
 		this.#opponentType = 'computer';
 		const initialConfig: ChessgroundConfig = {
@@ -300,8 +300,12 @@ export class MustGoFaster {
 		whiteTimeLeft: number,
 		blackTimeLeft: number,
 	): void {
-		window.clearInterval(this.#whiteTimerInterval);
-		window.clearInterval(this.#blackTimerInterval);
+		if (this.#whiteTimer) {
+			cancelAnimationFrame(this.#whiteTimer);
+		}
+		if (this.#blackTimer) {
+			cancelAnimationFrame(this.#blackTimer);
+		}
 
 		const timerDiv = new TimerElement()!;
 
@@ -309,10 +313,12 @@ export class MustGoFaster {
 	}
 
 	private toggleClock(whosNext: PlayerColor): void {
-		// clear previous intervals
-		window.clearInterval(this.#whiteTimerInterval);
-		window.clearInterval(this.#blackTimerInterval);
-
+		if (this.#whiteTimer) {
+			cancelAnimationFrame(this.#whiteTimer);
+		}
+		if (this.#blackTimer) {
+			cancelAnimationFrame(this.#blackTimer);
+		}
 		const timerDiv = new TimerElement()!;
 		const start = performance.now();
 		const self = this;
@@ -343,10 +349,15 @@ export class MustGoFaster {
 				}
 
 				timerDiv.setTime(gameClock, self.#blackTimeLeft!);
-				self.#whiteTimerInterval =
-					requestAnimationFrame(updateWhiteTimer);
+				if (self.#whiteTimer) {
+					cancelAnimationFrame(self.#whiteTimer);
+				}
+				self.#whiteTimer = requestAnimationFrame(updateWhiteTimer);
 			}
-			this.#whiteTimerInterval = requestAnimationFrame(updateWhiteTimer);
+			if (this.#whiteTimer) {
+				cancelAnimationFrame(this.#whiteTimer);
+			}
+			this.#whiteTimer = requestAnimationFrame(updateWhiteTimer);
 		} else {
 			function updateBlackTimer(): void {
 				if (!self.#blackTimeLeft) {
@@ -373,10 +384,15 @@ export class MustGoFaster {
 				}
 
 				timerDiv.setTime(self.#whiteTimeLeft!, gameClock);
-				self.#blackTimerInterval =
-					requestAnimationFrame(updateBlackTimer);
+				if (self.#blackTimer) {
+					cancelAnimationFrame(self.#blackTimer);
+				}
+				self.#blackTimer = requestAnimationFrame(updateBlackTimer);
 			}
-			this.#blackTimerInterval = requestAnimationFrame(updateBlackTimer);
+			if (this.#blackTimer) {
+				cancelAnimationFrame(this.#blackTimer);
+			}
+			this.#blackTimer = requestAnimationFrame(updateBlackTimer);
 		}
 	}
 

@@ -27,7 +27,7 @@ type Player struct {
 
 func (p *Player) ReadMessage() {
 	defer func() {
-		log.Println("Closing in ReadMessage for player ", p.Color)
+		// log.Println("Closing in ReadMessage for player ", p.Color)
 		p.Connection.Close()
 	}()
 
@@ -37,7 +37,7 @@ func (p *Player) ReadMessage() {
 
 		// this will fire for the player who is doing the abandonment
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-			log.Println("playerColor ", p.Color, " close going away error: ", err)
+			// log.Println("playerColor ", p.Color, " close going away error: ", err)
 
 			// game is over, send game abandoned message to winner and remove from active games
 			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
@@ -47,14 +47,14 @@ func (p *Player) ReadMessage() {
 		}
 
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-			log.Println("playerColor ", p.Color, " normal closure")
+			// log.Println("playerColor ", p.Color, " normal closure")
 			delete(p.Hub.InProgressSessions, p.SessionId)
 			close(p.WriteChan)
 			return
 		}
 
 		if err != nil {
-			log.Println("playerColor ", p.Color, "Cannot read message: ", err)
+			// log.Println("playerColor ", p.Color, "Cannot read message: ", err)
 			delete(p.Hub.InProgressSessions, p.SessionId)
 			close(p.WriteChan)
 			return
@@ -86,7 +86,7 @@ func (p *Player) ReadMessage() {
 
 func (p *Player) WriteMessage() {
 	defer func() {
-		log.Println("Closing in WriteMessage for player ", p.Color)
+		// log.Println("Closing in WriteMessage for player ", p.Color)
 		p.Connection.Close()
 	}()
 
@@ -104,7 +104,7 @@ func (p *Player) WriteMessage() {
 		}
 
 		if err := writer.Close(); err != nil {
-			log.Println("playerColor ", p.Color, "Failed to close writer: ", err)
+			// log.Println("playerColor ", p.Color, "Failed to close writer: ", err)
 			return
 		}
 	}

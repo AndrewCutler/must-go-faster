@@ -67,7 +67,7 @@ func (h *Hub) onRegister(player *Player, computer *Player) {
 
 func (h *Hub) onMessage(message Message) {
 	// todo: lots of fields on message that may or may not be unnecessary
-	log.Println("onMessage message: ", message)
+	// log.Println("onMessage message: ", message)
 	session, ok := h.InProgressSessions[message.SessionId]
 	if !ok {
 		log.Printf("Session not found; sessionId: %s\n", message.SessionId)
@@ -172,9 +172,9 @@ func joinComputerGame(player *Player, computer *Player) {
 
 	player.Hub.InProgressSessions[session.SessionId] = &session
 
-	log.Println("Broadcasting game joined for player", player.Color)
+	// log.Println("Broadcasting game joined for player", player.Color)
 	player.WriteChan <- sendGameJoinedMessage(&session, player.Color)
-	log.Println("Broadcasting game joined for computer player", computer.Color)
+	// log.Println("Broadcasting game joined for computer player", computer.Color)
 	computer.WriteChan <- sendGameJoinedMessage(&session, computer.Color)
 }
 
@@ -205,7 +205,7 @@ func createNewGame(hub *Hub, player *Player) {
 		session.Black = player
 	}
 	hub.AwaitingOpponentSessions[sessionId] = &session
-	log.Println("Creating new pending game for player", player.Color)
+	// log.Println("Creating new pending game for player", player.Color)
 }
 
 func joinPendingGame(hub *Hub, player *Player) {
@@ -226,7 +226,7 @@ func joinPendingGame(hub *Hub, player *Player) {
 	delete(hub.AwaitingOpponentSessions, session.SessionId)
 	hub.InProgressSessions[session.SessionId] = session
 
-	log.Println("Broadcasting game joined for player", player.Color)
+	// log.Println("Broadcasting game joined for player", player.Color)
 	player.WriteChan <- sendGameJoinedMessage(session, player.Color)
 	if player.Color == "white" {
 		session.Black.WriteChan <- sendGameJoinedMessage(session, session.Black.Color)

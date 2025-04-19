@@ -18,10 +18,11 @@ RUN npm install
 COPY . .
 RUN apk add --no-cache nginx
 RUN mkdir -p /var/log/nginx /var/cache/nginx
-RUN chmod +x dev.sh
 COPY nginx.conf /etc/nginx/http.d/default.conf
 EXPOSE 4200
-CMD ["./dev.sh"]
+
+# Run commands directly in CMD
+CMD sh -c "npm run watch & sleep 5 && nginx -g 'daemon off;'"
 
 # Production stage
 FROM nginx:alpine AS production

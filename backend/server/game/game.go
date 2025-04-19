@@ -78,7 +78,7 @@ func ValidMovesMap(g *chess.Game) map[string][]string {
 }
 
 func tryPlayMove(m MoveToServer, g *chess.Game) (Move, error) {
-	log.Println("move: ", m)
+	// log.Println("move: ", m)
 	if err := g.MoveStr(m.Move.From + m.Move.To); err != nil {
 		return m.Move, err
 	}
@@ -87,7 +87,7 @@ func tryPlayMove(m MoveToServer, g *chess.Game) (Move, error) {
 }
 
 func tryPlayPremove(m PremoveToServer, g *chess.Game) (Move, error) {
-	log.Println("premove: ", m)
+	// log.Println("premove: ", m)
 	if err := g.MoveStr(m.Premove.From + m.Premove.To); err != nil {
 		return m.Premove, err
 	}
@@ -105,17 +105,17 @@ func PlayComputer(player *Player, computer *Player) {
 		case v := <-computer.WriteChan:
 			value := string(v)
 
-			log.Println("value: ", value)
+			// log.Println("value: ", value)
 
 			// lazy way to check message type
-			if strings.Contains(value, "GameStartedToServerType") {
-				log.Println("GameStartedToServerType")
-			}
-			if strings.Contains(value, "GameStartedFromServerType") {
-				log.Println("GameStartedFromServerType")
-			}
+			// if strings.Contains(value, "GameStartedToServerType") {
+			// 	log.Println("GameStartedToServerType")
+			// }
+			// if strings.Contains(value, "GameStartedFromServerType") {
+			// 	log.Println("GameStartedFromServerType")
+			// }
 			if strings.Contains(value, "MoveFromServerType") {
-				log.Println("MoveFromServerType")
+				// log.Println("MoveFromServerType")
 				session, ok := player.Hub.InProgressSessions[player.SessionId]
 				if !ok {
 					log.Println("Cannot find session with id: ", player.SessionId)
@@ -151,29 +151,31 @@ func PlayComputer(player *Player, computer *Player) {
 				t := time.Duration(rand.Intn(3000) * int(time.Millisecond))
 				time.Sleep(t)
 
+				updateClocks(session)
+
 				player.WriteChan <- sendMoveMessage(session, player.Color, move)
 			}
-			if strings.Contains(value, "MoveToServerType") {
-				log.Println("MoveToServerType")
-			}
-			if strings.Contains(value, "PremoveFromServerType") {
-				log.Println("PremoveFromServerType")
-			}
-			if strings.Contains(value, "PremoveToServerType") {
-				log.Println("PremoveToServerType")
-			}
-			if strings.Contains(value, "TimeoutFromServerType") {
-				log.Println("TimeoutFromServerType")
-			}
-			if strings.Contains(value, "TimeoutToServerType") {
-				log.Println("TimeoutToServerType")
-			}
-			if strings.Contains(value, "AbandonedFromServerType") {
-				log.Println("AbandonedFromServerType")
-			}
-			if strings.Contains(value, "AbandonedToServerType") {
-				log.Println("AbandonedToServerType")
-			}
+			// if strings.Contains(value, "MoveToServerType") {
+			// 	log.Println("MoveToServerType")
+			// }
+			// if strings.Contains(value, "PremoveFromServerType") {
+			// 	log.Println("PremoveFromServerType")
+			// }
+			// if strings.Contains(value, "PremoveToServerType") {
+			// 	log.Println("PremoveToServerType")
+			// }
+			// if strings.Contains(value, "TimeoutFromServerType") {
+			// 	log.Println("TimeoutFromServerType")
+			// }
+			// if strings.Contains(value, "TimeoutToServerType") {
+			// 	log.Println("TimeoutToServerType")
+			// }
+			// if strings.Contains(value, "AbandonedFromServerType") {
+			// 	log.Println("AbandonedFromServerType")
+			// }
+			// if strings.Contains(value, "AbandonedToServerType") {
+			// 	log.Println("AbandonedToServerType")
+			// }
 		case <-time.After(time.Minute):
 			close(computer.WriteChan)
 			return

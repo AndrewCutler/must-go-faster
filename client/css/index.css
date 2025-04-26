@@ -54,24 +54,43 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 60px;
+	min-width: 100px;
 }
 
 #timer > div {
 	border: 2px solid hsl(220deg 14.02% 20.98%);
 	border-radius: 5%;
+	width: 100%;
+}
+
+.time {
+	display: flex;
+	justify-content: center;
+
+	&.is-running {
+		border: 2px solid rgb(15, 158, 15);
+
+		&#white-clock {
+			background: rgb(240, 240, 240);
+		}
+
+		&#black-clock {
+			background: rgb(110, 110, 110);
+		}
+	}
 }
 
 #white-clock {
 	background: rgb(197, 197, 197);
 	color: black;
 	padding: 0.25em;
-	border-bottom: 1px solid hsl(220deg 14.02% 20.98%);
+	/* border-bottom: 1px solid hsl(220deg 14.02% 20.98%); */
 }
 
 #black-clock {
+	background: rgb(40, 40, 40);
 	padding: 0.25em;
-	border-top: 1px solid hsl(220deg 14.02% 20.98%);
+	/* border-top: 1px solid hsl(220deg 14.02% 20.98%); */
 }
 
 #game-meta {
@@ -211,7 +230,7 @@ body {
 	width: 100%;
 	display: flex;
 	padding: 0.25rem 1rem;
-    justify-content: center;
+	justify-content: center;
 }
 
 #test-board {

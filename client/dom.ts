@@ -104,6 +104,16 @@ export class TimerElement implements IElement {
 		this.#blackClockElement!.innerHTML =
 			'<div>' + (blackTime > 0 ? blackTime : 0).toFixed(1) + 's</div>';
 	}
+
+	setActive(color: PlayerColor) {
+		if (color === 'white') {
+			this.#whiteClockElement!.classList.add('is-running');
+			this.#blackClockElement!.classList.remove('is-running');
+        } else {
+			this.#whiteClockElement!.classList.remove('is-running');
+			this.#blackClockElement!.classList.add('is-running');
+		}
+	}
 }
 
 // todo: bulma

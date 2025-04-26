@@ -324,6 +324,7 @@ export class MustGoFaster {
 		const self = this;
 
 		if (whosNext === 'white') {
+			timerDiv.setActive('white');
 			function updateWhiteTimer(): void {
 				if (!self.#whiteTimeLeft) {
 					return;
@@ -359,6 +360,7 @@ export class MustGoFaster {
 			}
 			this.#whiteTimer = requestAnimationFrame(updateWhiteTimer);
 		} else {
+			timerDiv.setActive('black');
 			function updateBlackTimer(): void {
 				if (!self.#blackTimeLeft) {
 					return;

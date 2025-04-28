@@ -74,11 +74,11 @@ export class CountdownContainerElement implements IElement {
 	}
 }
 
-export class TimerElement implements IElement {
+export class ControlsElement implements IElement {
 	#element: HTMLElement | undefined;
 	#whiteClockElement: HTMLElement | undefined;
 	#blackClockElement: HTMLElement | undefined;
-	readonly #selector = '#timer';
+	readonly #selector = '#controls';
 
 	get element(): HTMLElement | undefined {
 		return this.#element;

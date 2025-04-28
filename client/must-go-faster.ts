@@ -30,7 +30,7 @@ import {
 	GameMetaElement,
 	GameStatusModalElement,
 	GettingStartedElement,
-	TimerElement,
+	ControlsElement,
 } from './dom';
 
 export class MustGoFaster {
@@ -208,11 +208,6 @@ export class MustGoFaster {
 			validMoves,
 			move: { from, to },
 		} = (this.#message! as FromMessage<MoveFromServer>).payload!;
-		// console.log('move: ', { move: this.#message });
-		console.log(
-			(this.#message as any).payload?.whiteTimeLeft,
-			(this.#message as any).payload?.blackTimeLeft,
-		);
 		let gameStatus: GameStatus = 'ongoing';
 
 		if (isCheckmated) {
@@ -307,9 +302,9 @@ export class MustGoFaster {
 			cancelAnimationFrame(this.#blackTimer);
 		}
 
-		const timerDiv = new TimerElement()!;
+		const controlsDiv = new ControlsElement()!;
 
-		timerDiv.setTime(whiteTimeLeft, blackTimeLeft);
+		controlsDiv.setTime(whiteTimeLeft, blackTimeLeft);
 	}
 
 	private toggleClock(whosNext: PlayerColor): void {
@@ -319,12 +314,12 @@ export class MustGoFaster {
 		if (this.#blackTimer) {
 			cancelAnimationFrame(this.#blackTimer);
 		}
-		const timerDiv = new TimerElement()!;
+		const controlsDiv = new ControlsElement()!;
 		const start = performance.now();
 		const self = this;
 
 		if (whosNext === 'white') {
-			timerDiv.setActive('white');
+			controlsDiv.setActive('white');
 			function updateWhiteTimer(): void {
 				if (!self.#whiteTimeLeft) {
 					return;
@@ -349,7 +344,7 @@ export class MustGoFaster {
 					return;
 				}
 
-				timerDiv.setTime(gameClock, self.#blackTimeLeft!);
+				controlsDiv.setTime(gameClock, self.#blackTimeLeft!);
 				if (self.#whiteTimer) {
 					cancelAnimationFrame(self.#whiteTimer);
 				}
@@ -360,7 +355,7 @@ export class MustGoFaster {
 			}
 			this.#whiteTimer = requestAnimationFrame(updateWhiteTimer);
 		} else {
-			timerDiv.setActive('black');
+			controlsDiv.setActive('black');
 			function updateBlackTimer(): void {
 				if (!self.#blackTimeLeft) {
 					return;
@@ -385,7 +380,7 @@ export class MustGoFaster {
 					return;
 				}
 
-				timerDiv.setTime(self.#whiteTimeLeft!, gameClock);
+				controlsDiv.setTime(self.#whiteTimeLeft!, gameClock);
 				if (self.#blackTimer) {
 					cancelAnimationFrame(self.#blackTimer);
 				}

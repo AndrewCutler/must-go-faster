@@ -74,11 +74,11 @@ export class CountdownContainerElement implements IElement {
 	}
 }
 
-export class TimerElement implements IElement {
+export class ControlsElement implements IElement {
 	#element: HTMLElement | undefined;
 	#whiteClockElement: HTMLElement | undefined;
 	#blackClockElement: HTMLElement | undefined;
-	readonly #selector = '#timer';
+	readonly #selector = '#controls';
 
 	get element(): HTMLElement | undefined {
 		return this.#element;
@@ -103,6 +103,16 @@ export class TimerElement implements IElement {
 			'<div>' + (whiteTime > 0 ? whiteTime : 0).toFixed(1) + 's</div>';
 		this.#blackClockElement!.innerHTML =
 			'<div>' + (blackTime > 0 ? blackTime : 0).toFixed(1) + 's</div>';
+	}
+
+	setActive(color: PlayerColor) {
+		if (color === 'white') {
+			this.#whiteClockElement!.classList.add('is-running');
+			this.#blackClockElement!.classList.remove('is-running');
+        } else {
+			this.#whiteClockElement!.classList.remove('is-running');
+			this.#blackClockElement!.classList.add('is-running');
+		}
 	}
 }
 

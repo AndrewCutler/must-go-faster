@@ -1,85 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Must Go Faster</title>
-		<script src="/build/must-go-faster.js"></script>
-		<!-- todo: load statically from within build -->
-		<link
-			rel="stylesheet"
-			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-			integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
-			crossorigin="anonymous"
-			referrerpolicy="no-referrer"
-		/>
-		<link
-			rel="stylesheet"
-			href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css"
-		/>
-		<link rel="stylesheet" href="css/index.css" />
-	</head>
-	<body>
-		<div id="getting-started">Getting started...</div>
-		<div id="test-board"></div>
-		<div id="container">
-			<div id="board-container">
-				<div id="game-meta">
-					<div style="display: flex; gap: 1rem">
-						<div class="icon">
-							<i class="fa-solid fa-chess-king is-black"></i>
-						</div>
-						<div id="player-color"></div>
-					</div>
-					<div id="whose-move">Black to move you play black</div>
-				</div>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Must Go Faster</title>
+<script src="/build/must-go-faster.js"></script>
+<!-- todo: load statically from within build -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css" />
+<link rel="stylesheet" href="css/index.css" />
+</head>
 
-				<!-- board ui -->
-				<div id="board"></div>
-				<div id="connect-button-container">
-					<div class="dropdown" id="player-type-dropdown">
-						<div class="dropdown-trigger">
-							<button class="button">
-								<span id="player-type-dropdown-value"
-									>Computer</span
-								>
-								<span class="icon is-small">
-									<i class="fas fa-angle-down"></i>
-								</span>
-							</button>
-						</div>
-						<div
-							class="dropdown-menu"
-							id="player-type-menu"
-							role="menu"
-						>
-							<div class="dropdown-content">
-								<div
-									class="dropdown-item"
-									id="player-type-computer"
-								>
-									Computer
-								</div>
-								<div
-									class="dropdown-item"
-									id="player-type-human"
-								>
-									Human
-								</div>
-							</div>
-						</div>
-					</div>
-					<button class="button is-dark" id="connect-button">
-						Find a game
-					</button>
-				</div>
-			</div>
-			<div id="timer">
-				<div>
-					<div id="white-clock"></div>
-					<div id="black-clock"></div>
-				</div>
-			</div>
-		</div>
-		<div id="footer">footer here</div>
-	</body>
+<body>
+    <div id="getting-started">Getting started...</div>
+    <div style="display: flex; flex-direction: column; flex: 1">
+        <div id="test-board"></div>
+        <div id="container">
+            <div id="board-container">
+                <div id="game-meta">
+
+                    <div style="display: flex; gap: 1rem">
+                        <div class="icon">
+                            <i class="fa-solid fa-chess-king is-black"></i>
+                        </div>
+                        <div id="player-color"></div>
+                    </div>
+                    <div id="whose-move">Black to move you play black</div>
+                </div>
+
+                <!-- board ui -->
+                <div style="display: flex; justify-content: center;">
+                    <div id="board"></div>
+                </div>
+            </div>
+            <div id="controls">
+                <div id="clocks">
+                    <div class="time" id="white-clock"></div>
+                    <div class="time" id="black-clock"></div>
+                </div>
+                <div id="button-container">
+                    <div class="dropdown" id="player-type-dropdown">
+                        <div class="dropdown-trigger">
+                            <button class="button">
+                                <span id="player-type-dropdown-value">Computer</span>
+                                <span class="icon is-small">
+                                    <i class="fas fa-angle-down"></i>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="dropdown-menu" id="player-type-menu" role="menu">
+                            <div class="dropdown-content">
+                                <div class="dropdown-item" id="player-type-computer">
+                                    Computer
+                                </div>
+                                <div class="dropdown-item" id="player-type-human">
+                                    Human
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="button is-dark" id="connect-button">
+                        Find a game
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="footer">footer here</div>
+    </div>
+</body>
+
 </html>

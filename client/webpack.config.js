@@ -1,6 +1,7 @@
 // webpack.config.js
 const path = require('path');
 const webpack = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env) => {
 	const isDevelopment = env.watch === 'true';
@@ -22,7 +23,7 @@ module.exports = (env) => {
 				'process.env.WS_BASE_URL': JSON.stringify(
 					process.env.WS_BASE_URL || 'ws://10.0.0.73:8000',
 				),
-			}),
+			})
 		],
 		module: {
 			rules: [
@@ -35,6 +36,10 @@ module.exports = (env) => {
 					test: /\.css$/,
 					use: ['style-loader', 'css-loader'],
 				},
+				{
+					test: /\.(png|svg|jpg|jpeg|gif)$/i,
+					type: 'asset/resource',
+				}
 			],
 		},
 		output: {

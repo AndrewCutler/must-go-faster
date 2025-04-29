@@ -2,9 +2,10 @@
 	"main": "index.ts",
 	"scripts": {
 		"watch": "webpack --watch --env=watch=true",
-		"build": "webpack"
+        "build": "webpack --mode production"
 	},
 	"devDependencies": {
+		"copy-webpack-plugin": "^13.0.0",
 		"css-loader": "^6.10.0",
 		"style-loader": "^4.0.0",
 		"ts-loader": "^9.5.1",

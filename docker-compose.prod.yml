@@ -1,17 +1,25 @@
 services:
     server:
+        build:
+            context: ./backend/server
+            dockerfile: Dockerfile.prod
         environment:
-            ALLOWED_ORIGINS: ${PROD_ALLOWED_ORIGINS:-http://localhost:80}
+            PORT: ${PORT:-8000}
+            ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://*.onrender.com}
+        ports:
+            - '${PORT:-8000}:${PORT:-8000}'
 
     client:
         build:
+            context: ./client
             target: production
             args:
                 NODE_ENV: production
+                API_BASE_URL: ${API_BASE_URL}
+                WS_BASE_URL: ${WS_BASE_URL}
         environment:
             NODE_ENV: production
         ports:
-            - '80:80'
-        volumes:
-            - ./client/build:/usr/share/nginx/html
-        command: nginx -g 'daemon off;' 
+            - '${PORT:-80}:80'
+        depends_on:
+            - server 

@@ -43,7 +43,7 @@ body {
 #container {
 	width: 100%;
 	flex: 1;
-    display: flex;
+	display: flex;
 }
 
 @media screen and (max-width: 768px) {
@@ -56,9 +56,9 @@ body {
 @media screen and (min-width: 769px) {
 	#container {
 		justify-content: center;
-        padding-top: clamp(0.5rem, 2vw, 1rem);
-        padding-left: 0.1rem;
-        padding-right: 0.1rem;
+		padding-top: clamp(0.5rem, 2vw, 1rem);
+		padding-left: 0.1rem;
+		padding-right: 0.1rem;
 	}
 }
 
@@ -251,8 +251,9 @@ body {
 #footer {
 	width: 100%;
 	display: flex;
-	padding: 0.25rem 1rem;
-	justify-content: center;
+	gap: 3rem;
+	/* padding: 0.25rem 1rem;
+	justify-content: center; */
 }
 
 #test-board {

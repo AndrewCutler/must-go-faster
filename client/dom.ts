@@ -51,7 +51,7 @@ export class CountdownContainerElement implements IElement {
 	}
 
 	constructor() {
-		const parent = document.querySelector('#board-container')!;
+		const parent = document.querySelector('#board')!;
 		const element = document.createElement('div');
 		element.id = this.#selector.replace('#', '');
 		const span = document.createElement('span');

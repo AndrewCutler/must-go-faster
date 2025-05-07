@@ -46,6 +46,11 @@ body {
 	display: flex;
 }
 
+#board-container {
+	width: 100%;
+	position: relative;
+}
+
 @media screen and (max-width: 768px) {
 	#container {
 		flex-direction: column-reverse;
@@ -54,7 +59,6 @@ body {
 
 	#board-container {
 		flex: 1;
-		width: 100%;
 	}
 
 	#board-ui {
@@ -83,7 +87,6 @@ body {
 
 	#board-container {
 		flex: 4;
-		width: 100%;
 	}
 
 	#board-ui {
@@ -178,13 +181,12 @@ body {
 
 #countdown-container {
 	background-color: transparent;
-	padding: clamp(1rem, 4vw, 2rem);
 	font-size: clamp(2rem, 8vw, 6rem);
 	position: absolute;
 	z-index: 5;
+	top: 50%;
 	left: 50%;
-	transform: translateX(-50%);
-	margin-top: clamp(60px, 15vw, 130px);
+	transform: translate(-50%, -50%);
 	-webkit-text-stroke: 2px black;
 	color: white;
 }

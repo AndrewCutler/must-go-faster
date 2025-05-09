@@ -1,4 +1,5 @@
 import * as cg from 'chessground/types.js';
+import { Api as ChessgroundApi } from 'chessground/api';
 import { Config as CGConfig } from 'chessground/config';
 
 export type PlayerColor = 'white' | 'black';
@@ -107,4 +108,20 @@ export type Move = {
 
 export interface ChessgroundConfig extends CGConfig {
 	premovable?: CGConfig['premovable'] & { current?: string[] };
+}
+
+export interface MustGoFasterState {
+	sessionId?: string;
+	playerColor?: PlayerColor;
+	whiteTimeLeft?: number;
+	blackTimeLeft?: number;
+	whiteTimer?: number;
+	blackTimer?: number;
+	connection?: WebSocket;
+	board?: ChessgroundApi;
+	message?: Message;
+	wsBaseUrl?: string;
+	apiBaseUrl?: string;
+	opponentType?: OpponentType;
+	isAgainstComputer?: boolean;
 }

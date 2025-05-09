@@ -50,27 +50,55 @@ export class CountdownContainerElement implements IElement {
 		return this.#element;
 	}
 
-	constructor() {
+	constructor(whoMovesFirst: PlayerColor, playerColor: PlayerColor) {
 		const parent = document.querySelector('#board')!;
+
 		const element = document.createElement('div');
 		element.id = this.#selector.replace('#', '');
-		const span = document.createElement('span');
-		span.innerText = 'Get ready...';
-		span.style.fontSize = '2rem';
-		(span.style as any)['-webkit-text-stroke'] = '1px black';
 
-		element.appendChild(span);
+		const top = document.createElement('div');
+		if (whoMovesFirst === playerColor) {
+			top.innerText = 'Opponent moves first';
+			// top.innerText = 'You move first';
+		} else {
+			top.innerText = 'Opponent moves first';
+		}
+		top.style.fontSize = '2rem';
+		(top.style as any)['-webkit-text-stroke'] = '1px black';
+
+		const bottom = document.createElement('div');
+		bottom.innerText = 'Get ready...';
+		bottom.style.fontSize = '2rem';
+		(top.style as any)['-webkit-text-stroke'] = '1px black';
+
+		element.appendChild(top);
+		element.appendChild(bottom);
 		parent.prepend(element);
+		fadePieces(whoMovesFirst, true);
 
 		this.#element = element;
 	}
 
-	hide(): void {
+	hide(whoMovesFirst: PlayerColor): void {
 		this.#element!.remove();
+		fadePieces(whoMovesFirst, false);
 	}
 
 	setCountdownText(text: number): void {
-		this.#element!.innerText = text.toString();
+		const bottom: HTMLElement = document.querySelector(
+			'#countdown-container :nth-child(2)',
+		)!;
+		bottom.innerText = text.toString();
+	}
+}
+
+export function fadePieces(playerColor: PlayerColor, on = true): void {
+	for (const node of document.querySelectorAll(`piece.${playerColor}`)) {
+		if (on) {
+			node.classList.add('fade');
+		} else {
+			node.classList.remove('fade');
+		}
 	}
 }
 
@@ -109,7 +137,7 @@ export class ControlsElement implements IElement {
 		if (color === 'white') {
 			this.#whiteClockElement!.classList.add('is-running');
 			this.#blackClockElement!.classList.remove('is-running');
-        } else {
+		} else {
 			this.#whiteClockElement!.classList.remove('is-running');
 			this.#blackClockElement!.classList.add('is-running');
 		}
@@ -228,11 +256,6 @@ export class GameMetaElement implements IElement {
 		whoseMove.innerText = `${
 			whosNext === 'white' ? 'White' : 'Black'
 		} to play.`;
-
-		const playerColorDiv = document.querySelector<HTMLDivElement>(
-			'#game-meta #player-color',
-		)!;
-		playerColorDiv.innerText = `You play ${playerColor}.`;
 	}
 }
 

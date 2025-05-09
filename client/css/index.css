@@ -175,8 +175,23 @@ body {
 }
 
 #whose-move {
-	/* todo: change font color based on if it's the user's turn first (primary rather than warning or something) */
 	display: flex;
+}
+
+@keyframes fade {
+	0% {
+		opacity: 0;
+	}
+	50% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+piece.black.fade {
+	animation: fade 2.5s ease-in-out infinite;
 }
 
 #countdown-container {
@@ -189,6 +204,14 @@ body {
 	transform: translate(-50%, -50%);
 	-webkit-text-stroke: 2px black;
 	color: white;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+
+	> div {
+		display: flex;
+		justify-content: center;
+	}
 }
 
 #board {

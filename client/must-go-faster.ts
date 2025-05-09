@@ -18,6 +18,7 @@ import {
 	FromMessage,
 	FromPayload,
 	OpponentType,
+	MustGoFasterState,
 } from './models';
 import { GAME_CLOCK_DURATION } from './constants';
 
@@ -34,32 +35,23 @@ import {
 } from './dom';
 
 export class MustGoFaster {
-	#sessionId: string | undefined;
-	#playerColor: PlayerColor | undefined;
-	#whiteTimeLeft: number | undefined;
-	#blackTimeLeft: number | undefined;
-	#whiteTimer: number | undefined;
-	#blackTimer: number | undefined;
-	#connection: WebSocket | undefined;
-	#board: ChessgroundApi | undefined;
-	#message: Message | undefined;
-	#wsBaseUrl: string | undefined;
-	#apiBaseUrl: string | undefined;
-	#opponentType: OpponentType;
-	#isAgainstComputer = false;
+	#state: MustGoFasterState = {};
 
 	constructor() {
 		console.log('Initializing MustGoFaster.');
 		this.connect = this.connect.bind(this);
-		this.#opponentType = 'computer';
+		this.#state.opponentType = 'computer';
 		const initialConfig: ChessgroundConfig = {
 			movable: {
 				free: false,
 				color: 'white',
 			},
 		};
-		this.#board = Chessground(new BoardElement().element!, initialConfig);
-		this.#board.set({
+		this.#state.board = Chessground(
+			new BoardElement().element!,
+			initialConfig,
+		);
+		this.#state.board.set({
 			viewOnly: false,
 			movable: {
 				events: {
@@ -77,15 +69,17 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		});
-		this.#wsBaseUrl = process.env.WS_BASE_URL;
-		this.#apiBaseUrl = process.env.API_BASE_URL;
+		this.#state.wsBaseUrl = process.env.WS_BASE_URL;
+		this.#state.apiBaseUrl = process.env.API_BASE_URL;
 
 		this.ping();
 	}
 
 	connect(): void {
 		const ws = new WebSocket(
-			`${this.#wsBaseUrl!}/connect?opponentType=${this.#opponentType}`,
+			`${this.#state.wsBaseUrl!}/connect?opponentType=${
+				this.#state.opponentType
+			}`,
 			[],
 		);
 		// console.log('Creating WebSocket.');
@@ -115,17 +109,17 @@ export class MustGoFaster {
 			}
 		};
 
-		this.#connection = ws;
+		this.#state.connection = ws;
 	}
 
 	setOpponentType(type: OpponentType): void {
-		this.#opponentType = type;
+		this.#state.opponentType = type;
 	}
 
 	private async ping() {
 		const gettingStarted = new GettingStartedElement();
 		try {
-			await fetch(`${this.#apiBaseUrl!}/ping`);
+			await fetch(`${this.#state.apiBaseUrl!}/ping`);
 		} catch (error) {
 			console.error(error);
 		} finally {
@@ -134,7 +128,7 @@ export class MustGoFaster {
 	}
 
 	private async handleMessage(message: FromMessage<FromPayload>) {
-		this.#message = message;
+		this.#state.message = message;
 
 		// console.log('Handle message: ', { message });
 		switch (message.type) {
@@ -157,43 +151,46 @@ export class MustGoFaster {
 	}
 
 	private sendMessage(message: ToMessage<ToPayload>): void {
-		if (!this.#connection) {
+		if (!this.#state.connection) {
 			console.error('Connection does not exist.');
 			return;
 		}
 
-		if (this.#connection.readyState !== this.#connection.OPEN) {
+		if (this.#state.connection.readyState !== this.#state.connection.OPEN) {
 			console.error(
 				'Attempted send() on connection that is not open. State: ',
-				this.#connection.readyState,
+				this.#state.connection.readyState,
 			);
 			return;
 		}
 
 		try {
-			this.#connection.send(JSON.stringify(message));
+			this.#state.connection.send(JSON.stringify(message));
 		} catch (error) {
 			console.error('Cannot JSON.stingify message: ', message);
 		}
 	}
 
 	private async setupGame(): Promise<void> {
-		// console.log('start: ', { response: this.#message });
-		const message = this.#message as FromMessage<GameStartedFromServer>;
+		// console.log('start: ', { response: this.#state.message });
+		const message = this.#state
+			.message as FromMessage<GameStartedFromServer>;
 		this.setupBoard(message);
-		this.#isAgainstComputer = this.#message!.isAgainstComputer;
+		this.#state.isAgainstComputer = this.#state.message!.isAgainstComputer;
 
-		const { payload: { whiteTimeLeft, blackTimeLeft } = {} } = message;
+		const { payload: { whiteTimeLeft, blackTimeLeft, whosNext } = {} } =
+			message;
 		this.initializeClock(whiteTimeLeft!, blackTimeLeft!);
 
-		await this.showCountdownToStartGame();
+		await this.showCountdownToStartGame(whosNext!);
 	}
 
 	private enableBoard(): void {
-		const payload = (this.#message as FromMessage<GameJoinedFromServer>)
-			.payload!;
+		const payload = (
+			this.#state.message as FromMessage<GameJoinedFromServer>
+		).payload!;
 		this.toggleClock(payload.whosNext);
-		this.#board!.set({
+		this.#state.board!.set({
 			viewOnly: false,
 		});
 	}
@@ -207,32 +204,33 @@ export class MustGoFaster {
 			fen,
 			validMoves,
 			move: { from, to },
-		} = (this.#message! as FromMessage<MoveFromServer>).payload!;
+		} = (this.#state.message! as FromMessage<MoveFromServer>).payload!;
 		let gameStatus: GameStatus = 'ongoing';
 
 		if (isCheckmated) {
-			gameStatus = isCheckmated === this.#playerColor ? 'lost' : 'won';
+			gameStatus =
+				isCheckmated === this.#state.playerColor ? 'lost' : 'won';
 			this.gameOver(gameStatus, 'checkmate');
-			this.#whiteTimeLeft = 0;
-			this.#blackTimeLeft = 0;
+			this.#state.whiteTimeLeft = 0;
+			this.#state.blackTimeLeft = 0;
 
 			return;
 		}
 
-		this.#whiteTimeLeft = whiteTimeLeft;
-		this.#blackTimeLeft = blackTimeLeft;
+		this.#state.whiteTimeLeft = whiteTimeLeft;
+		this.#state.blackTimeLeft = blackTimeLeft;
 
 		this.toggleClock(whosNext);
 
-		if (this.#board!.state.premovable.current) {
+		if (this.#state.board!.state.premovable.current) {
 			// send premove message which checks if premove is valid
 			// if so, play response on server and send updated fen
-			const [from, to] = this.#board!.state.premovable.current;
+			const [from, to] = this.#state.board!.state.premovable.current;
 			this.sendPremoveMessage({ from, to });
-			this.#board!.playPremove();
+			this.#state.board!.playPremove();
 		}
 
-		this.#board!.set({
+		this.#state.board!.set({
 			fen,
 			turnColor: whosNext,
 			movable: {
@@ -245,8 +243,8 @@ export class MustGoFaster {
 	private timeout(): void {
 		let status: GameStatus = 'won';
 		if (
-			(this.#message! as FromMessage<TimeoutFromServer>).payload!
-				.loser === this.#playerColor
+			(this.#state.message! as FromMessage<TimeoutFromServer>).payload!
+				.loser === this.#state.playerColor
 		) {
 			status = 'lost';
 		}
@@ -256,29 +254,37 @@ export class MustGoFaster {
 	private abandoned(): void {
 		let status: GameStatus = 'won';
 		this.gameOver(status, 'abandonment');
-		if (this.#connection) {
-			this.#connection.close(1000, 'Game abandoned by opponent.');
-			this.#connection = undefined;
+		if (this.#state.connection) {
+			this.#state.connection.close(1000, 'Game abandoned by opponent.');
+			this.#state.connection = undefined;
 		}
 		// wipe out all game-specific data in class?
 	}
 
-	private async showCountdownToStartGame(): Promise<void> {
+	// todo: countdown-container should show "You move first/second" above countdown
+	private async showCountdownToStartGame(
+		whoMovesFirst: PlayerColor,
+	): Promise<void> {
 		return new Promise((resolve) => {
-			const countdownDisplay = new CountdownContainerElement();
+			const countdownDisplay = new CountdownContainerElement(
+				whoMovesFirst,
+                this.#state.playerColor!
+			);
 			let currentSecond = 5;
 			const self = this;
 			const countdownInterval = window.setInterval(function () {
 				if (currentSecond <= 0) {
 					window.clearInterval(countdownInterval);
-					countdownDisplay.hide();
-					if (self.#connection) {
+					// countdownDisplay.hide(whoMovesFirst);
+
+					if (self.#state.connection) {
 						const gameStartedRequest: ToMessage<GameStartedToServer> =
 							{
 								type: 'GameStartedToServerType',
-								sessionId: self.#sessionId!,
-								playerColor: self.#playerColor!,
-								isAgainstComputer: self.#isAgainstComputer,
+								sessionId: self.#state.sessionId!,
+								playerColor: self.#state.playerColor!,
+								isAgainstComputer:
+									self.#state.isAgainstComputer!,
 							};
 						self.sendMessage(gameStartedRequest);
 					}
@@ -295,11 +301,11 @@ export class MustGoFaster {
 		whiteTimeLeft: number,
 		blackTimeLeft: number,
 	): void {
-		if (this.#whiteTimer) {
-			cancelAnimationFrame(this.#whiteTimer);
+		if (this.#state.whiteTimer) {
+			cancelAnimationFrame(this.#state.whiteTimer);
 		}
-		if (this.#blackTimer) {
-			cancelAnimationFrame(this.#blackTimer);
+		if (this.#state.blackTimer) {
+			cancelAnimationFrame(this.#state.blackTimer);
 		}
 
 		const controlsDiv = new ControlsElement()!;
@@ -308,11 +314,11 @@ export class MustGoFaster {
 	}
 
 	private toggleClock(whosNext: PlayerColor): void {
-		if (this.#whiteTimer) {
-			cancelAnimationFrame(this.#whiteTimer);
+		if (this.#state.whiteTimer) {
+			cancelAnimationFrame(this.#state.whiteTimer);
 		}
-		if (this.#blackTimer) {
-			cancelAnimationFrame(this.#blackTimer);
+		if (this.#state.blackTimer) {
+			cancelAnimationFrame(this.#state.blackTimer);
 		}
 		const controlsDiv = new ControlsElement()!;
 		const start = performance.now();
@@ -321,20 +327,20 @@ export class MustGoFaster {
 		if (whosNext === 'white') {
 			controlsDiv.setActive('white');
 			function updateWhiteTimer(): void {
-				if (!self.#whiteTimeLeft) {
+				if (!self.#state.whiteTimeLeft) {
 					return;
 				}
 				const diff = performance.now() - start;
-				const gameClock = self.#whiteTimeLeft - diff / 1_000;
+				const gameClock = self.#state.whiteTimeLeft - diff / 1_000;
 
 				if (gameClock <= 0) {
 					// send message to server to end game/find out the outcome
-					if (self.#connection) {
+					if (self.#state.connection) {
 						const timeout: ToMessage<TimeoutToServer> = {
 							type: 'TimeoutToServerType',
-							sessionId: self.#sessionId!,
-							playerColor: self.#playerColor!,
-							isAgainstComputer: self.#isAgainstComputer,
+							sessionId: self.#state.sessionId!,
+							playerColor: self.#state.playerColor!,
+							isAgainstComputer: self.#state.isAgainstComputer!,
 							payload: {
 								timeout: true,
 							},
@@ -344,33 +350,34 @@ export class MustGoFaster {
 					return;
 				}
 
-				controlsDiv.setTime(gameClock, self.#blackTimeLeft!);
-				if (self.#whiteTimer) {
-					cancelAnimationFrame(self.#whiteTimer);
+				controlsDiv.setTime(gameClock, self.#state.blackTimeLeft!);
+				if (self.#state.whiteTimer) {
+					cancelAnimationFrame(self.#state.whiteTimer);
 				}
-				self.#whiteTimer = requestAnimationFrame(updateWhiteTimer);
+				self.#state.whiteTimer =
+					requestAnimationFrame(updateWhiteTimer);
 			}
-			if (this.#whiteTimer) {
-				cancelAnimationFrame(this.#whiteTimer);
+			if (this.#state.whiteTimer) {
+				cancelAnimationFrame(this.#state.whiteTimer);
 			}
-			this.#whiteTimer = requestAnimationFrame(updateWhiteTimer);
+			this.#state.whiteTimer = requestAnimationFrame(updateWhiteTimer);
 		} else {
 			controlsDiv.setActive('black');
 			function updateBlackTimer(): void {
-				if (!self.#blackTimeLeft) {
+				if (!self.#state.blackTimeLeft) {
 					return;
 				}
 				const diff = performance.now() - start;
-				const gameClock = self.#blackTimeLeft - diff / 1_000;
+				const gameClock = self.#state.blackTimeLeft - diff / 1_000;
 
 				if (gameClock <= 0) {
 					// send message to server to end game/find out the outcome
-					if (self.#connection) {
+					if (self.#state.connection) {
 						const timeout: ToMessage<TimeoutToServer> = {
 							type: 'TimeoutToServerType',
-							sessionId: self.#sessionId!,
-							playerColor: self.#playerColor!,
-							isAgainstComputer: self.#isAgainstComputer,
+							sessionId: self.#state.sessionId!,
+							playerColor: self.#state.playerColor!,
+							isAgainstComputer: self.#state.isAgainstComputer!,
 							payload: {
 								timeout: true,
 							},
@@ -380,16 +387,17 @@ export class MustGoFaster {
 					return;
 				}
 
-				controlsDiv.setTime(self.#whiteTimeLeft!, gameClock);
-				if (self.#blackTimer) {
-					cancelAnimationFrame(self.#blackTimer);
+				controlsDiv.setTime(self.#state.whiteTimeLeft!, gameClock);
+				if (self.#state.blackTimer) {
+					cancelAnimationFrame(self.#state.blackTimer);
 				}
-				self.#blackTimer = requestAnimationFrame(updateBlackTimer);
+				self.#state.blackTimer =
+					requestAnimationFrame(updateBlackTimer);
 			}
-			if (this.#blackTimer) {
-				cancelAnimationFrame(this.#blackTimer);
+			if (this.#state.blackTimer) {
+				cancelAnimationFrame(this.#state.blackTimer);
 			}
-			this.#blackTimer = requestAnimationFrame(updateBlackTimer);
+			this.#state.blackTimer = requestAnimationFrame(updateBlackTimer);
 		}
 	}
 
@@ -407,9 +415,9 @@ export class MustGoFaster {
 		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
 	): void {
 		// console.log('gameOver: ', { gameStatus, method });
-		if (this.#connection) {
-			this.#connection.close(1000, 'Game over.');
-			this.#connection = undefined;
+		if (this.#state.connection) {
+			this.#state.connection.close(1000, 'Game over.');
+			this.#state.connection = undefined;
 		}
 		const self = this;
 		function sendNewGameMessage() {
@@ -422,28 +430,28 @@ export class MustGoFaster {
 	}
 
 	private setupBoard(message: FromMessage<GameStartedFromServer>) {
-		this.#sessionId = message.sessionId;
-		this.#playerColor = message.playerColor;
-		this.#whiteTimeLeft = GAME_CLOCK_DURATION;
-		this.#blackTimeLeft = GAME_CLOCK_DURATION;
+		this.#state.sessionId = message.sessionId;
+		this.#state.playerColor = message.playerColor;
+		this.#state.whiteTimeLeft = GAME_CLOCK_DURATION;
+		this.#state.blackTimeLeft = GAME_CLOCK_DURATION;
 
 		const payload = message.payload as GameJoinedFromServer;
 		const gameMeta = new GameMetaElement({
-			playerColor: this.#playerColor,
+			playerColor: this.#state.playerColor,
 			whosNext: payload.whosNext,
 		});
 
 		const connectButton = new ConnectButtonElement();
 		connectButton.gameJoined();
 
-		this.#board!.set({
+		this.#state.board!.set({
 			viewOnly: true,
 			fen: payload.fen,
 			turnColor: payload.whosNext,
-			orientation: this.#playerColor,
+			orientation: this.#state.playerColor,
 			movable: {
 				dests: this.toValidMoves(payload.validMoves),
-				color: this.#playerColor,
+				color: this.#state.playerColor,
 			},
 			premovable: {
 				enabled: true,
@@ -457,12 +465,12 @@ export class MustGoFaster {
 
 	private sendPremoveMessage(move: Move): void {
 		// console.log('sendPremoveMessage: ', { premove: move });
-		if (this.#connection) {
+		if (this.#state.connection) {
 			const premove: ToMessage<PremoveToServer> = {
 				type: 'PremoveToServerType',
-				sessionId: this.#sessionId!,
-				playerColor: this.#playerColor!,
-				isAgainstComputer: this.#isAgainstComputer,
+				sessionId: this.#state.sessionId!,
+				playerColor: this.#state.playerColor!,
+				isAgainstComputer: this.#state.isAgainstComputer!,
 				payload: {
 					premove: move,
 				},
@@ -484,24 +492,25 @@ export class MustGoFaster {
 			// handle promotion here; autopromote to queen for now
 			to = self.checkIsPromotion(to);
 			// premove is set here
-			self.#board!.move(from, to);
+			self.#state.board!.move(from, to);
 
 			const move: { from: cg.Key; to: cg.Key } = { from, to };
-			if (self.#connection) {
+			if (self.#state.connection) {
 				const moveMessage: ToMessage<MoveToServer> = {
 					payload: { move },
-					playerColor: self.#playerColor!,
-					sessionId: self.#sessionId!,
+					playerColor: self.#state.playerColor!,
+					sessionId: self.#state.sessionId!,
 					type: 'MoveToServerType',
-					isAgainstComputer: self.#isAgainstComputer,
+					isAgainstComputer: self.#state.isAgainstComputer!,
 				};
 				self.sendMessage(moveMessage);
 			}
-			// console.log({ state: self.#board!.state });
-			self.#board!.set({
-				turnColor: self.#playerColor === 'white' ? 'black' : 'white',
+			// console.log({ state: self.#state.board!.state });
+			self.#state.board!.set({
+				turnColor:
+					self.#state.playerColor === 'white' ? 'black' : 'white',
 				movable: {
-					color: self.#playerColor,
+					color: self.#state.playerColor,
 				},
 				premovable: {
 					enabled: true,
@@ -511,7 +520,7 @@ export class MustGoFaster {
 	}
 
 	private checkIsPromotion(to: cg.Key): cg.Key {
-		const movedPiece = this.#board!.state.pieces.get(to);
+		const movedPiece = this.#state.board!.state.pieces.get(to);
 		// any pawn move ending in 1 or 8, i.e. last rank
 		if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
 			to += 'q';

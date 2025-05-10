@@ -275,7 +275,7 @@ export class MustGoFaster {
 			const countdownInterval = window.setInterval(function () {
 				if (currentSecond <= 0) {
 					window.clearInterval(countdownInterval);
-					// countdownDisplay.hide(whoMovesFirst);
+					countdownDisplay.hide(whoMovesFirst);
 
 					if (self.#state.connection) {
 						const gameStartedRequest: ToMessage<GameStartedToServer> =

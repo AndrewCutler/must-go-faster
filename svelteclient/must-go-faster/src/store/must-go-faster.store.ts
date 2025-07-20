@@ -19,8 +19,9 @@ export const sessionId = writable<string>();
 // it should be a separate message type unto itself
 export const socket = writable<WebSocket | undefined>();
 
-export function createSocket(baseUrl: string, opponentType: OpponentType): WebSocket {
-	const socket = new WebSocket(`${baseUrl!}/connect?opponentType=${opponentType}`);
+export function createSocket(opponentType: OpponentType): WebSocket {
+	const baseUrl: string = import.meta.env.VITE_WS_BASE_URL;
+	const socket = new WebSocket(`${baseUrl}/connect?opponentType=${opponentType}`);
 
 	socket.onopen = function (openEvent) {
 		// console.log('WebSocket opened.', { event: openEvent });

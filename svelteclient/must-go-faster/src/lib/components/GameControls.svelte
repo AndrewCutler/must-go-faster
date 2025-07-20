@@ -23,7 +23,7 @@
 			return;
 		}
 
-		socket.set(createSocket('', 'computer'));
+		socket.set(createSocket('computer'));
 		// dispatch('connectionToggle', { connected: isConnected });
 	}
 

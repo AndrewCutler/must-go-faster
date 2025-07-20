@@ -6,7 +6,7 @@ services:
         environment:
             BASE_URL: 0.0.0.0
             PORT: 8000
-            ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:4200}
+            ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
         ports:
             - '8000:8000'
         networks:
@@ -16,26 +16,28 @@ services:
 
     client:
         build:
-            context: ./client
+            # context: ./client
+            context: ./svelteclient/must-go-faster
             target: development
             args:
                 API_BASE_URL: ${API_BASE_URL:-http://10.0.0.73:8000}
                 WS_BASE_URL: ${WS_BASE_URL:-ws://10.0.0.73:8000}
                 NODE_ENV: ${NODE_ENV:-development}
         image: must-go-faster
-        container_name: client
+        container_name: svelteclient
         environment:
             API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:8000}
             WS_BASE_URL: ${WS_BASE_URL:-ws://host.docker.internal:8000}
             NODE_ENV: ${NODE_ENV:-development}
         ports:
-            - '4200:4200'
+            - '4200:5173'
         networks:
             - mustgofaster
         depends_on:
             - server
         volumes:
-            - ./client:/app
+            # - ./client:/app
+            - ./svelteclient/must-go-faster:/app
             - /app/node_modules
             - /app/build
 

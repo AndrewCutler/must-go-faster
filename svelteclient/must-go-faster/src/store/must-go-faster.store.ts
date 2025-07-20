@@ -17,10 +17,38 @@ export const sessionId = writable<string>();
 // todo: baseUrl should go to env variable,
 // opponent type shouldn't be required for a connection,
 // it should be a separate message type unto itself
-export const socket = writable<WebSocket>();
+export const socket = writable<WebSocket | undefined>();
 
 export function createSocket(baseUrl: string, opponentType: OpponentType): WebSocket {
-	return new WebSocket(`${baseUrl!}/connect?opponentType=${opponentType}`);
+	const socket = new WebSocket(`${baseUrl!}/connect?opponentType=${opponentType}`);
+
+	socket.onopen = function (openEvent) {
+		// console.log('WebSocket opened.', { event: openEvent });
+		// new BoardElement()!.enable();
+	};
+
+	socket.onerror = function (errorEvent) {
+		console.error('WebSocket error.', { event: errorEvent });
+	};
+
+	socket.onclose = function (closeEvent) {
+		// console.log('WebSocket closed.', { event: closeEvent });
+	};
+
+	socket.onmessage = function (event) {
+		// 	try {
+		// 		const message: FromMessage<FromPayload> = JSON.parse(
+		// 			event.data,
+		// 		);
+		// 		self.handleMessage(message);
+		// 	} catch (e) {
+		// 		console.error(e);
+		// 	}
+	};
+
+	console.log('creating socket');
+
+	return socket;
 }
 
 export function sendMessage({

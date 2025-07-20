@@ -36,7 +36,7 @@
 		const move: { from: cg.Key; to: cg.Key } = { from, to };
 		sendMessage({
 			type: 'move',
-
+			move,
 			connection: {} as WebSocket,
 			playerColor: $playerColor,
 			sessionId: '',

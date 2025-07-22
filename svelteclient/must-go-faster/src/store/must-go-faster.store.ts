@@ -11,6 +11,8 @@ import type {
 	ToPayload
 } from '$lib/models/models';
 import { writable } from 'svelte/store';
+import type { CGConfig } from '$lib/models/models';
+import { toValidMoves } from '$lib/utils/utils';
 
 // todo: why isn't this in gameState
 export const playerColor = writable<PlayerColor>('white');
@@ -27,7 +29,9 @@ export type GameState = {
 	validMoves: { [key: string]: string[] };
 	isCheckmated: PlayerColor;
 	move: Move;
+	playerColor: PlayerColor;
 	serverTimeStamp: string;
+	boardConfig: CGConfig;
 };
 
 export function receiveMessage(message: FromMessage<FromPayload>): void {
@@ -42,7 +46,24 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				fen: copy.payload.fen,
 				whosNext: copy.payload.whosNext,
 				validMoves: copy.payload.validMoves,
-				serverTimeStamp: copy.serverTimeStamp
+				serverTimeStamp: copy.serverTimeStamp,
+				boardConfig: {
+					// viewOnly: true, // todo: set up countdown
+					fen: copy.payload.fen,
+					turnColor: copy.payload.whosNext,
+					movable: {
+						dests: toValidMoves(copy.payload.validMoves),
+						color: prev.playerColor
+					},
+					orientation: prev.playerColor,
+					premovable: {
+						enabled: true,
+						showDests: true
+					},
+					draggable: {
+						enabled: true
+					}
+				}
 			}));
 			sessionId.set(copy.sessionId);
 			break;

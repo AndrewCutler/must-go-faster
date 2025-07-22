@@ -15,7 +15,7 @@ let socket: WebSocket;
 
 // todo: opponent type shouldn't be required for a connection,
 // it should be a separate message type unto itself
-export async function createSocket(opponentType: OpponentType): Promise<void> {
+export function createSocket(opponentType: OpponentType): void {
 	if (socket) {
 		console.error('socket already created');
 		return;
@@ -47,51 +47,6 @@ export async function createSocket(opponentType: OpponentType): Promise<void> {
 			console.error(e);
 		}
 	};
-
-	return Promise.resolve();
-}
-
-export function createSocket2(opponentType: OpponentType): Promise<void> {
-	return new Promise(function (res, rej) {
-		try {
-			if (socket) {
-				console.error('socket already created');
-				return;
-			}
-
-			const baseUrl: string = import.meta.env.VITE_WS_BASE_URL;
-			socket = new WebSocket(`${baseUrl}/connect?opponentType=${opponentType}`);
-
-			socket.onopen = function (openEvent) {
-				// console.log('WebSocket opened.', { event: openEvent });
-				// new BoardElement()!.enable();
-			};
-
-			socket.onerror = function (errorEvent) {
-				console.error('Socket error.', { event: errorEvent });
-			};
-
-			socket.onclose = function (closeEvent) {
-				console.log('Socket closed.', { event: closeEvent });
-			};
-
-			socket.onmessage = function (event) {
-				try {
-					const message: FromMessage<FromPayload> = JSON.parse(event.data);
-					console.log(message);
-					receiveMessage(message);
-					// self.handleMessage(message);
-				} catch (e) {
-					console.error(e);
-				}
-			};
-
-			res();
-		} catch (e) {
-			console.error(e);
-			rej(e);
-		}
-	});
 }
 
 export function sendMessage({
@@ -137,6 +92,7 @@ export function sendMessage({
 				sessionId: sessionId!,
 				type: 'GameStartedToServerType'
 			} as ToMessage<GameStartedToServer>;
+            break;
 		}
 	}
 

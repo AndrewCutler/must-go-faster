@@ -73,6 +73,7 @@
 				isAgainstComputer: $isAgainstComputer
 			});
 			const { fen, whosNext: turnColor, validMoves } = state;
+			// do not set state here like this; receive it from gameState
 			board?.set({
 				// viewOnly: true, // todo: set up countdown
 				fen,

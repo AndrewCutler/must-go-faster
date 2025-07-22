@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createSocket, createSocket2, sendMessage } from '$lib/socket/socket';
+	import { createSocket, sendMessage } from '$lib/socket/socket';
 	import { createEventDispatcher } from 'svelte';
 	import {
 		gameState,
@@ -24,17 +24,18 @@
 	}
 
 	function connect() {
-		createSocket('computer');
+		-createSocket('computer');
+		// +		createSocket(playerType.toLowerCase());
 	}
 
 	function closeDropdown() {
 		isDropdownOpen = false;
 	}
 
-	// Close dropdown when clicking outside
 	function handleClickOutside(event: MouseEvent) {
 		const target = event.target as HTMLElement;
-		if (!target.closest('.relative')) {
+		const dropdown = document.querySelector('[data-dropdown]');
+		if (dropdown && !dropdown.contains(target)) {
 			isDropdownOpen = false;
 		}
 	}
@@ -59,12 +60,14 @@
 		<div class="flex flex-col gap-4">
 			<!-- Player Type Dropdown -->
 			<div class="flex flex-col gap-2">
-				<label class="text-sm font-medium text-gray-700 dark:text-gray-300">Player Type</label>
 				<div class="relative">
 					<button
 						class="flex w-full cursor-pointer items-center justify-between rounded-md border border-gray-300 bg-gray-50 px-4 py-3 text-base transition-all duration-200 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600"
 						onclick={toggleDropdown}
 						type="button"
+						aria-expanded={isDropdownOpen}
+						aria-haspopup="listbox"
+						aria-label="Select player type"
 					>
 						<span class="font-medium text-gray-900 dark:text-white">{playerType}</span>
 						<span
@@ -82,10 +85,11 @@
 							</svg>
 						</span>
 					</button>
-
 					{#if isDropdownOpen}
 						<div
 							class="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700"
+							role="listbox"
+							data-dropdown
 						>
 							<div class="py-1">
 								<button
@@ -95,6 +99,8 @@
 										: ''}"
 									onclick={() => selectPlayerType('Computer')}
 									type="button"
+									role="option"
+									aria-selected={playerType === 'Computer'}
 								>
 									Computer
 								</button>
@@ -105,6 +111,8 @@
 										: ''}"
 									onclick={() => selectPlayerType('Human')}
 									type="button"
+									role="option"
+									aria-selected={playerType === 'Human'}
 								>
 									Human
 								</button>

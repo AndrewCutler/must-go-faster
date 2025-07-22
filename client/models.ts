@@ -125,3 +125,5 @@ export interface MustGoFasterState {
 	opponentType?: OpponentType;
 	isAgainstComputer?: boolean;
 }
+
+export type { CGConfig };

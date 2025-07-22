@@ -43,15 +43,18 @@
 	}
 
 	function toggleTurn() {
+		if (isRunning) {
+			return; // Prevent turn changes while clock is running
+		}
 		isWhiteTurn = !isWhiteTurn;
 	}
 
 	function resetClocks() {
+		stopClock();
 		whiteTime = 600;
 		blackTime = 600;
 		isWhiteTurn = true;
 	}
-
 	function toggleClock() {
 		if (isRunning) {
 			stopClock();

@@ -45,7 +45,7 @@ export type ToMessage<T extends ToPayload> = Message & {
 
 export type FromMessage<T extends FromPayload> = Message & {
 	payload: T;
-    serverTimeStamp: string; // todo: luxon datetime
+	serverTimeStamp: string; // todo: luxon datetime
 	type: Omit<
 		MessageType,
 		| 'GameJoinedToServerType'
@@ -145,3 +145,5 @@ export interface MustGoFasterState {
 	opponentType?: OpponentType;
 	isAgainstComputer?: boolean;
 }
+
+export type { CGConfig };

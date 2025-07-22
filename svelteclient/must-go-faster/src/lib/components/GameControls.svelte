@@ -1,6 +1,12 @@
 <script lang="ts">
+	import { createSocket, createSocket2, sendMessage } from '$lib/socket/socket';
 	import { createEventDispatcher } from 'svelte';
-	import { createSocket, socket } from '../../store/must-go-faster.store';
+	import {
+		gameState,
+		isAgainstComputer,
+		playerColor,
+		sessionId
+	} from '../../store/must-go-faster.store';
 
 	const dispatch = createEventDispatcher();
 
@@ -18,13 +24,7 @@
 	}
 
 	function connect() {
-		if ($socket && $socket.OPEN) {
-			console.error('attempted to open already opened ws');
-			return;
-		}
-
-		socket.set(createSocket('computer'));
-		// dispatch('connectionToggle', { connected: isConnected });
+		createSocket('computer');
 	}
 
 	function closeDropdown() {

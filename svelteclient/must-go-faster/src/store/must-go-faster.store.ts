@@ -1,103 +1,55 @@
 import * as cg from 'chessground/types';
 import type {
+	FromMessage,
+	FromPayload,
+	GameJoinedFromServer,
+	Move,
 	MoveToServer,
 	OpponentType,
 	PlayerColor,
 	ToMessage,
 	ToPayload
 } from '$lib/models/models';
-import { move } from 'chessground/drag';
 import { writable } from 'svelte/store';
 
+// todo: why isn't this in gameState
 export const playerColor = writable<PlayerColor>('white');
 export const opponentType = writable<OpponentType>();
 export const isAgainstComputer = writable(false);
 export const sessionId = writable<string>();
+export const gameState = writable<GameState>();
 
-// todo: baseUrl should go to env variable,
-// opponent type shouldn't be required for a connection,
-// it should be a separate message type unto itself
-export const socket = writable<WebSocket | undefined>();
+export type GameState = {
+	whiteTimeLeft: number;
+	blackTimeLeft: number;
+	fen: string;
+	whosNext: PlayerColor;
+	validMoves: { [key: string]: string[] };
+	isCheckmated: PlayerColor;
+	move: Move;
+	serverTimeStamp: string;
+};
 
-export function createSocket(opponentType: OpponentType): WebSocket {
-	const baseUrl: string = import.meta.env.VITE_WS_BASE_URL;
-	const socket = new WebSocket(`${baseUrl}/connect?opponentType=${opponentType}`);
-
-	socket.onopen = function (openEvent) {
-		// console.log('WebSocket opened.', { event: openEvent });
-		// new BoardElement()!.enable();
-	};
-
-	socket.onerror = function (errorEvent) {
-		console.error('WebSocket error.', { event: errorEvent });
-	};
-
-	socket.onclose = function (closeEvent) {
-		// console.log('WebSocket closed.', { event: closeEvent });
-	};
-
-	socket.onmessage = function (event) {
-		// 	try {
-		// 		const message: FromMessage<FromPayload> = JSON.parse(
-		// 			event.data,
-		// 		);
-		// 		self.handleMessage(message);
-		// 	} catch (e) {
-		// 		console.error(e);
-		// 	}
-	};
-
-	console.log('creating socket');
-
-	return socket;
-}
-
-export function sendMessage({
-	type,
-	connection,
-	playerColor,
-	sessionId,
-	isAgainstComputer,
-	move
-}: {
-	type: 'move' | 'premove' | 'timeout'; // etc; move to models.ts
-	connection: WebSocket | undefined;
-	playerColor: PlayerColor;
-	sessionId: string;
-	isAgainstComputer: boolean;
-	move?: { from: cg.Key; to: cg.Key };
-}): void {
-	if (!connection) {
-		console.error('Connection does not exist.');
-		return;
-	}
-
-	if (connection.readyState !== connection.OPEN) {
-		console.error(
-			'Attempted send() on connection that is not open. State: ',
-			connection.readyState
-		);
-		return;
-	}
-
-	let message: ToMessage<ToPayload> | undefined = undefined;
-	switch (type) {
-		case 'move': {
-			if (!move) throw new Error('move was undefined when called with type move');
-			message = {
-				payload: { move: move! },
-				playerColor: playerColor!,
-				sessionId: sessionId!,
-				type: 'MoveToServerType',
-				isAgainstComputer: isAgainstComputer!
-			} as ToMessage<MoveToServer>;
+export function receiveMessage(message: FromMessage<FromPayload>): void {
+	switch (message.type) {
+		case 'GameJoinedFromServerType': {
+			const copy = message as FromMessage<GameJoinedFromServer>;
+			console.log({ copy });
+			gameState.update((prev) => ({
+				...prev,
+				whiteTimeLeft: copy.payload.whiteTimeLeft,
+				blackTimeLeft: copy.payload.blackTimeLeft,
+				fen: copy.payload.fen,
+				whosNext: copy.payload.whosNext,
+				validMoves: copy.payload.validMoves,
+				serverTimeStamp: copy.serverTimeStamp
+			}));
+			sessionId.set(copy.sessionId);
 			break;
 		}
-	}
-
-	try {
-		connection.send(JSON.stringify(message ?? { invalidMessage: true }));
-	} catch (error) {
-		console.error('Cannot JSON.stingify message: ', message);
+		case 'MoveFromServerType': {
+			console.log({ message });
+			break;
+		}
 	}
 }

@@ -4,7 +4,15 @@
 	import { onMount } from 'svelte';
 	import * as cg from 'chessground/types';
 	import type { Api } from 'chessground/api';
-	import { playerColor, sendMessage } from '../../store/must-go-faster.store';
+	import {
+		gameState,
+		isAgainstComputer,
+		playerColor,
+		sessionId
+	} from '../../store/must-go-faster.store';
+	import { sendMessage } from '$lib/socket/socket';
+	import Page from '../../routes/+page.svelte';
+	import { toValidMoves } from '$lib/utils/utils';
 
 	const initialConfig: ChessgroundConfig = {
 		movable: {
@@ -37,22 +45,11 @@
 		sendMessage({
 			type: 'move',
 			move,
-			connection: {} as WebSocket,
 			playerColor: $playerColor,
-			sessionId: '',
-			isAgainstComputer: false
+			sessionId: $sessionId,
+			isAgainstComputer: $isAgainstComputer
 		});
-		// if (self.#state.connection) {
-		// 	const moveMessage: ToMessage<MoveToServer> = {
-		// 		payload: { move },
-		// 		playerColor: self.#state.playerColor!,
-		// 		sessionId: self.#state.sessionId!,
-		// 		type: 'MoveToServerType',
-		// 		isAgainstComputer: self.#state.isAgainstComputer!
-		// 	};
-		// 	self.sendMessage(moveMessage);
-		// }
-		// console.log({ state: self.#state.board!.state });
+
 		board!.set({
 			turnColor: $playerColor === 'white' ? 'black' : 'white',
 			movable: {
@@ -63,6 +60,38 @@
 			}
 		});
 	}
+
+	const unsub = gameState.subscribe(function (state) {
+		console.log(state);
+		if (state) {
+			// debug
+			console.log('sending gameStarted');
+			sendMessage({
+				type: 'gameStarted',
+				playerColor: $playerColor,
+				sessionId: $sessionId,
+				isAgainstComputer: $isAgainstComputer
+			});
+			const { fen, whosNext: turnColor, validMoves } = state;
+			board?.set({
+				// viewOnly: true, // todo: set up countdown
+				fen,
+				turnColor,
+				movable: {
+					dests: toValidMoves(validMoves),
+					color: $playerColor
+				},
+				orientation: $playerColor,
+				premovable: {
+					enabled: true,
+					showDests: true
+				},
+				draggable: {
+					enabled: true
+				}
+			});
+		}
+	});
 
 	onMount(() => {
 		if (boardDiv) {
@@ -90,6 +119,8 @@
 				}
 			});
 		}
+
+		return unsub;
 	});
 </script>
 

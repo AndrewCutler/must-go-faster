@@ -118,6 +118,7 @@ func checkCORS(origin string) bool {
 			allowed = true
 			break
 		}
+		log.Printf("request from origin %s not allowed\n", origin)
 	}
 
 	return allowed

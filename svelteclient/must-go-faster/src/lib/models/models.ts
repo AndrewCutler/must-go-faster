@@ -27,15 +27,35 @@ export type Message = {
 	sessionId: string;
 	playerColor: PlayerColor;
 	isAgainstComputer: boolean;
-	type: MessageType;
+	type: unknown;
 };
 
 export type ToMessage<T extends ToPayload> = Message & {
 	payload?: T;
+	type: Omit<
+		MessageType,
+		| 'GameJoinedFromServerType'
+		| 'GameStartedFromServerType'
+		| 'MoveFromServerType'
+		| 'PremoveFromServerType'
+		| 'TimeoutFromServerType'
+		| 'AbandonedFromServerType'
+	>;
 };
 
 export type FromMessage<T extends FromPayload> = Message & {
-	payload?: T;
+	payload: T;
+    serverTimeStamp: string; // todo: luxon datetime
+	type: Omit<
+		MessageType,
+		| 'GameJoinedToServerType'
+		| 'GameStartedToServerType'
+		| 'MoveToServerType'
+		| 'PremoveToServerType'
+		| 'TimeoutToServerType'
+		| 'AbandonedToServerType'
+		| 'NewGameToServerType'
+	>;
 };
 
 export type ToPayload =

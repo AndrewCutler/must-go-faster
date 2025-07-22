@@ -33,7 +33,7 @@ func (p *Player) ReadMessage() {
 
 	for {
 		messageType, content, err := p.Connection.ReadMessage()
-		log.Println("playerColor ", p.Color, "messageType: ", messageType)
+		log.Println("reading message: playerColor ", p.Color, "messageType: ", messageType)
 
 		// this will fire for the player who is doing the abandonment
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
@@ -77,6 +77,8 @@ func (p *Player) ReadMessage() {
 			log.Printf("Deserialization failed for type %s: %s\n", typeOnly.Type, err)
 			return
 		}
+
+		log.Println(string(content))
 
 		// todo: don't deserialize message and payload separately and then return new Message from original deserialized message.
 		// just do something like message.Payload = payload and return message

@@ -505,7 +505,6 @@ export class MustGoFaster {
 				};
 				self.sendMessage(moveMessage);
 			}
-			// console.log({ state: self.#state.board!.state });
 			self.#state.board!.set({
 				turnColor:
 					self.#state.playerColor === 'white' ? 'black' : 'white',

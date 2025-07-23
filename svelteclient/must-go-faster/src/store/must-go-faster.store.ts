@@ -4,6 +4,7 @@ import type {
 	FromPayload,
 	GameJoinedFromServer,
 	Move,
+	MoveFromServer,
 	MoveToServer,
 	OpponentType,
 	PlayerColor,
@@ -38,7 +39,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 	switch (message.type) {
 		case 'GameJoinedFromServerType': {
 			const copy = message as FromMessage<GameJoinedFromServer>;
-			console.log({ copy });
+			// console.log({ copy });
 			gameState.update((prev) => ({
 				...prev,
 				whiteTimeLeft: copy.payload.whiteTimeLeft,
@@ -53,9 +54,9 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 					turnColor: copy.payload.whosNext,
 					movable: {
 						dests: toValidMoves(copy.payload.validMoves),
-						color: prev.playerColor
+						color: prev?.playerColor ?? playerColor
 					},
-					orientation: prev.playerColor,
+					orientation: prev?.playerColor ?? playerColor,
 					premovable: {
 						enabled: true,
 						showDests: true
@@ -70,6 +71,35 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 		}
 		case 'MoveFromServerType': {
 			console.log({ message });
+            const copy = message as FromMessage<MoveFromServer>;
+			// console.log({ copy });
+			gameState.update((prev) => ({
+				...prev,
+				whiteTimeLeft: copy.payload.whiteTimeLeft,
+				blackTimeLeft: copy.payload.blackTimeLeft,
+				fen: copy.payload.fen,
+				whosNext: copy.payload.whosNext,
+				validMoves: copy.payload.validMoves,
+				serverTimeStamp: copy.serverTimeStamp,
+				boardConfig: {
+					// viewOnly: true, // todo: set up countdown
+					fen: copy.payload.fen,
+					turnColor: copy.payload.whosNext,
+					movable: {
+						dests: toValidMoves(copy.payload.validMoves),
+						color: prev?.playerColor ?? playerColor
+					},
+					orientation: prev?.playerColor ?? playerColor,
+					premovable: {
+						enabled: true,
+						showDests: true
+					},
+					draggable: {
+						enabled: true
+					}
+				}
+			}));
+			// sessionId.set(copy.sessionId);
 			break;
 		}
 	}

@@ -40,7 +40,7 @@ export function createSocket(opponentType: OpponentType): void {
 	socket.onmessage = function (event) {
 		try {
 			const message: FromMessage<FromPayload> = JSON.parse(event.data);
-			console.log(message);
+			// console.log(message);
 			receiveMessage(message);
 			// self.handleMessage(message);
 		} catch (e) {

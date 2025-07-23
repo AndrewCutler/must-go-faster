@@ -62,10 +62,10 @@
 	}
 
 	const unsub = gameState.subscribe(function (state) {
-		console.log(state);
+		// console.log(state);
 		if (state) {
 			// debug
-			console.log('sending gameStarted');
+			// console.log('sending gameStarted');
 			sendMessage({
 				type: 'gameStarted',
 				playerColor: $playerColor,

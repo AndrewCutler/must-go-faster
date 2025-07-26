@@ -4,19 +4,22 @@
 	import type { PlayerColor } from '$lib/models/models';
 	import { sendMessage } from '$lib/socket/socket';
 
-	let whiteTime = 0;
-	let blackTime = 600;
+	let whiteTime = 30;
+	let blackTime = 30;
 	let isWhiteTurn = true;
 	let timer: number;
 
 	onMount(() => {
 		const unsub = gameState.subscribe((value) => {
-			if (value) {
+			if (
+				value &&
+				(value.type === 'GameStartedToServerType' || value.type === 'MoveFromServerType')
+			) {
 				isWhiteTurn = value.whosNext === 'white';
 				whiteTime = value.whiteTimeLeft;
 				blackTime = value.blackTimeLeft;
 				runClock({
-					player: value.playerColor,
+					whoseMove: isWhiteTurn ? 'white' : 'black',
 					whiteTimeLeft: value.whiteTimeLeft,
 					blackTimeLeft: value.blackTimeLeft
 				});
@@ -27,11 +30,11 @@
 	});
 
 	function runClock({
-		player,
+		whoseMove,
 		whiteTimeLeft,
 		blackTimeLeft
 	}: {
-		player: PlayerColor | undefined;
+		whoseMove: PlayerColor | undefined;
 		whiteTimeLeft: number;
 		blackTimeLeft: number;
 	}): void {
@@ -39,16 +42,16 @@
 			cancelAnimationFrame(timer);
 		}
 
-		if (!player) return;
+		if (!whoseMove) return;
 
 		const startTime = performance.now();
-		const initialTime = player === 'white' ? whiteTimeLeft : blackTimeLeft;
+		const initialTime = whoseMove === 'white' ? whiteTimeLeft : blackTimeLeft;
 
-		function animate() {
+		function animate(): void {
 			const elapsed = (performance.now() - startTime) / 1000;
 			const remainingTime = Math.max(0, initialTime - elapsed);
 
-			if (player === 'white') {
+			if (whoseMove === 'white') {
 				whiteTime = remainingTime;
 			} else {
 				blackTime = remainingTime;
@@ -65,7 +68,7 @@
 
 		timer = requestAnimationFrame(animate);
 	}
-    
+
 	onDestroy(() => {
 		if (timer) {
 			cancelAnimationFrame(timer);

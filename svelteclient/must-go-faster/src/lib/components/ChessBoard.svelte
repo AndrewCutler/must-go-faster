@@ -60,7 +60,6 @@
 	}
 
 	const unsub = gameState.subscribe(function (state) {
-		// console.log(state);
 		if (state) {
 			if (!state.sessionId) {
 				console.error('sessionId not found');
@@ -71,7 +70,6 @@
 				startCountdown();
 			}
 
-			console.log(state.boardConfig);
 			board?.set({
 				...state.boardConfig
 			});
@@ -112,7 +110,7 @@
 			countdownInterval = setInterval(function () {
 				--countdownValue;
 				if (countdownValue <= 0) {
-					console.log('after');
+					gameState.update((state) => ({ ...state!, type: 'GameStartedToServerType' }));
 					sendMessage({
 						type: 'GameStartedToServerType',
 						playerColor: $gameState?.playerColor,

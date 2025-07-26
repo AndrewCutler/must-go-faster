@@ -84,7 +84,6 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				validMoves: copy.payload.validMoves,
 				serverTimeStamp: copy.serverTimeStamp,
 				boardConfig: {
-					viewOnly: true,
 					fen: copy.payload.fen,
 					turnColor: copy.payload.whosNext,
 					movable: {

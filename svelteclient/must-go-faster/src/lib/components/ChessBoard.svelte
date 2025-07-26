@@ -6,8 +6,6 @@
 	import type { Api } from 'chessground/api';
 	import { gameState, isAgainstComputer } from '../../store/must-go-faster.store';
 	import { sendMessage } from '$lib/socket/socket';
-	import Page from '../../routes/+page.svelte';
-	import { toValidMoves } from '$lib/utils/utils';
 
 	const initialConfig: ChessgroundConfig = {
 		movable: {
@@ -36,7 +34,6 @@
 			console.error('sessionId not found');
 			return;
 		}
-		// console.log('Handle move: ', { from, to });
 		// handle promotion here; autopromote to queen for now
 		to = promoteIfPromotion(to);
 		// premove is set here
@@ -66,12 +63,9 @@
 		// console.log(state);
 		if (state) {
 			if (!state.sessionId) {
-				console.log(state);
 				console.error('sessionId not found');
 				return;
 			}
-
-			// console.log(state);
 
 			if (state.type === 'GameJoinedFromServerType') {
 				startCountdown();
@@ -80,21 +74,6 @@
 			console.log(state.boardConfig);
 			board?.set({
 				...state.boardConfig
-				// viewOnly: true, // todo: set up countdown
-				// fen,
-				// turnColor,
-				// movable: {
-				// 	dests: toValidMoves(validMoves),
-				// 	color: $gameState?.playerColor
-				// },
-				// orientation: $gameState?.playerColor,
-				// premovable: {
-				// 	enabled: true,
-				// 	showDests: true
-				// },
-				// draggable: {
-				// 	enabled: true
-				// }
 			});
 		}
 	});
@@ -105,12 +84,10 @@
 
 			board.set({
 				viewOnly: false,
-				// fen: 'rnb1kb1r/pppp1ppp/8/4P3/3P4/2N5/PPP2PPP/R1BQKB1R b KQkq - 0 1',
 				movable: {
 					dests: new Map<cg.Key, cg.Key[]>([['e2', ['e4']]]),
 					events: {
 						after: handleClientMove
-						// after: this.handleClientMove()
 					}
 				},
 				premovable: {
@@ -132,10 +109,8 @@
 	function startCountdown(): void {
 		if ($gameState?.sessionId && $gameState?.playerColor) {
 			countdownValue = 5;
-			console.log('before');
 			countdownInterval = setInterval(function () {
 				--countdownValue;
-				console.log(countdownValue);
 				if (countdownValue <= 0) {
 					console.log('after');
 					sendMessage({
@@ -144,7 +119,6 @@
 						sessionId: $gameState.sessionId,
 						isAgainstComputer: $isAgainstComputer
 					});
-					// update  board here
 					board?.set({
 						viewOnly: false,
 						movable: {
@@ -154,25 +128,14 @@
 						draggable: {
 							enabled: true
 						}
-						// fen: 'rnb1kb1r/pppp1ppp/8/4P3/3P4/2N5/PPP2PPP/R1BQKB1R b KQkq - 0 1'
 					});
 					clearInterval(countdownInterval);
 				}
 			}, 1000);
-			// setTimeout(function () {
-			// 	sendMessage({
-			// 		type: 'GameStartedToServerType',
-			// 		playerColor: $gameState?.playerColor,
-			// 		sessionId: $gameState?.sessionId,
-			// 		isAgainstComputer: $isAgainstComputer
-			// 	});
-			// }, 5000);
 		} else {
 			console.log($gameState?.sessionId, $gameState?.playerColor);
 		}
 	}
-
-	$inspect(board);
 </script>
 
 <div class="chess-board">

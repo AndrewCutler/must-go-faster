@@ -53,7 +53,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				boardConfig: {
 					viewOnly: true,
 					fen: copy.payload.fen,
-					turnColor: copy.payload.whosNext === 'white' ? 'white' : 'black',   
+					turnColor: copy.payload.whosNext === 'white' ? 'white' : 'black',
 					orientation: copy.payload.whosNext === 'white' ? 'white' : 'black',
 					movable: {
 						dests: toValidMoves(copy.payload.validMoves),
@@ -73,7 +73,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 		case 'MoveFromServerType': {
 			const copy = message as FromMessage<MoveFromServer>;
 			gameState.update((value) => ({
-				...value,
+				...(value || {}),
 				type: message.type,
 				playerColor: copy.playerColor,
 				sessionId: copy.sessionId,
@@ -84,14 +84,14 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				validMoves: copy.payload.validMoves,
 				serverTimeStamp: copy.serverTimeStamp,
 				boardConfig: {
-					// viewOnly: true, // todo: set up countdown
+					viewOnly: true,
 					fen: copy.payload.fen,
 					turnColor: copy.payload.whosNext,
 					movable: {
 						dests: toValidMoves(copy.payload.validMoves),
-						color: value?.playerColor
+						color: copy.playerColor
 					},
-					orientation: value?.playerColor,
+					orientation: copy.playerColor,
 					premovable: {
 						enabled: true,
 						showDests: true

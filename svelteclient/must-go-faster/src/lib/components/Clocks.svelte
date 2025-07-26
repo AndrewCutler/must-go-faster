@@ -35,76 +35,37 @@
 		whiteTimeLeft: number;
 		blackTimeLeft: number;
 	}): void {
-		if (player === 'white') {
-			// run white's clock
-			if (timer) {
-				cancelAnimationFrame(timer);
-			}
-			const start = performance.now();
-
-			timer = requestAnimationFrame(function () {
-				const diff = performance.now() - start;
-				// todo: better name
-				const gameClock = whiteTimeLeft - diff / 1_000;
-				whiteTime = gameClock;
-				console.log(whiteTime);
-
-				if (gameClock <= 0) {
-					cancelAnimationFrame(timer);
-					// 	// send message to server to end game/find out the outcome
-					// 	if (self.#state.connection) {
-					// 		const timeout: ToMessage<TimeoutToServer> = {
-					// 			type: 'TimeoutToServerType',
-					// 			sessionId: self.#state.sessionId!,
-					// 			playerColor: self.#state.playerColor!,
-					// 			isAgainstComputer: self.#state.isAgainstComputer!,
-					// 			payload: {
-					// 				timeout: true,
-					// 			},
-					// 		};
-					// 		self.sendMessage(timeout);
-					// 	}
-					// todo
-					// sendMessage();
-				}
-				return;
-			});
-		} else if (player === 'black') {
-			// run black's
-			if (timer) {
-				cancelAnimationFrame(timer);
-			}
-			const start = performance.now();
-
-			timer = requestAnimationFrame(function () {
-				const diff = performance.now() - start;
-				const gameClock = blackTimeLeft - diff / 1_000;
-				blackTime = gameClock;
-				console.log(blackTime);
-
-				if (gameClock <= 0) {
-					// cancelAnimationFrame(timer);
-					// 	// send message to server to end game/find out the outcome
-					// 	if (self.#state.connection) {
-					// 		const timeout: ToMessage<TimeoutToServer> = {
-					// 			type: 'TimeoutToServerType',
-					// 			sessionId: self.#state.sessionId!,
-					// 			playerColor: self.#state.playerColor!,
-					// 			isAgainstComputer: self.#state.isAgainstComputer!,
-					// 			payload: {
-					// 				timeout: true,
-					// 			},
-					// 		};
-					// 		self.sendMessage(timeout);
-					// 	}
-					// todo
-					// sendMessage();
-				}
-				return;
-			});
+		if (timer) {
+			cancelAnimationFrame(timer);
 		}
-	}
 
+		if (!player) return;
+
+		const startTime = performance.now();
+		const initialTime = player === 'white' ? whiteTimeLeft : blackTimeLeft;
+
+		function animate() {
+			const elapsed = (performance.now() - startTime) / 1000;
+			const remainingTime = Math.max(0, initialTime - elapsed);
+
+			if (player === 'white') {
+				whiteTime = remainingTime;
+			} else {
+				blackTime = remainingTime;
+			}
+
+			if (remainingTime <= 0) {
+				// Handle timeout
+				// TODO: Implement sendMessage for timeout
+				return;
+			}
+
+			timer = requestAnimationFrame(animate);
+		}
+
+		timer = requestAnimationFrame(animate);
+	}
+    
 	onDestroy(() => {
 		if (timer) {
 			cancelAnimationFrame(timer);

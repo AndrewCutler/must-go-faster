@@ -15,12 +15,10 @@ import { writable } from 'svelte/store';
 import type { CGConfig } from '$lib/models/models';
 import { toValidMoves } from '$lib/utils/utils';
 
-// todo: why isn't this in gameState
-export const playerColor = writable<PlayerColor>('white');
-export const opponentType = writable<OpponentType>();
+// todo: why isn't this in gameState god store
+export const opponentType = writable<OpponentType | undefined>();
 export const isAgainstComputer = writable(false);
-export const sessionId = writable<string>();
-export const gameState = writable<GameState>();
+export const gameState = writable<GameState | undefined>();
 
 export type GameState = {
 	whiteTimeLeft: number;
@@ -28,20 +26,24 @@ export type GameState = {
 	fen: string;
 	whosNext: PlayerColor;
 	validMoves: { [key: string]: string[] };
-	isCheckmated: PlayerColor;
-	move: Move;
-	playerColor: PlayerColor;
 	serverTimeStamp: string;
 	boardConfig: CGConfig;
+	sessionId: string;
+	type: FromMessage<FromPayload>['type'];
+	playerColor: PlayerColor;
+	isCheckmated?: PlayerColor;
+	move?: Move;
 };
 
 export function receiveMessage(message: FromMessage<FromPayload>): void {
 	switch (message.type) {
 		case 'GameJoinedFromServerType': {
 			const copy = message as FromMessage<GameJoinedFromServer>;
-			// console.log({ copy });
-			gameState.update((prev) => ({
-				...prev,
+			gameState.update((value) => ({
+				...value,
+				type: message.type,
+				playerColor: copy.playerColor,
+				sessionId: copy.sessionId,
 				whiteTimeLeft: copy.payload.whiteTimeLeft,
 				blackTimeLeft: copy.payload.blackTimeLeft,
 				fen: copy.payload.fen,
@@ -49,14 +51,14 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				validMoves: copy.payload.validMoves,
 				serverTimeStamp: copy.serverTimeStamp,
 				boardConfig: {
-					// viewOnly: true, // todo: set up countdown
+					viewOnly: true,
 					fen: copy.payload.fen,
-					turnColor: copy.payload.whosNext,
+					turnColor: copy.payload.whosNext === 'white' ? 'white' : 'black',   
+					orientation: copy.payload.whosNext === 'white' ? 'white' : 'black',
 					movable: {
 						dests: toValidMoves(copy.payload.validMoves),
-						color: prev?.playerColor ?? playerColor
+						color: copy.payload.whosNext
 					},
-					orientation: prev?.playerColor ?? playerColor,
 					premovable: {
 						enabled: true,
 						showDests: true
@@ -66,15 +68,15 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 					}
 				}
 			}));
-			sessionId.set(copy.sessionId);
 			break;
 		}
 		case 'MoveFromServerType': {
-			console.log({ message });
-            const copy = message as FromMessage<MoveFromServer>;
-			// console.log({ copy });
-			gameState.update((prev) => ({
-				...prev,
+			const copy = message as FromMessage<MoveFromServer>;
+			gameState.update((value) => ({
+				...value,
+				type: message.type,
+				playerColor: copy.playerColor,
+				sessionId: copy.sessionId,
 				whiteTimeLeft: copy.payload.whiteTimeLeft,
 				blackTimeLeft: copy.payload.blackTimeLeft,
 				fen: copy.payload.fen,
@@ -87,9 +89,9 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 					turnColor: copy.payload.whosNext,
 					movable: {
 						dests: toValidMoves(copy.payload.validMoves),
-						color: prev?.playerColor ?? playerColor
+						color: value?.playerColor
 					},
-					orientation: prev?.playerColor ?? playerColor,
+					orientation: value?.playerColor,
 					premovable: {
 						enabled: true,
 						showDests: true
@@ -99,7 +101,6 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 					}
 				}
 			}));
-			// sessionId.set(copy.sessionId);
 			break;
 		}
 	}

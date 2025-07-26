@@ -1,12 +1,6 @@
 <script lang="ts">
-	import { createSocket, sendMessage } from '$lib/socket/socket';
+	import { createSocket } from '$lib/socket/socket';
 	import { createEventDispatcher } from 'svelte';
-	import {
-		gameState,
-		isAgainstComputer,
-		playerColor,
-		sessionId
-	} from '../../store/must-go-faster.store';
 
 	const dispatch = createEventDispatcher();
 

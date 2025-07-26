@@ -1,71 +1,118 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { gameState } from '../../store/must-go-faster.store';
+	import type { PlayerColor } from '$lib/models/models';
+	import { sendMessage } from '$lib/socket/socket';
 
 	let whiteTime = 0;
 	let blackTime = 600;
 	let isWhiteTurn = true;
-	let isRunning = false;
-	let interval: number;
+	let timer: number;
 
 	onMount(() => {
-		// Start the clock
-		// startClock();
 		const unsub = gameState.subscribe((value) => {
-			whiteTime = value?.whiteTimeLeft;
-			blackTime = value?.blackTimeLeft;
+			if (value) {
+				isWhiteTurn = value.whosNext === 'white';
+				whiteTime = value.whiteTimeLeft;
+				blackTime = value.blackTimeLeft;
+				runClock({
+					player: value.playerColor,
+					whiteTimeLeft: value.whiteTimeLeft,
+					blackTimeLeft: value.blackTimeLeft
+				});
+			}
 		});
 
 		return unsub;
 	});
 
+	function runClock({
+		player,
+		whiteTimeLeft,
+		blackTimeLeft
+	}: {
+		player: PlayerColor | undefined;
+		whiteTimeLeft: number;
+		blackTimeLeft: number;
+	}): void {
+		if (player === 'white') {
+			// run white's clock
+			if (timer) {
+				cancelAnimationFrame(timer);
+			}
+			const start = performance.now();
+
+			timer = requestAnimationFrame(function () {
+				const diff = performance.now() - start;
+				// todo: better name
+				const gameClock = whiteTimeLeft - diff / 1_000;
+				whiteTime = gameClock;
+				console.log(whiteTime);
+
+				if (gameClock <= 0) {
+					cancelAnimationFrame(timer);
+					// 	// send message to server to end game/find out the outcome
+					// 	if (self.#state.connection) {
+					// 		const timeout: ToMessage<TimeoutToServer> = {
+					// 			type: 'TimeoutToServerType',
+					// 			sessionId: self.#state.sessionId!,
+					// 			playerColor: self.#state.playerColor!,
+					// 			isAgainstComputer: self.#state.isAgainstComputer!,
+					// 			payload: {
+					// 				timeout: true,
+					// 			},
+					// 		};
+					// 		self.sendMessage(timeout);
+					// 	}
+					// todo
+					// sendMessage();
+				}
+				return;
+			});
+		} else if (player === 'black') {
+			// run black's
+			if (timer) {
+				cancelAnimationFrame(timer);
+			}
+			const start = performance.now();
+
+			timer = requestAnimationFrame(function () {
+				const diff = performance.now() - start;
+				const gameClock = blackTimeLeft - diff / 1_000;
+				blackTime = gameClock;
+				console.log(blackTime);
+
+				if (gameClock <= 0) {
+					// cancelAnimationFrame(timer);
+					// 	// send message to server to end game/find out the outcome
+					// 	if (self.#state.connection) {
+					// 		const timeout: ToMessage<TimeoutToServer> = {
+					// 			type: 'TimeoutToServerType',
+					// 			sessionId: self.#state.sessionId!,
+					// 			playerColor: self.#state.playerColor!,
+					// 			isAgainstComputer: self.#state.isAgainstComputer!,
+					// 			payload: {
+					// 				timeout: true,
+					// 			},
+					// 		};
+					// 		self.sendMessage(timeout);
+					// 	}
+					// todo
+					// sendMessage();
+				}
+				return;
+			});
+		}
+	}
+
 	onDestroy(() => {
-		if (interval) {
-			clearInterval(interval);
+		if (timer) {
+			cancelAnimationFrame(timer);
 		}
 	});
 
-	function startClock() {
-		isRunning = true;
-		interval = setInterval(() => {
-			if (isWhiteTurn) {
-				whiteTime--;
-			} else {
-				blackTime--;
-			}
-		}, 1000);
-	}
-
-	function stopClock() {
-		isRunning = false;
-		if (interval) {
-			clearInterval(interval);
-		}
-	}
-
 	function formatTime(seconds: number): string {
-		return seconds?.toPrecision(4);
-	}
-
-	function toggleTurn() {
-		if (isRunning) {
-			return; // Prevent turn changes while clock is running
-		}
-		isWhiteTurn = !isWhiteTurn;
-	}
-
-	function resetClocks() {
-		stopClock();
-		whiteTime = 600;
-		blackTime = 600;
-		isWhiteTurn = true;
-	}
-	function toggleClock() {
-		if (isRunning) {
-			stopClock();
-		} else {
-			startClock();
-		}
+		return (seconds > 0 ? seconds : 0).toFixed(1);
 	}
 </script>
 
@@ -100,27 +147,6 @@
 					{formatTime(blackTime)}
 				</div>
 			</div>
-		</div>
-
-		<div class="flex flex-wrap gap-2">
-			<button
-				class="min-w-[80px] flex-1 rounded-md bg-gray-600 px-4 py-2 font-medium text-white transition-colors duration-200 hover:bg-gray-700"
-				on:click={toggleClock}
-			>
-				{isRunning ? 'Pause' : 'Start'}
-			</button>
-			<button
-				class="min-w-[80px] flex-1 rounded-md bg-gray-600 px-4 py-2 font-medium text-white transition-colors duration-200 hover:bg-gray-700"
-				on:click={toggleTurn}
-			>
-				Toggle Turn
-			</button>
-			<button
-				class="min-w-[80px] flex-1 rounded-md bg-red-600 px-4 py-2 font-medium text-white transition-colors duration-200 hover:bg-red-700"
-				on:click={resetClocks}
-			>
-				Reset
-			</button>
 		</div>
 	</div>
 </div>

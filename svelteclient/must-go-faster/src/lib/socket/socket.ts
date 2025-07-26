@@ -3,13 +3,14 @@ import type {
 	FromMessage,
 	FromPayload,
 	GameStartedToServer,
+	MessageType,
 	MoveToServer,
 	OpponentType,
 	PlayerColor,
 	ToMessage,
 	ToPayload
 } from '$lib/models/models';
-import { gameState, receiveMessage } from '../../store/must-go-faster.store';
+import { receiveMessage } from '../../store/must-go-faster.store';
 
 let socket: WebSocket;
 
@@ -24,25 +25,22 @@ export function createSocket(opponentType: OpponentType): void {
 	const baseUrl: string = import.meta.env.VITE_WS_BASE_URL;
 	socket = new WebSocket(`${baseUrl}/connect?opponentType=${opponentType}`);
 
-	socket.onopen = function (openEvent) {
-		// console.log('WebSocket opened.', { event: openEvent });
-		// new BoardElement()!.enable();
+	socket.onopen = function (openEvent: Event) {
+		console.log('WebSocket opened.', { event: openEvent });
 	};
 
-	socket.onerror = function (errorEvent) {
+	socket.onerror = function (errorEvent: Event) {
 		console.error('Socket error.', { event: errorEvent });
 	};
 
-	socket.onclose = function (closeEvent) {
+	socket.onclose = function (closeEvent: CloseEvent) {
 		console.log('Socket closed.', { event: closeEvent });
 	};
 
-	socket.onmessage = function (event) {
+	socket.onmessage = function (event: MessageEvent) {
 		try {
 			const message: FromMessage<FromPayload> = JSON.parse(event.data);
-			// console.log(message);
 			receiveMessage(message);
-			// self.handleMessage(message);
 		} catch (e) {
 			console.error(e);
 		}
@@ -51,15 +49,15 @@ export function createSocket(opponentType: OpponentType): void {
 
 export function sendMessage({
 	type,
-	playerColor,
 	sessionId,
 	isAgainstComputer,
+	playerColor,
 	move
 }: {
-	type: 'move' | 'premove' | 'timeout' | 'gameStarted'; // etc; move to models.ts
-	playerColor: PlayerColor;
+	type: MessageType;
 	sessionId: string;
 	isAgainstComputer: boolean;
+	playerColor?: PlayerColor;
 	move?: { from: cg.Key; to: cg.Key };
 }): void {
 	if (!socket) {
@@ -74,25 +72,25 @@ export function sendMessage({
 
 	let message: ToMessage<ToPayload> | undefined = undefined;
 	switch (type) {
-		case 'move': {
+		case 'MoveToServerType': {
 			if (!move) throw new Error('move was undefined when called with type move');
 			message = {
 				payload: { move: move! },
-				playerColor: playerColor!,
+				playerColor: playerColor,
 				sessionId: sessionId!,
-				type: 'MoveToServerType',
+				type,
 				isAgainstComputer: isAgainstComputer!
 			} as ToMessage<MoveToServer>;
 			break;
 		}
-		case 'gameStarted': {
+		case 'GameStartedToServerType': {
 			message = {
 				isAgainstComputer: isAgainstComputer!,
-				playerColor: playerColor!,
+				playerColor: playerColor,
 				sessionId: sessionId!,
-				type: 'GameStartedToServerType'
+				type
 			} as ToMessage<GameStartedToServer>;
-            break;
+			break;
 		}
 	}
 

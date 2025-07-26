@@ -90,6 +90,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 						dests: toValidMoves(copy.payload.validMoves),
 						color: copy.playerColor
 					},
+					lastMove: [copy.payload.move.from, copy.payload.move.to],
 					orientation: copy.playerColor,
 					premovable: {
 						enabled: true,

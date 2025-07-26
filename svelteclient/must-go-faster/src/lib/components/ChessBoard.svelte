@@ -14,7 +14,7 @@
 		}
 	};
 
-	let board: Api | undefined = $state();
+	let board: Api | undefined;
 	let boardDiv: HTMLElement | undefined;
 	let countdownInterval: number | undefined = $state(undefined);
 	let countdownValue = $state(0);
@@ -29,6 +29,7 @@
 		return to;
 	}
 
+	// TODO: meta tells you if premove
 	function handleClientMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
 		if (!$gameState?.sessionId) {
 			console.error('sessionId not found');
@@ -36,7 +37,6 @@
 		}
 		// handle promotion here; autopromote to queen for now
 		to = promoteIfPromotion(to);
-		// premove is set here
 		board!.move(from, to);
 
 		const move: { from: cg.Key; to: cg.Key } = { from, to };
@@ -83,11 +83,14 @@
 			board.set({
 				viewOnly: false,
 				movable: {
-					dests: new Map<cg.Key, cg.Key[]>([['e2', ['e4']]]),
 					events: {
 						after: handleClientMove
 					}
 				},
+				// events: {
+				// 	move: function (from: cg.Key, to: cg.Key, captured: cg.Piece | undefined) {
+				// 	}
+				// },
 				premovable: {
 					enabled: true,
 					showDests: true

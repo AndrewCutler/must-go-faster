@@ -44,13 +44,9 @@
 </script>
 
 <div class="flex items-center">
-	<div
-		class="rounded-lg border border-gray-700 bg-gray-800 p-6 shadow-lg"
-	>
+	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-lg">
 		<div class="mb-4 border-b border-gray-600 pb-2">
-			<h3 class="text-lg font-semibold text-white">
-				Game Controls
-			</h3>
+			<h3 class="text-lg font-semibold text-white">Game Controls</h3>
 		</div>
 
 		<div class="flex flex-col gap-4">
@@ -58,16 +54,31 @@
 			<div class="flex flex-col gap-2">
 				<div class="relative">
 					<button
-						class="flex w-full cursor-pointer items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-4 py-3 text-base transition-all duration-200 hover:bg-gray-600"
+						class={[
+							'flex',
+							'w-full',
+							'cursor-pointer',
+							'items-center',
+							'justify-between',
+							'rounded-md',
+							'border',
+							'border-gray-600',
+							'bg-gray-700',
+							'px-2',
+							'py-1',
+							'text-base',
+							'transition-all',
+							'duration-200',
+							'hover:bg-gray-600'
+						]}
 						onclick={toggleDropdown}
 						type="button"
 						aria-expanded={isDropdownOpen}
 						aria-haspopup="listbox"
 						aria-label="Select player type"
 					>
-						<span class="font-medium text-white"
-							>{playerType}</span
-						>
+						<span class="font-medium text-white">{playerType}</span>
+						<!-- TODO: chevron icon -->
 						<span
 							class="text-gray-400 transition-transform duration-200 {isDropdownOpen
 								? 'rotate-180'
@@ -128,7 +139,7 @@
 			<!-- Connection Button -->
 			<div class="flex flex-col gap-2">
 				<button
-					class="w-full rounded-md px-4 py-3 text-base font-semibold transition-colors duration-200 {!isConnected
+					class="w-full rounded-md px-2 py-1 text-base font-semibold transition-colors duration-200 {!isConnected
 						? 'bg-gray-700 text-white hover:bg-gray-600'
 						: 'bg-red-600 text-white hover:bg-red-700'}"
 					onclick={connect}

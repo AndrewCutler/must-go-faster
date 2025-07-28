@@ -166,7 +166,19 @@
 </script>
 
 <div class="chess-board">
-	<div id="countdown-timer" class={countdownValue ? ' block' : 'hidden'}>
+	<div
+		id="countdown-timer"
+		class={[
+			countdownValue ? ' block' : 'hidden',
+			'absolute',
+			'top-1/2',
+			'left-1/2',
+			'-translate-1/2',
+			'font-black',
+			'text-8xl',
+			'z-20'
+		]}
+	>
 		{countdownValue}
 	</div>
 	<div id="board" bind:this={boardDiv}></div>
@@ -174,9 +186,7 @@
 		open={showGameOverDialog}
 		class="-translate-z-2 absolute left-1/3 top-1/4 z-10 rounded-lg border border-gray-700 bg-gray-800 p-6 shadow-lg"
 	>
-		<div
-			class={['flex-col', 'font-medium', 'text-gray-300']}
-		>
+		<div class={['flex-col', 'font-medium', 'text-gray-300']}>
 			<div class="mb-4 flex border-b border-gray-600 pb-2">
 				{gameResultText}
 			</div>

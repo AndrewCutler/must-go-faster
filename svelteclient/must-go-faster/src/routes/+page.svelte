@@ -42,7 +42,6 @@
 			>
 				Must Go Faster
 			</h1>
-			<p class="text-gray-300">Chess Game</p>
 		</header>
 
 		<div class="mx-auto flex max-w-6xl justify-center">

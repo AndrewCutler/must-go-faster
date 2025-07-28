@@ -89,50 +89,16 @@
 </script>
 
 <div class="flex items-center">
-	<div class="flex-col text-lg font-semibold">
+	<div class="flex-coltext-lg font-semibold">
 		<div
-			class="flex rounded-t-md border-2 border-b-0 border-gray-700 p-1 bg-white text-black"
+			class="flex rounded-t-md border-2 border-b-0 border-gray-700 bg-white p-1 px-3 py-1 text-black"
 		>
 			{formatTime(whiteTime)}
 		</div>
 		<div
-			class="flex rounded-b-md border-2 border-gray-700 p-1 bg-black text-white"
+			class="flex rounded-b-md border-2 border-gray-700 bg-black p-1 px-3 py-1 text-white"
 		>
 			{formatTime(blackTime)}
 		</div>
 	</div>
 </div>
-<!-- 
-<div class="mb-4">
-	<div
-		class="rounded-lg border border-gray-700 bg-gray-800 p-6 shadow-lg"
-	>
-		<div class="mb-4 border-b border-gray-600 pb-2">
-			<h3 class="text-lg font-semibold text-white">Chess Clocks</h3>
-		</div>
-
-		<div class="mb-4 flex flex-col gap-4">
-			<div
-				class="flex items-center justify-between rounded-md border-2 border-transparent bg-gray-700 p-4 transition-all duration-300 {isWhiteTurn
-					? 'border-blue-500 bg-blue-900/20'
-					: ''}"
-			>
-				<div class="font-semibold text-gray-300">White</div>
-				<div class="font-mono text-xl font-bold text-white">
-					{formatTime(whiteTime)}
-				</div>
-			</div>
-
-			<div
-				class="flex items-center justify-between rounded-md border-2 border-transparent bg-gray-700 p-4 transition-all duration-300 {!isWhiteTurn
-					? 'border-blue-500 bg-blue-900/20'
-					: ''}"
-			>
-				<div class="font-semibold text-gray-300">Black</div>
-				<div class="font-mono text-xl font-bold text-white">
-					{formatTime(blackTime)}
-				</div>
-			</div>
-		</div>
-	</div>
-</div> -->

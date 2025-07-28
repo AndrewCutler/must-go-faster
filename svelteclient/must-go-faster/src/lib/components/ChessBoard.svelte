@@ -172,39 +172,35 @@
 	<div id="board" bind:this={boardDiv}></div>
 	<dialog
 		open={showGameOverDialog}
-		class="-translate-z-2 absolute left-1/3 top-1/4 z-10 rounded-lg border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+		class="-translate-z-2 absolute left-1/3 top-1/4 z-10 rounded-lg border border-gray-700 bg-gray-800 p-6 shadow-lg"
 	>
 		<div
-			class={['flex-col', 'font-medium', 'text-gray-600', 'dark:text-gray-300']}
+			class={['flex-col', 'font-medium', 'text-gray-300']}
 		>
-			<div class="mb-4 flex border-b border-gray-200 pb-2 dark:border-gray-600">
+			<div class="mb-4 flex border-b border-gray-600 pb-2">
 				{gameResultText}
 			</div>
-			<div class="mb-4 flex border-b border-gray-200 pb-2 dark:border-gray-600">
+			<div class="mb-4 flex border-b border-gray-600 pb-2">
 				<button
 					class={[
 						'inline-flex',
 						'items-center',
 						'rounded-md',
 						'border',
-						'border-gray-300',
+						'border-gray-600',
 						'px-4',
 						'py-2',
 						'text-sm',
 						'font-medium',
-						'text-gray-700',
+						'text-gray-200',
 						'shadow-sm',
 						'transition-colors',
 						'duration-150',
-						'hover:bg-gray-100',
+						'hover:bg-gray-600',
 						'focus:outline-none',
 						'focus:ring-2',
 						'focus:ring-blue-500',
-						'focus:ring-offset-2',
-						'dark:border-gray-600',
-						'dark:bg-gray-700',
-						'dark:text-gray-200',
-						'dark:hover:bg-gray-600'
+						'focus:ring-offset-2'
 					]}
 					onclick={() => location.reload()}
 				>

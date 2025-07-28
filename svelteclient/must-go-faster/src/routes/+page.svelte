@@ -28,7 +28,7 @@
 	}
 </script>
 
-<main class="min-h-screen bg-gray-50 dark:bg-gray-900">
+<main class="min-h-screen bg-gray-900">
 	<div class="container mx-auto px-4 py-8">
 		<!-- Header -->
 		<header class="mb-8 text-center">
@@ -37,13 +37,12 @@
 					'mb-2',
 					'text-4xl',
 					'font-bold',
-					'text-gray-800',
-					'dark:text-white'
+					'text-white'
 				]}
 			>
 				Must Go Faster
 			</h1>
-			<p class="text-gray-600 dark:text-gray-300">Chess Game</p>
+			<p class="text-gray-300">Chess Game</p>
 		</header>
 
 		<div class="mx-auto flex max-w-6xl justify-center">
@@ -53,12 +52,10 @@
 					'rounded-lg',
 					'gap-8',
 					'border',
-					'border-gray-200',
-					'bg-white',
+					'border-gray-700',
+					'bg-gray-800',
 					'p-6',
-					'shadow-lg',
-					'dark:border-gray-700',
-					'dark:bg-gray-800'
+					'shadow-lg'
 				]}
 			>
 				<Clocks />

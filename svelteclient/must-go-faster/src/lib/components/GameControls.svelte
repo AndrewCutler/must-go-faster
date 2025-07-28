@@ -45,10 +45,10 @@
 
 <div class="flex items-center">
 	<div
-		class="rounded-lg border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+		class="rounded-lg border border-gray-700 bg-gray-800 p-6 shadow-lg"
 	>
-		<div class="mb-4 border-b border-gray-200 pb-2 dark:border-gray-600">
-			<h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+		<div class="mb-4 border-b border-gray-600 pb-2">
+			<h3 class="text-lg font-semibold text-white">
 				Game Controls
 			</h3>
 		</div>
@@ -58,18 +58,18 @@
 			<div class="flex flex-col gap-2">
 				<div class="relative">
 					<button
-						class="flex w-full cursor-pointer items-center justify-between rounded-md border border-gray-300 bg-gray-50 px-4 py-3 text-base transition-all duration-200 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600"
+						class="flex w-full cursor-pointer items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-4 py-3 text-base transition-all duration-200 hover:bg-gray-600"
 						onclick={toggleDropdown}
 						type="button"
 						aria-expanded={isDropdownOpen}
 						aria-haspopup="listbox"
 						aria-label="Select player type"
 					>
-						<span class="font-medium text-gray-900 dark:text-white"
+						<span class="font-medium text-white"
 							>{playerType}</span
 						>
 						<span
-							class="text-gray-500 transition-transform duration-200 dark:text-gray-400 {isDropdownOpen
+							class="text-gray-400 transition-transform duration-200 {isDropdownOpen
 								? 'rotate-180'
 								: ''}"
 						>
@@ -90,15 +90,15 @@
 					</button>
 					{#if isDropdownOpen}
 						<div
-							class="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700"
+							class="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-gray-600 bg-gray-700 shadow-lg"
 							role="listbox"
 							data-dropdown
 						>
 							<div class="py-1">
 								<button
-									class="w-full px-4 py-3 text-left text-gray-900 transition-colors duration-200 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600 {playerType ===
+									class="w-full px-4 py-3 text-left text-white transition-colors duration-200 hover:bg-gray-600 {playerType ===
 									'Computer'
-										? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+										? 'bg-blue-900/20 font-semibold text-blue-300'
 										: ''}"
 									onclick={() => selectPlayerType('Computer')}
 									type="button"
@@ -108,9 +108,9 @@
 									Computer
 								</button>
 								<button
-									class="w-full px-4 py-3 text-left text-gray-900 transition-colors duration-200 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600 {playerType ===
+									class="w-full px-4 py-3 text-left text-white transition-colors duration-200 hover:bg-gray-600 {playerType ===
 									'Human'
-										? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+										? 'bg-blue-900/20 font-semibold text-blue-300'
 										: ''}"
 									onclick={() => selectPlayerType('Human')}
 									type="button"
@@ -129,7 +129,7 @@
 			<div class="flex flex-col gap-2">
 				<button
 					class="w-full rounded-md px-4 py-3 text-base font-semibold transition-colors duration-200 {!isConnected
-						? 'bg-gray-800 text-white hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600'
+						? 'bg-gray-700 text-white hover:bg-gray-600'
 						: 'bg-red-600 text-white hover:bg-red-700'}"
 					onclick={connect}
 					type="button"

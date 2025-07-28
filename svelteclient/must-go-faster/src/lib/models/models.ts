@@ -73,7 +73,7 @@ export type FromPayload =
 	| GameStartedFromServer
 	| GameOverFromServerType
 	| MoveFromServer
-	| TimeoutFromServer
+	// | TimeoutFromServer
 	| AbandonedFromServer;
 
 export type GameJoinedFromServer = {
@@ -104,14 +104,14 @@ export type GameOverFromServerType = {
 	move: Move;
 }
 
-export type TimeoutFromServer = {
-	// whiteTimeLeft: number;
-	// blackTimeLeft: number;
-	fen: string;
-	whosNext: PlayerColor;
-	validMoves: { [key: string]: string[] };
-	loser: PlayerColor;
-};
+// export type TimeoutFromServer = {
+// 	// whiteTimeLeft: number;
+// 	// blackTimeLeft: number;
+// 	fen: string;
+// 	whosNext: PlayerColor;
+// 	validMoves: { [key: string]: string[] };
+// 	loser: PlayerColor;
+// };
 
 export type AbandonedFromServer = {
 	abandoned: boolean;

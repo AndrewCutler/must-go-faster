@@ -1,4 +1,3 @@
-import * as cg from 'chessground/types';
 import type {
 	FromMessage,
 	FromPayload,
@@ -6,11 +5,8 @@ import type {
 	GameOverFromServerType,
 	Move,
 	MoveFromServer,
-	MoveToServer,
 	OpponentType,
-	PlayerColor,
-	ToMessage,
-	ToPayload
+	PlayerColor
 } from '$lib/models/models';
 import { writable } from 'svelte/store';
 import type { CGConfig } from '$lib/models/models';
@@ -32,8 +28,8 @@ export type GameState = {
 	sessionId: string;
 	type: FromMessage<FromPayload>['type'];
 	playerColor: PlayerColor;
-	isCheckmated?: PlayerColor;
-    outcome: 'in-progress' | 'checkmate' | 'timeout' | 'stalemate'; // etc
+	loser?: PlayerColor;
+	outcome: 'in-progress' | 'checkmate' | 'timeout' | 'stalemate'; // etc
 	move?: Move;
 };
 
@@ -52,7 +48,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				whosNext: copy.payload.whosNext,
 				validMoves: copy.payload.validMoves,
 				serverTimeStamp: copy.serverTimeStamp,
-                outcome: 'in-progress',
+				outcome: 'in-progress',
 				boardConfig: {
 					viewOnly: true,
 					fen: copy.payload.fen,
@@ -86,8 +82,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				whosNext: copy.payload.whosNext,
 				validMoves: copy.payload.validMoves,
 				serverTimeStamp: copy.serverTimeStamp,
-				isCheckmated: copy.payload.isCheckmated,
-                outcome: 'in-progress',
+				outcome: 'in-progress',
 				boardConfig: {
 					fen: copy.payload.fen,
 					turnColor: copy.payload.whosNext,
@@ -108,7 +103,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 			}));
 			break;
 		}
-        case 'GameOverFromServerType': {
+		case 'GameOverFromServerType': {
 			const copy = message as FromMessage<GameOverFromServerType>;
 			gameState.update((value) => ({
 				...(value || {}),
@@ -121,11 +116,11 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				whosNext: value!.whosNext,
 				validMoves: value!.validMoves,
 				serverTimeStamp: copy.serverTimeStamp,
-				isCheckmated: copy.payload.loser,
-                outcome: 'checkmate',
+				outcome: copy.payload.outcome as any,
+				loser: copy.payload.loser,
 				boardConfig: {
 					lastMove: [copy.payload.move.from, copy.payload.move.to],
-					orientation: copy.playerColor,
+					orientation: copy.playerColor
 				}
 			}));
 			break;

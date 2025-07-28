@@ -78,7 +78,8 @@
 			if (state.type === 'GameJoinedFromServerType') {
 				startCountdown();
 			} else if (state.type === 'GameOverFromServerType') {
-				gameOver(state.outcome!, state.isCheckmated!);
+				console.log(state);
+				gameOver(state.outcome!, state.loser!);
 			}
 
 			board?.set({

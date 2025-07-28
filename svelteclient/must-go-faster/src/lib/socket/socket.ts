@@ -42,6 +42,7 @@ export function createSocket(opponentType: OpponentType): void {
 			const message: FromMessage<FromPayload> = JSON.parse(event.data);
 			receiveMessage(message);
 		} catch (e) {
+			console.log(event.data);
 			console.error(e);
 		}
 	};
@@ -66,14 +67,18 @@ export function sendMessage({
 	}
 
 	if (socket.readyState !== socket.OPEN) {
-		console.error('Attempted send() on socket that is not open. State: ', socket.readyState);
+		console.error(
+			'Attempted send() on socket that is not open. State: ',
+			socket.readyState
+		);
 		return;
 	}
 
 	let message: ToMessage<ToPayload> | undefined = undefined;
 	switch (type) {
 		case 'MoveToServerType': {
-			if (!move) throw new Error('move was undefined when called with type move');
+			if (!move)
+				throw new Error('move was undefined when called with type move');
 			message = {
 				payload: { move: move! },
 				playerColor: playerColor,

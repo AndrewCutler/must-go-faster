@@ -24,7 +24,6 @@ const (
 	PremoveFromServerType
 	PremoveToServerType
 
-	TimeoutFromServerType
 	TimeoutToServerType
 
 	AbandonedFromServerType
@@ -41,8 +40,8 @@ func (m MessageType) String() string {
 		return "GameStartedFromServerType"
 	case MoveFromServerType:
 		return "MoveFromServerType"
-	case TimeoutFromServerType:
-		return "TimeoutFromServerType"
+	case GameOverFromServerType:
+		return "GameOverFromServerType"
 	case AbandonedFromServerType:
 		return "AbandonedFromServerType"
 	case GameJoinedToServerType:
@@ -57,8 +56,6 @@ func (m MessageType) String() string {
 		return "TimeoutToServerType"
 	case AbandonedToServerType:
 		return "AbandonedToServerType"
-	case GameOverFromServerType:
-		return "GameOverFromServerType"
 	default:
 		return ""
 	}
@@ -72,8 +69,6 @@ func MessageTypeFromString(s string) (MessageType, error) {
 		return GameStartedFromServerType, nil
 	case "MoveFromServerType":
 		return MoveFromServerType, nil
-	case "TimeoutFromServerType":
-		return TimeoutFromServerType, nil
 	case "AbandonedFromServerType":
 		return AbandonedFromServerType, nil
 	case "PremoveFromServerType":
@@ -120,14 +115,14 @@ type MoveFromServer struct {
 	Move          Move                `json:"move"`
 }
 
-type TimeoutFromServer struct {
-	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-	BlackTimeLeft float64             `json:"blackTimeLeft"`
-	Fen           string              `json:"fen"`
-	ValidMoves    map[string][]string `json:"validMoves"`
-	WhosNext      string              `json:"whosNext"`
-	Loser         string              `json:"loser"`
-}
+// type TimeoutFromServer struct {
+// 	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
+// 	BlackTimeLeft float64             `json:"blackTimeLeft"`
+// 	Fen           string              `json:"fen"`
+// 	ValidMoves    map[string][]string `json:"validMoves"`
+// 	WhosNext      string              `json:"whosNext"`
+// 	Loser         string              `json:"loser"`
+// }
 
 type AbandonedFromServer struct {
 	Abandoned bool `json:"abandoned"`
@@ -256,15 +251,13 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 
 func sendTimeoutMessage(session *Session, playerColor string, loser string) []byte {
 	message := Message{
-		Type:        TimeoutFromServerType.String(),
+		Type:        GameOverFromServerType.String(),
 		SessionId:   session.SessionId,
 		PlayerColor: playerColor,
 		TimeStamp:   time.Now().Format(time.RFC3339),
-		Payload: TimeoutFromServer{
-			Fen:        session.getFen(),
-			ValidMoves: ValidMovesMap(session.Game),
-			WhosNext:   session.whoseMoveIsIt(),
-			Loser:      loser,
+		Payload: GameOverFromServer{
+			Outcome: "timeout",
+			Loser:   loser,
 		},
 	}
 

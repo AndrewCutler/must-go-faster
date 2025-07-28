@@ -29,6 +29,8 @@ const (
 
 	AbandonedFromServerType
 	AbandonedToServerType
+
+	GameOverFromServerType
 )
 
 func (m MessageType) String() string {
@@ -55,6 +57,8 @@ func (m MessageType) String() string {
 		return "TimeoutToServerType"
 	case AbandonedToServerType:
 		return "AbandonedToServerType"
+	case GameOverFromServerType:
+		return "GameOverFromServerType"
 	default:
 		return ""
 	}
@@ -74,6 +78,8 @@ func MessageTypeFromString(s string) (MessageType, error) {
 		return AbandonedFromServerType, nil
 	case "PremoveFromServerType":
 		return PremoveFromServerType, nil
+	case "GameOverFromServerType":
+		return GameOverFromServerType, nil
 	}
 
 	return -1, fmt.Errorf("invalid message type: %s", s)
@@ -139,6 +145,12 @@ type TimeoutToServer struct {
 	Timeout bool `json:"timeout"`
 }
 
+type GameOverFromServer struct {
+	Outcome string `json:"outcome"`
+	Loser   string `json:"loser"`
+	Move    Move   `json:"move"`
+}
+
 func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 	message := Message{
 		Type:              GameJoinedFromServerType.String(),
@@ -199,22 +211,38 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 		isCheckmated = "black"
 	}
 
-	whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
+	var message Message
+	if isCheckmated != "" {
+		message = Message{
+			Type:        GameOverFromServerType.String(),
+			SessionId:   session.SessionId,
+			PlayerColor: playerColor,
+			TimeStamp:   time.Now().Format(time.RFC3339),
+			Payload: GameOverFromServer{
+				Loser:   isCheckmated,
+				Outcome: "checkmate",
+				Move:    move,
+			},
+		}
 
-	message := Message{
-		Type:        MoveFromServerType.String(),
-		SessionId:   session.SessionId,
-		PlayerColor: playerColor,
-		TimeStamp:   time.Now().Format(time.RFC3339),
-		Payload: MoveFromServer{
-			Fen:           session.getFen(),
-			ValidMoves:    ValidMovesMap(session.Game),
-			WhosNext:      session.whoseMoveIsIt(),
-			IsCheckmated:  isCheckmated,
-			WhiteTimeLeft: whiteTimeLeft,
-			BlackTimeLeft: blackTimeLeft,
-			Move:          move,
-		},
+	} else {
+		whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
+
+		message = Message{
+			Type:        MoveFromServerType.String(),
+			SessionId:   session.SessionId,
+			PlayerColor: playerColor,
+			TimeStamp:   time.Now().Format(time.RFC3339),
+			Payload: MoveFromServer{
+				Fen:           session.getFen(),
+				ValidMoves:    ValidMovesMap(session.Game),
+				WhosNext:      session.whoseMoveIsIt(),
+				IsCheckmated:  isCheckmated,
+				WhiteTimeLeft: whiteTimeLeft,
+				BlackTimeLeft: blackTimeLeft,
+				Move:          move,
+			},
+		}
 	}
 
 	jsonData, err := json.Marshal(message)
@@ -265,6 +293,26 @@ func sendAbandonedMessage() []byte {
 	}
 
 	return jsonData
+}
+
+func sendGameOverMessage(session *Session, outcome string, loser string) []byte {
+	message := Message{
+		Type:      GameOverFromServerType.String(),
+		TimeStamp: time.Now().Format(time.RFC3339),
+		Payload: GameOverFromServer{
+			Loser:   loser,
+			Outcome: outcome,
+		},
+	}
+
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
+
 }
 
 // Receive

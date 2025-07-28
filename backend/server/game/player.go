@@ -78,8 +78,6 @@ func (p *Player) ReadMessage() {
 			return
 		}
 
-		log.Println(string(content))
-
 		// todo: don't deserialize message and payload separately and then return new Message from original deserialized message.
 		// just do something like message.Payload = payload and return message
 		p.Hub.ReadChan <- Message{SessionId: p.SessionId, Payload: payload, Type: typeOnly.Type, IsAgainstComputer: message.IsAgainstComputer, PlayerColor: message.PlayerColor}

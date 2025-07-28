@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import ChessBoard from '$lib/components/ChessBoard.svelte';
 	import GameControls from '$lib/components/GameControls.svelte';
-	import GameInfo from '$lib/components/GameInfo.svelte';
 	import Clocks from '$lib/components/Clocks.svelte';
 
 	let gameState = {
@@ -18,52 +17,58 @@
 
 	function handleConnectionToggle(event: CustomEvent) {
 		gameState.isConnected = event.detail.connected;
-		gameState.gameStatus = gameState.isConnected ? 'Connected - Ready to play!' : 'Disconnected';
+		gameState.gameStatus = gameState.isConnected
+			? 'Connected - Ready to play!'
+			: 'Disconnected';
 	}
 
 	function handleMove() {
-		gameState.currentTurn = gameState.currentTurn === 'Black' ? 'White' : 'Black';
+		gameState.currentTurn =
+			gameState.currentTurn === 'Black' ? 'White' : 'Black';
 	}
 </script>
 
 <main class="min-h-screen bg-gray-50 dark:bg-gray-900">
 	<div class="container mx-auto px-4 py-8">
 		<!-- Header -->
-		<header class="text-center mb-8">
-			<h1 class="text-4xl font-bold text-gray-800 dark:text-white mb-2">Must Go Faster</h1>
+		<header class="mb-8 text-center">
+			<h1
+				class={[
+					'mb-2',
+					'text-4xl',
+					'font-bold',
+					'text-gray-800',
+					'dark:text-white'
+				]}
+			>
+				Must Go Faster
+			</h1>
 			<p class="text-gray-600 dark:text-gray-300">Chess Game</p>
 		</header>
 
-		<!-- Game Layout -->
-		<div class="max-w-6xl mx-auto">
-			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-				<!-- Game Info -->
-				<div class="lg:col-span-1">
-					<GameInfo 
-						currentTurn={gameState.currentTurn}
-						gameStatus={gameState.gameStatus}
-						on:move={handleMove}
-					/>
-					
-					<Clocks />
-				</div>
-
-				<!-- Chess Board -->
-				<div class="lg:col-span-1">
-					<div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-						<ChessBoard on:move={handleMove} />
-					</div>
-				</div>
-
-				<!-- Game Controls -->
-				<div class="lg:col-span-1">
-					<GameControls 
-						playerType={gameState.playerType}
-						isConnected={gameState.isConnected}
-						on:playerTypeChange={handlePlayerTypeChange}
-						on:connectionToggle={handleConnectionToggle}
-					/>
-				</div>
+		<div class="mx-auto flex max-w-6xl justify-center">
+			<div
+				class={[
+					'flex',
+					'rounded-lg',
+					'gap-8',
+					'border',
+					'border-gray-200',
+					'bg-white',
+					'p-6',
+					'shadow-lg',
+					'dark:border-gray-700',
+					'dark:bg-gray-800'
+				]}
+			>
+				<Clocks />
+				<ChessBoard on:move={handleMove} />
+				<GameControls
+					playerType={gameState.playerType}
+					isConnected={gameState.isConnected}
+					on:playerTypeChange={handlePlayerTypeChange}
+					on:connectionToggle={handleConnectionToggle}
+				/>
 			</div>
 		</div>
 

@@ -1,10 +1,13 @@
 <script lang="ts">
-	import type { ChessgroundConfig } from '$lib/models/models';
+	import type { ChessgroundConfig, PlayerColor } from '$lib/models/models';
 	import { Chessground } from 'chessground';
 	import { onMount } from 'svelte';
 	import * as cg from 'chessground/types';
 	import type { Api } from 'chessground/api';
-	import { gameState, isAgainstComputer } from '../../store/must-go-faster.store';
+	import {
+		gameState,
+		isAgainstComputer
+	} from '../../store/must-go-faster.store';
 	import { sendMessage } from '$lib/socket/socket';
 
 	const initialConfig: ChessgroundConfig = {
@@ -18,6 +21,8 @@
 	let boardDiv: HTMLElement | undefined;
 	let countdownInterval: number | undefined = $state(undefined);
 	let countdownValue = $state(0);
+	let showGameOverDialog = $state(false);
+	let gameResultText = $state('');
 
 	function promoteIfPromotion(to: cg.Key): cg.Key {
 		const movedPiece = board!.state.pieces.get(to);
@@ -30,7 +35,11 @@
 	}
 
 	// TODO: meta tells you if premove
-	function handleClientMove(from: cg.Key, to: cg.Key, meta: cg.MoveMetadata): void {
+	function handleClientMove(
+		from: cg.Key,
+		to: cg.Key,
+		meta: cg.MoveMetadata
+	): void {
 		if (!$gameState?.sessionId) {
 			console.error('sessionId not found');
 			return;
@@ -68,6 +77,8 @@
 
 			if (state.type === 'GameJoinedFromServerType') {
 				startCountdown();
+			} else if (state.type === 'GameOverFromServerType') {
+				gameOver(state.outcome!, state.isCheckmated!);
 			}
 
 			board?.set({
@@ -113,7 +124,10 @@
 			countdownInterval = setInterval(function () {
 				--countdownValue;
 				if (countdownValue <= 0) {
-					gameState.update((state) => ({ ...state!, type: 'GameStartedToServerType' }));
+					gameState.update((state) => ({
+						...state!,
+						type: 'GameStartedToServerType'
+					}));
 					sendMessage({
 						type: 'GameStartedToServerType',
 						playerColor: $gameState?.playerColor,
@@ -137,14 +151,75 @@
 			console.log($gameState?.sessionId, $gameState?.playerColor);
 		}
 	}
+
+	// todo: better types
+	function gameOver(
+		gameState: 'timeout' | 'checkmate' | 'stalemate' | 'in-progress',
+		loser: PlayerColor
+	): void {
+		gameResultText = `${loser
+			.split('')
+			.map((l, i) => (i === 0 ? l.toUpperCase() : l))
+			.join('')} lost due to ${gameState}.`;
+		showGameOverDialog = true;
+	}
 </script>
 
 <div class="chess-board">
-	<div id="countdown-timer" class={countdownValue ? ' block' : 'hidden'}>{countdownValue}</div>
+	<div id="countdown-timer" class={countdownValue ? ' block' : 'hidden'}>
+		{countdownValue}
+	</div>
 	<div id="board" bind:this={boardDiv}></div>
+	<dialog
+		open={showGameOverDialog}
+		class="-translate-z-2 absolute left-1/3 top-1/4 z-10 rounded-lg border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+	>
+		<div
+			class={['flex-col', 'font-medium', 'text-gray-600', 'dark:text-gray-300']}
+		>
+			<div class="mb-4 flex border-b border-gray-200 pb-2 dark:border-gray-600">
+				{gameResultText}
+			</div>
+			<div class="mb-4 flex border-b border-gray-200 pb-2 dark:border-gray-600">
+				<button
+					class={[
+						'inline-flex',
+						'items-center',
+						'rounded-md',
+						'border',
+						'border-gray-300',
+						'px-4',
+						'py-2',
+						'text-sm',
+						'font-medium',
+						'text-gray-700',
+						'shadow-sm',
+						'transition-colors',
+						'duration-150',
+						'hover:bg-gray-100',
+						'focus:outline-none',
+						'focus:ring-2',
+						'focus:ring-blue-500',
+						'focus:ring-offset-2',
+						'dark:border-gray-600',
+						'dark:bg-gray-700',
+						'dark:text-gray-200',
+						'dark:hover:bg-gray-600'
+					]}
+					onclick={() => location.reload()}
+				>
+					Play again
+				</button>[dropdown for opponent type]
+			</div>
+		</div>
+	</dialog>
 </div>
 
 <style>
+	.chess-board {
+		position: relative;
+	}
+
 	#board {
 		width: 400px;
 		height: 400px;

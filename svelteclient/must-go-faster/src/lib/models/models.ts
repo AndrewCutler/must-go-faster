@@ -11,6 +11,7 @@ export type OpponentType = 'computer' | 'human';
 export type MessageType =
 	| 'GameJoinedFromServerType'
 	| 'GameStartedFromServerType'
+	| 'GameOverFromServerType'
 	| 'MoveFromServerType'
 	| 'PremoveFromServerType'
 	| 'TimeoutFromServerType'
@@ -70,6 +71,7 @@ export type ToPayload =
 export type FromPayload =
 	| GameJoinedFromServer
 	| GameStartedFromServer
+	| GameOverFromServerType
 	| MoveFromServer
 	| TimeoutFromServer
 	| AbandonedFromServer;
@@ -95,6 +97,12 @@ export type MoveFromServer = {
 	isCheckmated: PlayerColor;
 	move: Move;
 };
+
+export type GameOverFromServerType = {
+    loser: PlayerColor;
+    outcome: string; // checkmate | timeout | stalemate | etc.
+	move: Move;
+}
 
 export type TimeoutFromServer = {
 	// whiteTimeLeft: number;

@@ -3,6 +3,7 @@ import type {
 	FromMessage,
 	FromPayload,
 	GameJoinedFromServer,
+	GameOverFromServerType,
 	Move,
 	MoveFromServer,
 	MoveToServer,
@@ -32,6 +33,7 @@ export type GameState = {
 	type: FromMessage<FromPayload>['type'];
 	playerColor: PlayerColor;
 	isCheckmated?: PlayerColor;
+    outcome: 'in-progress' | 'checkmate' | 'timeout' | 'stalemate'; // etc
 	move?: Move;
 };
 
@@ -50,6 +52,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				whosNext: copy.payload.whosNext,
 				validMoves: copy.payload.validMoves,
 				serverTimeStamp: copy.serverTimeStamp,
+                outcome: 'in-progress',
 				boardConfig: {
 					viewOnly: true,
 					fen: copy.payload.fen,
@@ -83,6 +86,8 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				whosNext: copy.payload.whosNext,
 				validMoves: copy.payload.validMoves,
 				serverTimeStamp: copy.serverTimeStamp,
+				isCheckmated: copy.payload.isCheckmated,
+                outcome: 'in-progress',
 				boardConfig: {
 					fen: copy.payload.fen,
 					turnColor: copy.payload.whosNext,
@@ -99,6 +104,28 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 					draggable: {
 						enabled: true
 					}
+				}
+			}));
+			break;
+		}
+        case 'GameOverFromServerType': {
+			const copy = message as FromMessage<GameOverFromServerType>;
+			gameState.update((value) => ({
+				...(value || {}),
+				type: message.type,
+				playerColor: copy.playerColor,
+				sessionId: copy.sessionId,
+				whiteTimeLeft: value!.whiteTimeLeft,
+				blackTimeLeft: value!.blackTimeLeft,
+				fen: value!.fen,
+				whosNext: value!.whosNext,
+				validMoves: value!.validMoves,
+				serverTimeStamp: copy.serverTimeStamp,
+				isCheckmated: copy.payload.loser,
+                outcome: 'checkmate',
+				boardConfig: {
+					lastMove: [copy.payload.move.from, copy.payload.move.to],
+					orientation: copy.playerColor,
 				}
 			}));
 			break;

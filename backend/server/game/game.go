@@ -161,9 +161,24 @@ func PlayComputer(player *Player, computer *Player) {
 
 				updateClocks(session)
 
+				// todo: how is this used?
 				if c.Clock.TimeLeft <= 0 {
 					player.WriteChan <- sendTimeoutMessage(session, player.Color, c.Color)
 				} else {
+					// isCheckmated := ""
+					// switch session.Game.Outcome() {
+					// case "0-1":
+					// 	isCheckmated = "white"
+					// case "1-0":
+					// 	isCheckmated = "black"
+					// }
+
+					// log.Println("is checkmated", isCheckmated)
+					// if isCheckmated != "" {
+					// 	player.WriteChan <- sendGameOverMessage(session, "checkmate", isCheckmated)
+					// } else {
+					// 	player.WriteChan <- sendMoveMessage(session, player.Color, move)
+					// }
 					player.WriteChan <- sendMoveMessage(session, player.Color, move)
 				}
 			}

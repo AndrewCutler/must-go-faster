@@ -11,18 +11,26 @@
 
 	onMount(() => {
 		const unsub = gameState.subscribe((value) => {
-			if (
-				value &&
-				(value.type === 'GameStartedToServerType' || value.type === 'MoveFromServerType')
-			) {
-				isWhiteTurn = value.whosNext === 'white';
-				whiteTime = value.whiteTimeLeft;
-				blackTime = value.blackTimeLeft;
-				runClock({
-					whoseMove: isWhiteTurn ? 'white' : 'black',
-					whiteTimeLeft: value.whiteTimeLeft,
-					blackTimeLeft: value.blackTimeLeft
-				});
+			// TODO: switch statement
+			if (value) {
+				if (
+					value.type === 'GameStartedToServerType' ||
+					value.type === 'MoveFromServerType'
+				) {
+					isWhiteTurn = value.whosNext === 'white';
+					whiteTime = value.whiteTimeLeft;
+					blackTime = value.blackTimeLeft;
+					runClock({
+						whoseMove: isWhiteTurn ? 'white' : 'black',
+						whiteTimeLeft: value.whiteTimeLeft,
+						blackTimeLeft: value.blackTimeLeft
+					});
+					return;
+				}
+
+				if (value.type === 'GameOverFromServerType' && timer) {
+					cancelAnimationFrame(timer);
+				}
 			}
 		});
 
@@ -80,8 +88,22 @@
 	}
 </script>
 
+<div class="flex items-center">
+	<div class="flex-col text-lg font-semibold">
+		<div
+			class="flex rounded-t-md border-2 border-b-0 border-gray-700 p-1 dark:bg-white dark:text-black"
+		>
+			{formatTime(whiteTime)}
+		</div>
+		<div
+			class="flex rounded-b-md border-2 border-gray-700 p-1 dark:bg-black dark:text-white"
+		>
+			{formatTime(blackTime)}
+		</div>
+	</div>
+</div>
+<!-- 
 <div class="mb-4">
-	<!-- TODO change this entire ui. it's ugly and bulky. -->
 	<div
 		class="rounded-lg border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800"
 	>
@@ -113,4 +135,4 @@
 			</div>
 		</div>
 	</div>
-</div>
+</div> -->

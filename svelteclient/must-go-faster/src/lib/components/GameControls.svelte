@@ -43,12 +43,14 @@
 	});
 </script>
 
-<div class="mb-4">
+<div class="flex items-center">
 	<div
 		class="rounded-lg border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800"
 	>
 		<div class="mb-4 border-b border-gray-200 pb-2 dark:border-gray-600">
-			<h3 class="text-lg font-semibold text-gray-800 dark:text-white">Game Controls</h3>
+			<h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+				Game Controls
+			</h3>
 		</div>
 
 		<div class="flex flex-col gap-4">
@@ -63,13 +65,20 @@
 						aria-haspopup="listbox"
 						aria-label="Select player type"
 					>
-						<span class="font-medium text-gray-900 dark:text-white">{playerType}</span>
+						<span class="font-medium text-gray-900 dark:text-white"
+							>{playerType}</span
+						>
 						<span
 							class="text-gray-500 transition-transform duration-200 dark:text-gray-400 {isDropdownOpen
 								? 'rotate-180'
 								: ''}"
 						>
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg
+								class="h-4 w-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
 								<path
 									stroke-linecap="round"
 									stroke-linejoin="round"

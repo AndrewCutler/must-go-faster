@@ -31,6 +31,7 @@ export type GameState = {
 	loser?: PlayerColor;
 	outcome: 'in-progress' | 'checkmate' | 'timeout' | 'stalemate'; // etc
 	move?: Move;
+	premove?: Move;
 };
 
 export function receiveMessage(message: FromMessage<FromPayload>): void {
@@ -58,10 +59,10 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 						dests: toValidMoves(copy.payload.validMoves),
 						color: copy.payload.whosNext
 					},
-					premovable: {
-						enabled: true,
-						showDests: true
-					},
+					// premovable: {
+					// 	enabled: true,
+					// 	showDests: true
+					// },
 					draggable: {
 						enabled: true
 					}
@@ -92,10 +93,10 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 					},
 					lastMove: [copy.payload.move.from, copy.payload.move.to],
 					orientation: copy.playerColor,
-					premovable: {
-						enabled: true,
-						showDests: true
-					},
+					// premovable: {
+					// 	enabled: true,
+					// 	showDests: true
+					// },
 					draggable: {
 						enabled: true
 					}

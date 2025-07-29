@@ -7,6 +7,7 @@ import type {
 	MoveToServer,
 	OpponentType,
 	PlayerColor,
+	PremoveToServer,
 	ToMessage,
 	ToPayload
 } from '$lib/models/models';
@@ -55,6 +56,7 @@ export function sendMessage({
 	playerColor,
 	move
 }: {
+	// TODO: type as Pick of GameState
 	type: MessageType;
 	sessionId: string;
 	isAgainstComputer: boolean;
@@ -77,8 +79,9 @@ export function sendMessage({
 	let message: ToMessage<ToPayload> | undefined = undefined;
 	switch (type) {
 		case 'MoveToServerType': {
-			if (!move)
+			if (!move) {
 				throw new Error('move was undefined when called with type move');
+			}
 			message = {
 				payload: { move: move! },
 				playerColor: playerColor,
@@ -88,6 +91,21 @@ export function sendMessage({
 			} as ToMessage<MoveToServer>;
 			break;
 		}
+		case 'PremoveToServerType': {
+			if (!move) {
+				throw new Error('move was undefined when called with type premove');
+			}
+			message = {
+				isAgainstComputer: isAgainstComputer!,
+				playerColor: playerColor,
+				payload: {
+					premove: move
+				},
+				sessionId: sessionId!,
+				type
+			} as ToMessage<PremoveToServer>;
+			break;
+		}
 		case 'GameStartedToServerType': {
 			message = {
 				isAgainstComputer: isAgainstComputer!,
@@ -95,6 +113,10 @@ export function sendMessage({
 				sessionId: sessionId!,
 				type
 			} as ToMessage<GameStartedToServer>;
+			break;
+		}
+		default: {
+			console.error(`invalid message ${type}`);
 			break;
 		}
 	}

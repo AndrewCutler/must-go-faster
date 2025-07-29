@@ -1,12 +1,17 @@
 <script lang="ts">
-	import type { ChessgroundConfig, PlayerColor } from '$lib/models/models';
+	import type {
+		ChessgroundConfig,
+		Move,
+		PlayerColor
+	} from '$lib/models/models';
 	import { Chessground } from 'chessground';
 	import { onMount } from 'svelte';
 	import * as cg from 'chessground/types';
 	import type { Api } from 'chessground/api';
 	import {
 		gameState,
-		isAgainstComputer
+		isAgainstComputer,
+		type GameState
 	} from '../../store/must-go-faster.store';
 	import { sendMessage } from '$lib/socket/socket';
 
@@ -61,10 +66,10 @@
 			turnColor: $gameState.playerColor === 'white' ? 'black' : 'white',
 			movable: {
 				color: $gameState.playerColor
-			},
-			premovable: {
-				enabled: true
 			}
+			// premovable: {
+			// 	enabled: true
+			// }
 		});
 	}
 
@@ -78,7 +83,6 @@
 			if (state.type === 'GameJoinedFromServerType') {
 				startCountdown();
 			} else if (state.type === 'GameOverFromServerType') {
-				console.log(state);
 				gameOver(state.outcome!, state.loser!);
 			}
 
@@ -99,13 +103,17 @@
 						after: handleClientMove
 					}
 				},
-				// events: {
-				// 	move: function (from: cg.Key, to: cg.Key, captured: cg.Piece | undefined) {
-				// 	}
-				// },
 				premovable: {
 					enabled: true,
-					showDests: true
+					showDests: true,
+					events: {
+						set: function (from: cg.Key, to: cg.Key) {
+							gameState.update((prev) => ({
+								...(prev as GameState),
+								premove: { from, to }
+							}));
+						}
+					}
 				},
 				predroppable: {
 					enabled: true

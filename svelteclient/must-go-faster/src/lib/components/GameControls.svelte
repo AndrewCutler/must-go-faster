@@ -44,7 +44,7 @@
 </script>
 
 <div class="flex items-center">
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-lg">
+	<div class="rounded-lg border border-gray-700 bg-gray-800 p-3 shadow-lg">
 		<div class="mb-4 border-b border-gray-600 pb-2">
 			<h3 class="text-lg font-semibold text-white">Game Controls</h3>
 		</div>

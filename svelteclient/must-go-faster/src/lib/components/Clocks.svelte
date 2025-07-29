@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { gameState } from '../../store/must-go-faster.store';
+	import {
+		gameState,
+		isAgainstComputer,
+		type GameState
+	} from '../../store/must-go-faster.store';
 	import type { PlayerColor } from '$lib/models/models';
 	import { sendMessage } from '$lib/socket/socket';
 
@@ -17,6 +21,23 @@
 					value.type === 'GameStartedToServerType' ||
 					value.type === 'MoveFromServerType'
 				) {
+					if (value.premove) {
+						console.log('playing premove...');
+						console.log(value.premove);
+						// wipe out premove
+						gameState.update((prev) => ({
+							...(prev as GameState),
+							premove: undefined
+						}));
+						// send premove message
+						sendMessage({
+							type: 'PremoveToServerType',
+							move: value.premove,
+							playerColor: value.playerColor,
+							sessionId: value.sessionId,
+							isAgainstComputer: $isAgainstComputer
+						});
+					}
 					isWhiteTurn = value.whosNext === 'white';
 					whiteTime = value.whiteTimeLeft;
 					blackTime = value.blackTimeLeft;

@@ -8,6 +8,7 @@ import type {
 	OpponentType,
 	PlayerColor,
 	PremoveToServer,
+	TimeoutToServer,
 	ToMessage,
 	ToPayload
 } from '$lib/models/models';
@@ -113,6 +114,15 @@ export function sendMessage({
 				sessionId: sessionId!,
 				type
 			} as ToMessage<GameStartedToServer>;
+			break;
+		}
+		case 'TimeoutToServerType': {
+			message = {
+				isAgainstComputer: isAgainstComputer!,
+				playerColor: playerColor,
+				sessionId: sessionId!,
+				type
+			} as ToMessage<TimeoutToServer>;
 			break;
 		}
 		default: {

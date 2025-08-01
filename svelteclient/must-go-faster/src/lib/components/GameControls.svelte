@@ -18,12 +18,7 @@
 	}
 
 	function connect() {
-		-createSocket('computer');
-		// +		createSocket(playerType.toLowerCase());
-	}
-
-	function closeDropdown() {
-		isDropdownOpen = false;
+		createSocket('computer');
 	}
 
 	function handleClickOutside(event: MouseEvent) {

@@ -44,7 +44,8 @@
 					runClock({
 						whoseMove: isWhiteTurn ? 'white' : 'black',
 						whiteTimeLeft: value.whiteTimeLeft,
-						blackTimeLeft: value.blackTimeLeft
+						blackTimeLeft: value.blackTimeLeft,
+						sessionId: value.sessionId
 					});
 					return;
 				}
@@ -61,11 +62,13 @@
 	function runClock({
 		whoseMove,
 		whiteTimeLeft,
-		blackTimeLeft
+		blackTimeLeft,
+		sessionId
 	}: {
 		whoseMove: PlayerColor | undefined;
 		whiteTimeLeft: number;
 		blackTimeLeft: number;
+		sessionId: string;
 	}): void {
 		if (timer) {
 			cancelAnimationFrame(timer);
@@ -87,8 +90,12 @@
 			}
 
 			if (remainingTime <= 0) {
-				// Handle timeout
-				// TODO: Implement sendMessage for timeout
+				sendMessage({
+					type: 'TimeoutToServerType',
+					sessionId,
+					isAgainstComputer: $isAgainstComputer,
+					playerColor: whoseMove
+				});
 				return;
 			}
 

@@ -42,10 +42,11 @@
 					whiteTime = value.whiteTimeLeft;
 					blackTime = value.blackTimeLeft;
 					runClock({
-						whoseMove: isWhiteTurn ? 'white' : 'black',
+						whosNext: value.whosNext,
 						whiteTimeLeft: value.whiteTimeLeft,
 						blackTimeLeft: value.blackTimeLeft,
-						sessionId: value.sessionId
+						sessionId: value.sessionId,
+						playerColor: value.playerColor
 					});
 					return;
 				}
@@ -60,41 +61,47 @@
 	});
 
 	function runClock({
-		whoseMove,
+		whosNext,
 		whiteTimeLeft,
 		blackTimeLeft,
-		sessionId
-	}: {
-		whoseMove: PlayerColor | undefined;
-		whiteTimeLeft: number;
-		blackTimeLeft: number;
-		sessionId: string;
-	}): void {
+		sessionId,
+		playerColor
+	}: Required<
+		Pick<
+			GameState,
+			| 'whiteTimeLeft'
+			| 'blackTimeLeft'
+			| 'sessionId'
+			| 'playerColor'
+			| 'whosNext'
+		>
+	>): void {
 		if (timer) {
 			cancelAnimationFrame(timer);
 		}
 
-		if (!whoseMove) return;
+		if (!whosNext) return;
 
 		const startTime = performance.now();
-		const initialTime = whoseMove === 'white' ? whiteTimeLeft : blackTimeLeft;
+		const initialTime = whosNext === 'white' ? whiteTimeLeft : blackTimeLeft;
 
 		function animate(): void {
 			const elapsed = (performance.now() - startTime) / 1000;
 			const remainingTime = Math.max(0, initialTime - elapsed);
 
-			if (whoseMove === 'white') {
+			if (whosNext === 'white') {
 				whiteTime = remainingTime;
 			} else {
 				blackTime = remainingTime;
 			}
 
-			if (remainingTime <= 0) {
+			// if (remainingTime <= 0) {
+			if (remainingTime <= 0 && whosNext === playerColor) {
 				sendMessage({
 					type: 'TimeoutToServerType',
 					sessionId,
 					isAgainstComputer: $isAgainstComputer,
-					playerColor: whoseMove
+					playerColor: whosNext
 				});
 				return;
 			}

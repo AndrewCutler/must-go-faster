@@ -198,47 +198,47 @@ func sendGameStartedMessage(session *Session, playerColor string) []byte {
 }
 
 func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
-	isCheckmated := ""
-	switch session.Game.Outcome() {
-	case "0-1":
-		isCheckmated = "white"
-	case "1-0":
-		isCheckmated = "black"
-	}
+	// isCheckmated := ""
+	// switch session.Game.Outcome() {
+	// case "0-1":
+	// 	isCheckmated = "white"
+	// case "1-0":
+	// 	isCheckmated = "black"
+	// }
 
 	var message Message
-	if isCheckmated != "" {
-		message = Message{
-			Type:        GameOverFromServerType.String(),
-			SessionId:   session.SessionId,
-			PlayerColor: playerColor,
-			TimeStamp:   time.Now().Format(time.RFC3339),
-			Payload: GameOverFromServer{
-				Loser:   isCheckmated,
-				Outcome: "checkmate",
-				Move:    move,
-			},
-		}
+	// if isCheckmated != "" {
+	// 	message = Message{
+	// 		Type:        GameOverFromServerType.String(),
+	// 		SessionId:   session.SessionId,
+	// 		PlayerColor: playerColor,
+	// 		TimeStamp:   time.Now().Format(time.RFC3339),
+	// 		Payload: GameOverFromServer{
+	// 			Loser:   isCheckmated,
+	// 			Outcome: "checkmate",
+	// 			Move:    move,
+	// 		},
+	// 	}
 
-	} else {
-		whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
+	// } else {
+	whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
 
-		message = Message{
-			Type:        MoveFromServerType.String(),
-			SessionId:   session.SessionId,
-			PlayerColor: playerColor,
-			TimeStamp:   time.Now().Format(time.RFC3339),
-			Payload: MoveFromServer{
-				Fen:           session.getFen(),
-				ValidMoves:    ValidMovesMap(session.Game),
-				WhosNext:      session.whoseMoveIsIt(),
-				IsCheckmated:  isCheckmated,
-				WhiteTimeLeft: whiteTimeLeft,
-				BlackTimeLeft: blackTimeLeft,
-				Move:          move,
-			},
-		}
+	message = Message{
+		Type:        MoveFromServerType.String(),
+		SessionId:   session.SessionId,
+		PlayerColor: playerColor,
+		TimeStamp:   time.Now().Format(time.RFC3339),
+		Payload: MoveFromServer{
+			Fen:        session.getFen(),
+			ValidMoves: ValidMovesMap(session.Game),
+			WhosNext:   session.whoseMoveIsIt(),
+			// IsCheckmated:  isCheckmated,
+			WhiteTimeLeft: whiteTimeLeft,
+			BlackTimeLeft: blackTimeLeft,
+			Move:          move,
+		},
 	}
+	// }
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
@@ -290,6 +290,7 @@ func sendAbandonedMessage() []byte {
 
 func sendGameOverMessage(session *Session, outcome string, loser string) []byte {
 	message := Message{
+		SessionId: session.SessionId,
 		Type:      GameOverFromServerType.String(),
 		TimeStamp: time.Now().Format(time.RFC3339),
 		Payload: GameOverFromServer{
@@ -328,6 +329,7 @@ func handleMoveMessage(message Message, session *Session) {
 	updateClocks(session, false)
 
 	for _, player := range session.GetPlayers() {
+		// TODO: check if game over and if so, send game over message
 		player.WriteChan <- sendMoveMessage(session, player.Color, move)
 	}
 }

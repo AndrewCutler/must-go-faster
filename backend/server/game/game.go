@@ -95,6 +95,24 @@ func tryPlayPremove(m PremoveToServer, g *chess.Game) (Move, error) {
 	return m.Premove, nil
 }
 
+func checkGameOutcome(session *Session, player *Player) bool {
+	isCheckmated := ""
+	switch session.Game.Outcome() {
+	case "0-1":
+		isCheckmated = "white"
+	case "1-0":
+		isCheckmated = "black"
+	}
+
+	// log.Println("is checkmated", isCheckmated)
+	if isCheckmated != "" {
+		player.WriteChan <- sendGameOverMessage(session, "checkmate", isCheckmated)
+		return true
+	}
+
+	return false
+}
+
 func PlayComputer(player *Player, computer *Player) {
 	defer func() {
 		log.Println("Exiting PlayComputer")
@@ -115,7 +133,7 @@ func PlayComputer(player *Player, computer *Player) {
 			// 	log.Println("GameStartedFromServerType")
 			// }
 			if strings.Contains(value, "MoveFromServerType") {
-				// log.Println("MoveFromServerType")
+				log.Println("MoveFromServerType in PlayComputer")
 				session, ok := player.Hub.InProgressSessions[player.SessionId]
 				if !ok {
 					log.Println("Cannot find session with id: ", player.SessionId)
@@ -135,6 +153,9 @@ func PlayComputer(player *Player, computer *Player) {
 
 				if session.Game.Outcome() != chess.NoOutcome {
 					// handle stalemate here
+					// check for checkmate as well
+					log.Println("OUTCOME, ", session.Game.Outcome())
+					checkGameOutcome(session, player)
 					delete(player.Hub.InProgressSessions, player.SessionId)
 					close(computer.WriteChan)
 					return
@@ -159,6 +180,7 @@ func PlayComputer(player *Player, computer *Player) {
 				}
 				time.Sleep(t)
 
+				// Update clocks after computer makes its move
 				updateClocks(session, false)
 
 				// todo: how is this used?
@@ -173,13 +195,17 @@ func PlayComputer(player *Player, computer *Player) {
 					// 	isCheckmated = "black"
 					// }
 
-					// log.Println("is checkmated", isCheckmated)
+					// // log.Println("is checkmated", isCheckmated)
 					// if isCheckmated != "" {
 					// 	player.WriteChan <- sendGameOverMessage(session, "checkmate", isCheckmated)
 					// } else {
 					// 	player.WriteChan <- sendMoveMessage(session, player.Color, move)
 					// }
-					player.WriteChan <- sendMoveMessage(session, player.Color, move)
+
+					hasOutcome := checkGameOutcome(session, player)
+					if !hasOutcome {
+						player.WriteChan <- sendMoveMessage(session, player.Color, move)
+					}
 				}
 			}
 			// if strings.Contains(value, "MoveToServerType") {

@@ -159,7 +159,7 @@ func PlayComputer(player *Player, computer *Player) {
 				}
 				time.Sleep(t)
 
-				updateClocks(session)
+				updateClocks(session, false)
 
 				// todo: how is this used?
 				if c.Clock.TimeLeft <= 0 {

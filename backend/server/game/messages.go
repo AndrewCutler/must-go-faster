@@ -325,7 +325,7 @@ func handleMoveMessage(message Message, session *Session) {
 		return
 	}
 
-	updateClocks(session)
+	updateClocks(session, false)
 
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendMoveMessage(session, player.Color, move)
@@ -342,7 +342,7 @@ func handlePremoveMessage(message Message, session *Session) {
 		return
 	}
 
-	updateClocks(session)
+	updateClocks(session, true)
 
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
@@ -377,7 +377,12 @@ func handleTimeoutMessage(session *Session) {
 	}
 }
 
-func updateClocks(session *Session) {
+func updateClocks(session *Session, isPremove bool) {
+	if isPremove {
+		// TODO: decrement clock by 0.1
+		return
+	}
+
 	if session.White.Clock.IsRunning {
 		session.White.Clock.TimeLeft -= time.Since(session.White.Clock.TimeStamp).Seconds()
 		session.White.Clock.IsRunning = false

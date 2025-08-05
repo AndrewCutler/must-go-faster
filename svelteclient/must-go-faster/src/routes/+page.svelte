@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ChessBoard from '$lib/components/ChessBoard.svelte';
-	import GameControls from '$lib/components/GameControls.svelte';
+	import GameControls from '$lib/components/GameMeta.svelte';
 	import Clocks from '$lib/components/Clocks.svelte';
 
 	let gameState = {
@@ -32,19 +32,12 @@
 	<div class="container mx-auto px-4 py-8">
 		<!-- Header -->
 		<header class="mb-8 text-center">
-			<h1
-				class={[
-					'mb-2',
-					'text-4xl',
-					'font-bold',
-					'text-white'
-				]}
-			>
+			<h1 class={['mb-2', 'text-4xl', 'font-bold', 'text-white']}>
 				Must Go Faster
 			</h1>
 		</header>
 
-		<div class="mx-auto flex max-w-6xl justify-center">
+		<div class="mx-auto flex justify-center">
 			<div
 				class={[
 					'flex',

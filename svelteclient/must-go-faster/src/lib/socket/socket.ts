@@ -14,11 +14,15 @@ import type {
 } from '$lib/models/models';
 import { receiveMessage } from '../../store/must-go-faster.store';
 
-let socket: WebSocket;
+let socket: WebSocket | undefined;
 
 // todo: opponent type shouldn't be required for a connection,
 // it should be a separate message type unto itself
 export function createSocket(opponentType: OpponentType): void {
+	if (opponentType === 'human') {
+		throw new Error('not implemented');
+	}
+
 	if (socket) {
 		console.error('socket already created');
 		return;
@@ -48,6 +52,13 @@ export function createSocket(opponentType: OpponentType): void {
 			console.error(e);
 		}
 	};
+}
+
+export function closeSocket() {
+	if (socket) {
+		socket.close();
+		socket = undefined;
+	}
 }
 
 export function sendMessage({

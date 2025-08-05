@@ -82,8 +82,6 @@
 
 			if (state.type === 'GameJoinedFromServerType') {
 				startCountdown();
-			} else if (state.type === 'GameOverFromServerType') {
-				gameOver(state.outcome!, state.loser!);
 			}
 
 			board?.set({
@@ -92,7 +90,7 @@
 		}
 	});
 
-	onMount(() => {
+	onMount(function () {
 		if (boardDiv) {
 			board = Chessground(boardDiv, initialConfig);
 
@@ -160,18 +158,6 @@
 			console.log($gameState?.sessionId, $gameState?.playerColor);
 		}
 	}
-
-	// todo: better types
-	function gameOver(
-		gameState: 'timeout' | 'checkmate' | 'stalemate' | 'in-progress',
-		loser: PlayerColor
-	): void {
-		gameResultText = `${loser
-			.split('')
-			.map((l, i) => (i === 0 ? l.toUpperCase() : l))
-			.join('')} lost due to ${gameState}.`;
-		showGameOverDialog = true;
-	}
 </script>
 
 <div class="chess-board">
@@ -196,9 +182,6 @@
 		class="-translate-z-2 absolute left-1/3 top-1/4 z-10 rounded-lg border border-gray-700 bg-gray-800 p-6 shadow-lg"
 	>
 		<div class={['flex-col', 'font-medium', 'text-gray-300']}>
-			<div class="mb-4 flex border-b border-gray-600 pb-2">
-				{gameResultText}
-			</div>
 			<div class="mb-4 flex border-b border-gray-600 pb-2">
 				<button
 					class={[

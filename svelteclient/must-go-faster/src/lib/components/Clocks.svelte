@@ -10,13 +10,20 @@
 
 	let whiteTime = 30;
 	let blackTime = 30;
-	let isWhiteTurn = true;
 	let timer: number;
 
 	onMount(() => {
 		const unsub = gameState.subscribe((value) => {
 			// TODO: switch statement
 			if (value) {
+				if (value.type === 'GameJoinedFromServerType') {
+					whiteTime = 30;
+					blackTime = 30;
+					if (timer) {
+						cancelAnimationFrame(timer);
+					}
+				}
+
 				if (
 					value.type === 'GameStartedToServerType' ||
 					value.type === 'MoveFromServerType'
@@ -38,7 +45,6 @@
 							isAgainstComputer: $isAgainstComputer
 						});
 					}
-					isWhiteTurn = value.whosNext === 'white';
 					whiteTime = value.whiteTimeLeft;
 					blackTime = value.blackTimeLeft;
 					runClock({

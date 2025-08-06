@@ -44,11 +44,15 @@
 	});
 
 	function playComputer(): void {
-		connect('computer');
+		if (!isGameInProgress) {
+			connect('computer');
+		}
 	}
 
 	function playHuman(): void {
-		connect('human');
+		if (!isGameInProgress) {
+			connect('human');
+		}
 	}
 
 	onMount(function () {

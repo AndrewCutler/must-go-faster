@@ -1,9 +1,5 @@
 <script lang="ts">
-	import type {
-		ChessgroundConfig,
-		Move,
-		PlayerColor
-	} from '$lib/models/models';
+	import type { ChessgroundConfig } from '$lib/models/models';
 	import { Chessground } from 'chessground';
 	import { onMount } from 'svelte';
 	import * as cg from 'chessground/types';
@@ -14,6 +10,7 @@
 		type GameState
 	} from '../../store/must-go-faster.store';
 	import { sendMessage } from '$lib/socket/socket';
+	import Countdown from './Countdown.svelte';
 
 	const initialConfig: ChessgroundConfig = {
 		movable: {
@@ -24,10 +21,8 @@
 
 	let board: Api | undefined;
 	let boardDiv: HTMLElement | undefined;
-	let countdownInterval: number | undefined = $state(undefined);
-	let countdownValue = $state(0);
 	let showGameOverDialog = $state(false);
-	let gameResultText = $state('');
+	let countdownRef: ReturnType<typeof Countdown>;
 
 	function promoteIfPromotion(to: cg.Key): cg.Key {
 		const movedPiece = board!.state.pieces.get(to);
@@ -81,7 +76,8 @@
 			}
 
 			if (state.type === 'GameJoinedFromServerType') {
-				startCountdown();
+				countdownRef.startCountdown();
+				// startCountdown();
 			}
 
 			board?.set({
@@ -124,58 +120,10 @@
 
 		return unsub;
 	});
-
-	function startCountdown(): void {
-		if ($gameState?.sessionId && $gameState?.playerColor) {
-			countdownValue = 5;
-			countdownInterval = setInterval(function () {
-				--countdownValue;
-				if (countdownValue <= 0) {
-					gameState.update((state) => ({
-						...state!,
-						type: 'GameStartedToServerType'
-					}));
-					sendMessage({
-						type: 'GameStartedToServerType',
-						playerColor: $gameState?.playerColor,
-						sessionId: $gameState.sessionId,
-						isAgainstComputer: $isAgainstComputer
-					});
-					board?.set({
-						viewOnly: false,
-						movable: {
-							dests: board.state.movable.dests,
-							color: board.state.movable.color
-						},
-						draggable: {
-							enabled: true
-						}
-					});
-					clearInterval(countdownInterval);
-				}
-			}, 1000);
-		} else {
-			console.log($gameState?.sessionId, $gameState?.playerColor);
-		}
-	}
 </script>
 
 <div class="chess-board">
-	<div
-		id="countdown-timer"
-		class={[
-			countdownValue ? ' block' : 'hidden',
-			'absolute',
-			'top-1/2',
-			'left-1/2',
-			'-translate-1/2',
-			'font-black',
-			'text-8xl',
-			'z-20'
-		]}
-	>
-		{countdownValue}
-	</div>
+	<Countdown {board} bind:this={countdownRef} />
 	<div id="board" bind:this={boardDiv}></div>
 	<dialog
 		open={showGameOverDialog}

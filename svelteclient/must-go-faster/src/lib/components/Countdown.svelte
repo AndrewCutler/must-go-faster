@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { sendMessage } from '$lib/socket/socket';
+	import { clear } from 'chessground/draw';
 	import {
 		gameState,
 		isAgainstComputer
@@ -11,6 +12,7 @@
 	let countdownValue = $state(0);
 
 	export function startCountdown(): void {
+		console.log('start countdown');
 		if (countdownInterval) {
 			clearInterval(countdownInterval);
 		}
@@ -40,6 +42,8 @@
 							enabled: true
 						}
 					});
+
+					clearInterval(countdownInterval);
 				} else {
 					console.error(
 						'Cannot start countdown: missing sessionId or playerColor',
@@ -49,7 +53,7 @@
 						}
 					);
 				}
-			});
+			}, 1000);
 		}
 	}
 </script>

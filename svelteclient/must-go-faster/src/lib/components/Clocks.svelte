@@ -16,6 +16,7 @@
 		const unsub = gameState.subscribe((value) => {
 			// TODO: switch statement
 			if (value) {
+				console.log(value.type);
 				if (value.type === 'GameJoinedFromServerType') {
 					whiteTime = 30;
 					blackTime = 30;

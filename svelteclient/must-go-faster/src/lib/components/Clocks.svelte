@@ -130,7 +130,7 @@
 </script>
 
 <div class="flex items-center">
-	<div class="flex-coltext-lg font-semibold">
+	<div class="flex-col text-lg font-semibold">
 		<div
 			class="flex rounded-t-md border-2 border-b-0 border-gray-700 bg-white p-1 px-3 py-1 text-black"
 		>

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { sendMessage } from '$lib/socket/socket';
-	import { gameState, isAgainstComputer } from '../../store/must-go-faster.store';
+	import {
+		gameState,
+		isAgainstComputer
+	} from '../../store/must-go-faster.store';
 
 	let { board } = $props();
 
@@ -8,6 +11,10 @@
 	let countdownValue = $state(0);
 
 	export function startCountdown(): void {
+		if (countdownInterval) {
+			clearInterval(countdownInterval);
+		}
+
 		if ($gameState?.sessionId && $gameState?.playerColor) {
 			countdownValue = 5;
 			countdownInterval = setInterval(function () {
@@ -33,11 +40,16 @@
 							enabled: true
 						}
 					});
-					clearInterval(countdownInterval);
+				} else {
+					console.error(
+						'Cannot start countdown: missing sessionId or playerColor',
+						{
+							sessionId: $gameState?.sessionId,
+							playerColor: $gameState?.playerColor
+						}
+					);
 				}
-			}, 1000);
-		} else {
-			console.log($gameState?.sessionId, $gameState?.playerColor);
+			});
 		}
 	}
 </script>

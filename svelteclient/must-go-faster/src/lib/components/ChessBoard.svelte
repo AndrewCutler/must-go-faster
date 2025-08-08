@@ -19,7 +19,7 @@
 		}
 	};
 
-	let board: Api | undefined;
+	let board: Api | undefined = $state();
 	let boardDiv: HTMLElement | undefined;
 	let showGameOverDialog = $state(false);
 	let countdownRef: ReturnType<typeof Countdown>;

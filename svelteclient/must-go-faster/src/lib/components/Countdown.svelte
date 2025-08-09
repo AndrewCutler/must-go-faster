@@ -12,7 +12,6 @@
 	let countdownValue = $state(0);
 
 	export function startCountdown(): void {
-		console.log('start countdown');
 		if (countdownInterval) {
 			clearInterval(countdownInterval);
 		}
@@ -44,16 +43,16 @@
 					});
 
 					clearInterval(countdownInterval);
-				} else {
-					console.error(
-						'Cannot start countdown: missing sessionId or playerColor',
-						{
-							sessionId: $gameState?.sessionId,
-							playerColor: $gameState?.playerColor
-						}
-					);
 				}
 			}, 1000);
+		} else {
+			console.error(
+				'Cannot start countdown: missing sessionId or playerColor',
+				{
+					sessionId: $gameState?.sessionId,
+					playerColor: $gameState?.playerColor
+				}
+			);
 		}
 	}
 </script>

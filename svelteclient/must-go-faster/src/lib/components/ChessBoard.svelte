@@ -19,7 +19,8 @@
 		}
 	};
 
-	let board: Api | undefined = $state();
+	// svelte-ignore non_reactive_update
+	let board: Api | undefined;
 	let boardDiv: HTMLElement | undefined;
 	let showGameOverDialog = $state(false);
 	let countdownRef: ReturnType<typeof Countdown>;

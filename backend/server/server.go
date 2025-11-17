@@ -20,8 +20,19 @@ func main() {
 	log.Println("Server starting.")
 	baseurl := os.Getenv("BASE_URL")
 	port := os.Getenv("PORT")
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+
+	log.Printf("Environment variables - BASE_URL: %s, PORT: %s, ALLOWED_ORIGINS: %s", baseurl, port, allowedOrigins)
 
 	r := mux.NewRouter()
+
+	// Log all incoming requests
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("Incoming request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -38,19 +49,24 @@ func main() {
 	r.HandleFunc("/ping", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr
 		w.Write([]byte(fmt.Sprintf("Ping received from IP %s", ip)))
+		log.Println(ip)
 	}))
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
 		queryParams := r.URL.Query()
 		opponentType := queryParams.Get("opponentType")
 
-		log.Println("Connection successful.")
+		origin := r.Header.Get("Origin")
+		log.Printf("WebSocket connection attempt from origin: %s", origin)
+
 		connection, err := upgrader.Upgrade(w, r, nil)
 
 		if err != nil {
-			log.Println("Failed to upgrade: ", err)
+			log.Printf("Failed to upgrade WebSocket from origin %s: %v", origin, err)
 			return
 		}
+
+		log.Println("Connection successful.")
 
 		color := "white"
 		if rand.Intn(100) < 50 {
@@ -81,9 +97,19 @@ func main() {
 		ReadTimeout:  5 * time.Second,
 	}
 
-	if baseurl != "" && port != "" {
-		srv.Addr = baseurl + ":" + port
+	// Set default values if not provided
+	if baseurl == "" {
+		baseurl = "0.0.0.0"
+		log.Println("BASE_URL not set, defaulting to 0.0.0.0")
 	}
+	if port == "" {
+		port = "8000"
+		log.Println("PORT not set, defaulting to 8000")
+	}
+
+	srv.Addr = baseurl + ":" + port
+	log.Printf("Server listening on %s", srv.Addr)
+	log.Printf("ALLOWED_ORIGINS: %s", os.Getenv("ALLOWED_ORIGINS"))
 
 	log.Fatal(srv.ListenAndServe())
 }
@@ -110,16 +136,27 @@ func withCORS(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func checkCORS(origin string) bool {
-	allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
-	allowed := false
-	allowedOrigins := strings.Split(allowedOriginsEnv, ",")
-	for _, curr := range allowedOrigins {
-		if curr == origin {
-			allowed = true
-			break
-		}
-		log.Printf("request from origin %s not allowed\n", origin)
+	// Allow requests with no origin (direct browser access, same-origin requests)
+	if origin == "" {
+		log.Println("Request with no origin (direct browser access or same-origin), allowing")
+		return true
 	}
 
-	return allowed
+	allowedOriginsEnv := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOriginsEnv == "" {
+		log.Println("WARNING: ALLOWED_ORIGINS not set, allowing all origins")
+		return true
+	}
+
+	allowedOrigins := strings.Split(allowedOriginsEnv, ",")
+	for _, curr := range allowedOrigins {
+		curr = strings.TrimSpace(curr)
+		if curr == origin {
+			log.Printf("Origin %s is allowed", origin)
+			return true
+		}
+	}
+
+	log.Printf("Origin %s is NOT in allowed list: %v", origin, allowedOrigins)
+	return false
 }

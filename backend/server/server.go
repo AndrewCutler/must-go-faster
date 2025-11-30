@@ -53,6 +53,7 @@ func main() {
 	}))
 
 	r.HandleFunc("/connect", func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(time.Second * 2)
 		queryParams := r.URL.Query()
 		opponentType := queryParams.Get("opponentType")
 

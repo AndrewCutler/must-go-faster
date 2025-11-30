@@ -1,31 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ChessBoard from '$lib/components/ChessBoard.svelte';
-	import GameControls from '$lib/components/GameMeta.svelte';
+	import GameMeta from '$lib/components/GameMeta.svelte';
 	import Clocks from '$lib/components/Clocks.svelte';
-
-	let gameState = {
-		isConnected: false,
-		playerType: 'Computer',
-		currentTurn: 'Black',
-		gameStatus: 'Waiting to start...'
-	};
-
-	function handlePlayerTypeChange(event: CustomEvent) {
-		gameState.playerType = event.detail.type;
-	}
-
-	function handleConnectionToggle(event: CustomEvent) {
-		gameState.isConnected = event.detail.connected;
-		gameState.gameStatus = gameState.isConnected
-			? 'Connected - Ready to play!'
-			: 'Disconnected';
-	}
-
-	function handleMove() {
-		gameState.currentTurn =
-			gameState.currentTurn === 'Black' ? 'White' : 'Black';
-	}
 </script>
 
 <main class="min-h-screen bg-gray-900">
@@ -51,13 +28,8 @@
 				]}
 			>
 				<Clocks />
-				<ChessBoard on:move={handleMove} />
-				<GameControls
-					playerType={gameState.playerType}
-					isConnected={gameState.isConnected}
-					on:playerTypeChange={handlePlayerTypeChange}
-					on:connectionToggle={handleConnectionToggle}
-				/>
+				<ChessBoard />
+				<GameMeta />
 			</div>
 		</div>
 

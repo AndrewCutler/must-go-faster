@@ -13,7 +13,7 @@ import type { CGConfig } from '$lib/models/models';
 import { toValidMoves } from '$lib/utils/utils';
 
 // todo: why isn't this in gameState god store
-export const opponentType = writable<OpponentType | undefined>();
+// export const opponentType = writable<OpponentType | undefined>();
 export const isAgainstComputer = writable(false);
 export const gameState = writable<GameState | undefined>();
 

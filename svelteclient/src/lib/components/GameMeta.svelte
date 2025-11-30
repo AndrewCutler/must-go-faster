@@ -2,15 +2,18 @@
 	import type { OpponentType, PlayerColor } from '$lib/models/models';
 	import { closeSocket, createSocket } from '$lib/socket/socket';
 	import { onMount } from 'svelte';
-	import { gameState } from '../../store/must-go-faster.store';
+	import {
+		gameState,
+		isAgainstComputer
+	} from '../../store/must-go-faster.store';
 	import LoadingSpinner from './LoadingSpinner.svelte';
 
-	let { playerType = 'Computer', isConnected = false } = $props();
 	let isGameOver = $state(false);
 	let isGameInProgress = $state(false);
 	let gameResultText = $state('');
 
 	function connect(opponentType: OpponentType) {
+        isAgainstComputer.set(opponentType === 'computer');
 		gameState.update((state) => ({
 			...state!,
 			socketStatus: 'connecting'
@@ -54,12 +57,6 @@
 			connect('human');
 		}
 	}
-
-	// function getBotButtonText(): string {
-	// 	if ($gameState?.socketStatus === 'connecting') return LoadingSpinner;
-
-	// 	return 'Play bot';
-	// }
 
 	onMount(function () {
 		return unsub;
@@ -114,7 +111,7 @@
 						isGameInProgress && 'opacity-40'
 					]}
 				>
-					{#if $gameState?.socketStatus === 'connecting'}
+					{#if $isAgainstComputer && $gameState?.socketStatus === 'connecting'}
 						<LoadingSpinner />
 					{:else}Play bot
 					{/if}
@@ -140,7 +137,12 @@
 						'duration-200',
 						'hover:bg-gray-600',
 						isGameInProgress ? 'opacity-40' : ''
-					]}>Play human</button
+					]}
+				>
+					{#if !$isAgainstComputer && $gameState?.socketStatus === 'connecting'}
+						<LoadingSpinner />
+					{:else}Play human
+					{/if}</button
 				>
 			</div>
 		</div>

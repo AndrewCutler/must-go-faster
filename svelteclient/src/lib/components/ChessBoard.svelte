@@ -71,11 +71,6 @@
 
 	const unsub = gameState.subscribe(function (state) {
 		if (state) {
-			if (!state.sessionId) {
-				console.error('sessionId not found');
-				return;
-			}
-
 			if (state.type === 'GameJoinedFromServerType') {
 				countdownRef.startCountdown();
 				// startCountdown();

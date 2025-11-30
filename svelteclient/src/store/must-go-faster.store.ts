@@ -29,6 +29,7 @@ export type GameState = {
 	type: FromMessage<FromPayload>['type'];
 	playerColor: PlayerColor;
 	loser?: PlayerColor;
+	socketStatus: 'disconnected' | 'connecting' | 'connected';
 	outcome: 'in-progress' | 'checkmate' | 'timeout' | 'stalemate'; // etc
 	move?: Move;
 	premove?: Move;
@@ -40,6 +41,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 			const copy = message as FromMessage<GameJoinedFromServer>;
 			gameState.update((value) => ({
 				...value,
+				socketStatus: 'connected',
 				type: message.type,
 				playerColor: copy.playerColor,
 				sessionId: copy.sessionId,
@@ -74,6 +76,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 			const copy = message as FromMessage<MoveFromServer>;
 			gameState.update((value) => ({
 				...(value || {}),
+				socketStatus: value?.socketStatus ?? 'disconnected',
 				type: message.type,
 				playerColor: copy.playerColor,
 				sessionId: copy.sessionId,
@@ -108,6 +111,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 			const copy = message as FromMessage<GameOverFromServerType>;
 			gameState.update((value) => ({
 				...(value || {}),
+				socketStatus: 'disconnected',
 				type: message.type,
 				playerColor: copy.playerColor,
 				sessionId: copy.sessionId,

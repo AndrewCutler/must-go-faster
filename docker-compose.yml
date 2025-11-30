@@ -17,7 +17,7 @@ services:
     client:
         build:
             # context: ./client
-            context: ./svelteclient/must-go-faster
+            context: ./svelteclient
             target: development
             args:
                 API_BASE_URL: ${API_BASE_URL:-http://10.0.0.73:8000}
@@ -39,7 +39,7 @@ services:
             - server
         volumes:
             # - ./client:/app
-            - ./svelteclient/must-go-faster:/app
+            - ./svelteclient:/app
             - /app/node_modules
             - /app/build
 

@@ -3,6 +3,7 @@
 	import { closeSocket, createSocket } from '$lib/socket/socket';
 	import { onMount } from 'svelte';
 	import { gameState } from '../../store/must-go-faster.store';
+	import LoadingSpinner from './LoadingSpinner.svelte';
 
 	let { playerType = 'Computer', isConnected = false } = $props();
 	let isGameOver = $state(false);
@@ -10,6 +11,10 @@
 	let gameResultText = $state('');
 
 	function connect(opponentType: OpponentType) {
+		gameState.update((state) => ({
+			...state!,
+			socketStatus: 'connecting'
+		}));
 		createSocket(opponentType);
 		isGameInProgress = true;
 		isGameOver = false;
@@ -32,11 +37,6 @@
 
 	const unsub = gameState.subscribe(function (state) {
 		if (state) {
-			if (!state.sessionId) {
-				console.error('sessionId not found');
-				return;
-			}
-
 			if (state.type === 'GameOverFromServerType') {
 				gameOver(state.outcome!, state.loser!);
 			}
@@ -54,6 +54,12 @@
 			connect('human');
 		}
 	}
+
+	// function getBotButtonText(): string {
+	// 	if ($gameState?.socketStatus === 'connecting') return LoadingSpinner;
+
+	// 	return 'Play bot';
+	// }
 
 	onMount(function () {
 		return unsub;
@@ -105,9 +111,14 @@
 						'transition-all',
 						'duration-200',
 						'hover:bg-gray-600',
-						isGameInProgress ? 'opacity-40' : '' // is game in progress?
-					]}>Play bot</button
+						isGameInProgress && 'opacity-40'
+					]}
 				>
+					{#if $gameState?.socketStatus === 'connecting'}
+						<LoadingSpinner />
+					{:else}Play bot
+					{/if}
+				</button>
 				<button
 					onclick={() => playHuman()}
 					class={[
@@ -128,7 +139,7 @@
 						'transition-all',
 						'duration-200',
 						'hover:bg-gray-600',
-						isGameInProgress ? 'opacity-40' : '' // is game in progress?
+						isGameInProgress ? 'opacity-40' : ''
 					]}>Play human</button
 				>
 			</div>

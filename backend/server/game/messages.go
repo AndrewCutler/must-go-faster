@@ -207,6 +207,8 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 	// 	isCheckmated = "black"
 	// }
 
+	log.Println("move", move)
+
 	var message Message
 	// if isCheckmated != "" {
 	// 	message = Message{
@@ -330,10 +332,20 @@ func handleMoveMessage(message Message, session *Session) {
 
 	updateClocks(session, false)
 
-	for _, player := range session.GetPlayers() {
-		// TODO: check if game over and if so, send game over message
-		player.WriteChan <- sendMoveMessage(session, player.Color, move)
+	opponent := session.White
+	if message.PlayerColor == "white" {
+		opponent = session.Black
 	}
+
+	opponent.WriteChan <- sendMoveMessage(session, opponent.Color, move)
+
+	// for _, player := range session.GetPlayers() {
+	// 	// is it correct to send this message to all players? shouldn't it be just the other player? doesn't this also apply to premoves and timeouts?
+	// 	if !player.IsComputer {
+	// 		// TODO: check if game over and if so, send game over message
+	// 		player.WriteChan <- sendMoveMessage(session, player.Color, move)
+	// 	}
+	// }
 }
 
 func handlePremoveMessage(message Message, session *Session) {
@@ -347,11 +359,19 @@ func handlePremoveMessage(message Message, session *Session) {
 
 	updateClocks(session, true)
 
-	for i, player := range session.GetPlayers() {
-		if !player.IsComputer {
-			player.WriteChan <- sendMoveMessage(session, player.Color, premove)
-		}
+	opponent := session.White
+	if message.PlayerColor == "white" {
+		opponent = session.Black
 	}
+
+	opponent.WriteChan <- sendMoveMessage(session, opponent.Color, premove)
+
+	// for _, player := range session.GetPlayers() {
+	// 	if !player.IsComputer {
+	// 		log.Println("send move message in premove")
+	// 		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
+	// 	}
+	// }
 }
 
 func handleGameStartedMessage(session *Session) {

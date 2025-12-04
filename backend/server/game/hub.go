@@ -150,9 +150,8 @@ func joinComputerGame(player *Player, computer *Player) {
 	sessionId := uuid.New().String()
 	player.SessionId = sessionId
 	session := Session{
-		SessionId:         player.SessionId,
-		Game:              game,
-		IsAgainstComputer: true,
+		SessionId: player.SessionId,
+		Game:      game,
 	}
 
 	// make human player always have first move

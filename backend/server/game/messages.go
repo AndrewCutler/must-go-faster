@@ -175,10 +175,11 @@ func sendGameStartedMessage(session *Session, playerColor string) []byte {
 	whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
 
 	message := Message{
-		Type:        GameStartedFromServerType.String(),
-		SessionId:   session.SessionId,
-		PlayerColor: playerColor,
-		TimeStamp:   time.Now().Format(time.RFC3339),
+		Type:              GameStartedFromServerType.String(),
+		SessionId:         session.SessionId,
+		PlayerColor:       playerColor,
+		TimeStamp:         time.Now().Format(time.RFC3339),
+		IsAgainstComputer: session.isAgainstComputer(),
 		Payload: GameStartedFromServer{
 			Fen:           session.getFen(),
 			ValidMoves:    ValidMovesMap(session.Game),
@@ -224,10 +225,11 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 	whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
 
 	message = Message{
-		Type:        MoveFromServerType.String(),
-		SessionId:   session.SessionId,
-		PlayerColor: playerColor,
-		TimeStamp:   time.Now().Format(time.RFC3339),
+		Type:              MoveFromServerType.String(),
+		SessionId:         session.SessionId,
+		PlayerColor:       playerColor,
+		TimeStamp:         time.Now().Format(time.RFC3339),
+		IsAgainstComputer: session.isAgainstComputer(),
 		Payload: MoveFromServer{
 			Fen:        session.getFen(),
 			ValidMoves: ValidMovesMap(session.Game),
@@ -335,7 +337,6 @@ func handleMoveMessage(message Message, session *Session) {
 }
 
 func handlePremoveMessage(message Message, session *Session) {
-	// log.Println("handlePremoveMessage")
 	payload := message.Payload.(PremoveToServer)
 	premove, err := tryPlayPremove(payload, session.Game)
 	fmt.Println(premove)
@@ -346,8 +347,10 @@ func handlePremoveMessage(message Message, session *Session) {
 
 	updateClocks(session, true)
 
-	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
+	for i, player := range session.GetPlayers() {
+		if !player.IsComputer {
+			player.WriteChan <- sendMoveMessage(session, player.Color, premove)
+		}
 	}
 }
 

@@ -82,7 +82,7 @@ func (h *Hub) onMessage(message Message) {
 	case PremoveToServerType.String():
 		handlePremoveMessage(message, session)
 	case TimeoutToServerType.String():
-		handleTimeoutMessage(session)
+		handleTimeoutMessage(message, session)
 	case AbandonedToServerType.String():
 		handleAbandonedMessage(session)
 	default:

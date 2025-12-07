@@ -17,7 +17,15 @@ import { toValidMoves } from '$lib/utils/utils';
 export const isAgainstComputer = writable(false);
 export const gameState = writable<GameState | undefined>();
 
+export type Action =
+	| 'send premove'
+	| 'game joined'
+	| 'move from server'
+	| 'set premove'
+	| 'game over';
+
 export type GameState = {
+	action: Action;
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -35,12 +43,17 @@ export type GameState = {
 	premove?: Move;
 };
 
+export interface Test {
+	test: string;
+}
+
 export function receiveMessage(message: FromMessage<FromPayload>): void {
 	switch (message.type) {
 		case 'GameJoinedFromServerType': {
 			const copy = message as FromMessage<GameJoinedFromServer>;
 			gameState.update((value) => ({
 				...value,
+				action: 'game joined',
 				socketStatus: 'connected',
 				type: message.type,
 				playerColor: copy.playerColor,
@@ -74,43 +87,53 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 		}
 		case 'MoveFromServerType': {
 			const copy = message as FromMessage<MoveFromServer>;
-			gameState.update((value) => ({
-				...(value || {}),
-				socketStatus: value?.socketStatus ?? 'disconnected',
-				type: message.type,
-				playerColor: copy.playerColor,
-				sessionId: copy.sessionId,
-				whiteTimeLeft: copy.payload.whiteTimeLeft,
-				blackTimeLeft: copy.payload.blackTimeLeft,
-				fen: copy.payload.fen,
-				whosNext: copy.payload.whosNext,
-				validMoves: copy.payload.validMoves,
-				serverTimeStamp: copy.serverTimeStamp,
-				outcome: 'in-progress',
-				boardConfig: {
-					fen: copy.payload.fen,
-					turnColor: copy.payload.whosNext,
-					movable: {
-						dests: toValidMoves(copy.payload.validMoves),
-						color: copy.playerColor
-					},
-					lastMove: [copy.payload.move.from, copy.payload.move.to],
-					orientation: copy.playerColor,
-					// premovable: {
-					// 	enabled: true,
-					// 	showDests: true
-					// },
-					draggable: {
-						enabled: true
-					}
+			console.log(copy);
+			gameState.update((value) => {
+				let action: Action = 'move from server';
+				if (value?.premove) {
+					action = 'send premove';
 				}
-			}));
+
+				return {
+					...(value || {}),
+					action,
+					socketStatus: value?.socketStatus ?? 'disconnected',
+					type: message.type,
+					playerColor: copy.playerColor,
+					sessionId: copy.sessionId,
+					whiteTimeLeft: copy.payload.whiteTimeLeft,
+					blackTimeLeft: copy.payload.blackTimeLeft,
+					fen: copy.payload.fen,
+					whosNext: copy.payload.whosNext,
+					validMoves: copy.payload.validMoves,
+					serverTimeStamp: copy.serverTimeStamp,
+					outcome: 'in-progress',
+					boardConfig: {
+						fen: copy.payload.fen,
+						turnColor: copy.payload.whosNext,
+						movable: {
+							dests: toValidMoves(copy.payload.validMoves),
+							color: copy.playerColor
+						},
+						lastMove: [copy.payload.move.from, copy.payload.move.to],
+						orientation: copy.playerColor,
+						// premovable: {
+						// 	enabled: true,
+						// 	showDests: true
+						// },
+						draggable: {
+							enabled: true
+						}
+					}
+				};
+			});
 			break;
 		}
 		case 'GameOverFromServerType': {
 			const copy = message as FromMessage<GameOverFromServerType>;
 			gameState.update((value) => ({
 				...(value || {}),
+				action: 'game over',
 				socketStatus: 'disconnected',
 				type: message.type,
 				playerColor: copy.playerColor,

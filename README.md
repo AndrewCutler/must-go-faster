@@ -18,3 +18,12 @@
 9. Frontend errors when server is not responsive
 10. Acknowledgement packets
 11. Allow canceling of find a game requests
+
+
+## top priority
+premove to server is sent by client in between move to server and move from server. should be
+1. send move to server
+2. make premove and keep in frontend state
+3. receive move from server
+4. send premove to server
+

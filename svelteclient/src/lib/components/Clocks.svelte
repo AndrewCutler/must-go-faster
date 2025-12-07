@@ -13,11 +13,14 @@
 	let timer: number;
 
 	onMount(() => {
-		const unsub = gameState.subscribe((value) => {
+		const unsub = gameState.subscribe((state) => {
+			console.log(state);
+
 			// TODO: switch statement
-			if (value) {
-				console.log(value.type);
-				if (value.type === 'GameJoinedFromServerType') {
+			if (state) {
+				console.log(state.type);
+				if (state.action === 'game joined') {
+					// if (state.type === 'GameJoinedFromServerType') {
 					whiteTime = 30;
 					blackTime = 30;
 					if (timer) {
@@ -25,40 +28,64 @@
 					}
 				}
 
+				if ((state.action = 'send premove')) {
+					console.log('playing premove...');
+					console.log(state.premove);
+					// wipe out premove
+					console.log($gameState);
+					gameState.update((prev) => ({
+						...(prev as GameState),
+						premove: undefined
+					}));
+					// send premove message
+					sendMessage({
+						type: 'PremoveToServerType',
+						move: state.premove,
+						playerColor: state.playerColor,
+						sessionId: state.sessionId,
+						isAgainstComputer: $isAgainstComputer
+					});
+					return; // test this
+				}
+
 				if (
-					value.type === 'GameStartedToServerType' ||
-					value.type === 'MoveFromServerType'
+					state.action === 'move from server'
+					// state.type === 'GameStartedToServerType' ||
+					// state.type === 'MoveFromServerType'
 				) {
-					if (value.premove) {
-						console.log('playing premove...');
-						console.log(value.premove);
-						// wipe out premove
-						gameState.update((prev) => ({
-							...(prev as GameState),
-							premove: undefined
-						}));
-						// send premove message
-						sendMessage({
-							type: 'PremoveToServerType',
-							move: value.premove,
-							playerColor: value.playerColor,
-							sessionId: value.sessionId,
-							isAgainstComputer: $isAgainstComputer
-						});
-					}
-					whiteTime = value.whiteTimeLeft;
-					blackTime = value.blackTimeLeft;
+					// if (state.premove) {
+					// 	console.log('playing premove...');
+					// 	console.log(state.premove);
+					// 	// wipe out premove
+					// 	console.log($gameState);
+					// 	gameState.update((prev) => ({
+					// 		...(prev as GameState),
+					// 		premove: undefined
+					// 	}));
+					// 	// send premove message
+					// 	sendMessage({
+					// 		type: 'PremoveToServerType',
+					// 		move: state.premove,
+					// 		playerColor: state.playerColor,
+					// 		sessionId: state.sessionId,
+					// 		isAgainstComputer: $isAgainstComputer
+					// 	});
+					// 	return; // test this
+					// }
+					whiteTime = state.whiteTimeLeft;
+					blackTime = state.blackTimeLeft;
 					runClock({
-						whosNext: value.whosNext,
-						whiteTimeLeft: value.whiteTimeLeft,
-						blackTimeLeft: value.blackTimeLeft,
-						sessionId: value.sessionId,
-						playerColor: value.playerColor
+						whosNext: state.whosNext,
+						whiteTimeLeft: state.whiteTimeLeft,
+						blackTimeLeft: state.blackTimeLeft,
+						sessionId: state.sessionId,
+						playerColor: state.playerColor
 					});
 					return;
 				}
 
-				if (value.type === 'GameOverFromServerType' && timer) {
+				if (state.action === 'game over' && timer) {
+					// if (state.type === 'GameOverFromServerType' && timer) {
 					cancelAnimationFrame(timer);
 				}
 			}

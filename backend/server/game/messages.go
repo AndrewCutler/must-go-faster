@@ -396,10 +396,17 @@ func handleGameStartedMessage(session *Session) {
 	}
 }
 
-func handleTimeoutMessage(session *Session) {
-	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
+func handleTimeoutMessage(message Message, session *Session) {
+	// todo: is this necessary?
+	// if session.isAgainstComputer() {
+	player := session.White
+	if message.PlayerColor == "black" {
+		player = session.Black
 	}
+	// return
+	// }
+
+	player.WriteChan <- sendTimeoutMessage(session, player.Color, session.whoseMoveIsIt())
 }
 
 func updateClocks(session *Session, isPremove bool) {

@@ -71,7 +71,8 @@
 
 	const unsub = gameState.subscribe(function (state) {
 		if (state) {
-			if (state.type === 'GameJoinedFromServerType') {
+			if (state.action === 'game joined') {
+			// if (state.type === 'GameJoinedFromServerType') {
 				countdownRef.startCountdown();
 				// startCountdown();
 			}
@@ -100,6 +101,7 @@
 						set: function (from: cg.Key, to: cg.Key) {
 							gameState.update((prev) => ({
 								...(prev as GameState),
+                                action: 'set premove',
 								premove: { from, to }
 							}));
 						}

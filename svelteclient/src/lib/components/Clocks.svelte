@@ -17,8 +17,8 @@
 			console.log(state);
 
 			// TODO: switch statement
-			if (state) {
-				console.log(state.type);
+			if (state && state.action) {
+				console.log(state.type, state.action);
 				if (state.action === 'game joined') {
 					// if (state.type === 'GameJoinedFromServerType') {
 					whiteTime = 30;
@@ -28,13 +28,11 @@
 					}
 				}
 
-				if ((state.action = 'send premove')) {
+				if (state.action === 'send premove') {
 					console.log('playing premove...');
-					console.log(state.premove);
-					// wipe out premove
-					console.log($gameState);
 					gameState.update((prev) => ({
 						...(prev as GameState),
+						action: 'move from server',
 						premove: undefined
 					}));
 					// send premove message
@@ -45,33 +43,12 @@
 						sessionId: state.sessionId,
 						isAgainstComputer: $isAgainstComputer
 					});
-					return; // test this
+					return;
 				}
 
 				if (
 					state.action === 'move from server'
-					// state.type === 'GameStartedToServerType' ||
-					// state.type === 'MoveFromServerType'
 				) {
-					// if (state.premove) {
-					// 	console.log('playing premove...');
-					// 	console.log(state.premove);
-					// 	// wipe out premove
-					// 	console.log($gameState);
-					// 	gameState.update((prev) => ({
-					// 		...(prev as GameState),
-					// 		premove: undefined
-					// 	}));
-					// 	// send premove message
-					// 	sendMessage({
-					// 		type: 'PremoveToServerType',
-					// 		move: state.premove,
-					// 		playerColor: state.playerColor,
-					// 		sessionId: state.sessionId,
-					// 		isAgainstComputer: $isAgainstComputer
-					// 	});
-					// 	return; // test this
-					// }
 					whiteTime = state.whiteTimeLeft;
 					blackTime = state.blackTimeLeft;
 					runClock({
@@ -85,7 +62,6 @@
 				}
 
 				if (state.action === 'game over' && timer) {
-					// if (state.type === 'GameOverFromServerType' && timer) {
 					cancelAnimationFrame(timer);
 				}
 			}

@@ -14,10 +14,11 @@
 
 	function connect(opponentType: OpponentType) {
         isAgainstComputer.set(opponentType === 'computer');
-		gameState.update((state) => ({
-			...state!,
-			socketStatus: 'connecting'
-		}));
+		// gameState.update((state) => ({
+		// 	...state!,
+        //     action: 'game joined',
+		// 	socketStatus: 'connecting'
+		// }));
 		createSocket(opponentType);
 		isGameInProgress = true;
 		isGameOver = false;

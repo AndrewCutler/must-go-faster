@@ -23,6 +23,7 @@
 				if (countdownValue <= 0) {
 					gameState.update((state) => ({
 						...state!,
+						action: 'game started',
 						type: 'GameStartedToServerType'
 					}));
 					sendMessage({

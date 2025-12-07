@@ -22,10 +22,11 @@ export type Action =
 	| 'game joined'
 	| 'move from server'
 	| 'set premove'
+	| 'game started'
 	| 'game over';
 
 export type GameState = {
-	action: Action;
+	action: Action; // todo: should this be a handler function?
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -42,10 +43,6 @@ export type GameState = {
 	move?: Move;
 	premove?: Move;
 };
-
-export interface Test {
-	test: string;
-}
 
 export function receiveMessage(message: FromMessage<FromPayload>): void {
 	switch (message.type) {
@@ -91,6 +88,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 			gameState.update((value) => {
 				let action: Action = 'move from server';
 				if (value?.premove) {
+                    console.log('premove: ', value.premove);
 					action = 'send premove';
 				}
 

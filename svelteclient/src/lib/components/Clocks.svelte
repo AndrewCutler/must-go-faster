@@ -5,7 +5,6 @@
 		isAgainstComputer,
 		type GameState
 	} from '../../store/must-go-faster.store';
-	import type { PlayerColor } from '$lib/models/models';
 	import { sendMessage } from '$lib/socket/socket';
 
 	let whiteTime = 30;
@@ -18,9 +17,7 @@
 
 			// TODO: switch statement
 			if (state && state.action) {
-				console.log(state.type, state.action);
 				if (state.action === 'game joined') {
-					// if (state.type === 'GameJoinedFromServerType') {
 					whiteTime = 30;
 					blackTime = 30;
 					if (timer) {
@@ -29,13 +26,11 @@
 				}
 
 				if (state.action === 'send premove') {
-					console.log('playing premove...');
 					gameState.update((prev) => ({
 						...(prev as GameState),
 						action: 'move from server',
 						premove: undefined
 					}));
-					// send premove message
 					sendMessage({
 						type: 'PremoveToServerType',
 						move: state.premove,
@@ -105,7 +100,6 @@
 				blackTime = remainingTime;
 			}
 
-			// if (remainingTime <= 0) {
 			if (remainingTime <= 0 && whosNext === playerColor) {
 				sendMessage({
 					type: 'TimeoutToServerType',

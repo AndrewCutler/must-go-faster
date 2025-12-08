@@ -63,18 +63,13 @@
 			movable: {
 				color: $gameState.playerColor
 			}
-			// premovable: {
-			// 	enabled: true
-			// }
 		});
 	}
 
 	const unsub = gameState.subscribe(function (state) {
 		if (state) {
 			if (state.action === 'game joined') {
-			// if (state.type === 'GameJoinedFromServerType') {
 				countdownRef.startCountdown();
-				// startCountdown();
 			}
 
 			board?.set({

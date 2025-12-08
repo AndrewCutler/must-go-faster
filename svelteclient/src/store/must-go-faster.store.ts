@@ -35,7 +35,6 @@ export type GameState = {
 	serverTimeStamp: string;
 	boardConfig: CGConfig;
 	sessionId: string;
-	type: FromMessage<FromPayload>['type'];
 	playerColor: PlayerColor;
 	loser?: PlayerColor;
 	socketStatus: 'disconnected' | 'connecting' | 'connected';
@@ -52,7 +51,6 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				...value,
 				action: 'game joined',
 				socketStatus: 'connected',
-				type: message.type,
 				playerColor: copy.playerColor,
 				sessionId: copy.sessionId,
 				whiteTimeLeft: copy.payload.whiteTimeLeft,
@@ -71,10 +69,6 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 						dests: toValidMoves(copy.payload.validMoves),
 						color: copy.payload.whosNext
 					},
-					// premovable: {
-					// 	enabled: true,
-					// 	showDests: true
-					// },
 					draggable: {
 						enabled: true
 					}
@@ -84,11 +78,10 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 		}
 		case 'MoveFromServerType': {
 			const copy = message as FromMessage<MoveFromServer>;
-			console.log(copy);
 			gameState.update((value) => {
 				let action: Action = 'move from server';
 				if (value?.premove) {
-                    console.log('premove: ', value.premove);
+					console.log('premove: ', value.premove);
 					action = 'send premove';
 				}
 
@@ -96,7 +89,6 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 					...(value || {}),
 					action,
 					socketStatus: value?.socketStatus ?? 'disconnected',
-					type: message.type,
 					playerColor: copy.playerColor,
 					sessionId: copy.sessionId,
 					whiteTimeLeft: copy.payload.whiteTimeLeft,
@@ -115,10 +107,6 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 						},
 						lastMove: [copy.payload.move.from, copy.payload.move.to],
 						orientation: copy.playerColor,
-						// premovable: {
-						// 	enabled: true,
-						// 	showDests: true
-						// },
 						draggable: {
 							enabled: true
 						}
@@ -133,7 +121,6 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 				...(value || {}),
 				action: 'game over',
 				socketStatus: 'disconnected',
-				type: message.type,
 				playerColor: copy.playerColor,
 				sessionId: copy.sessionId,
 				whiteTimeLeft: value!.whiteTimeLeft,

@@ -16,13 +16,14 @@ type Clock struct {
 }
 
 type Player struct {
-	SessionId  string
-	Connection *websocket.Conn
-	WriteChan  chan []byte
-	Hub        *Hub
-	Color      string
-	Clock      Clock
-	IsComputer bool
+	SessionId      string
+	Connection     *websocket.Conn
+	WriteChan      chan []byte
+	Hub            *Hub
+	Color          string
+	Clock          Clock
+	IsComputer     bool
+	CurrentPremove *Move
 }
 
 func (p *Player) ReadMessage() {
@@ -32,8 +33,9 @@ func (p *Player) ReadMessage() {
 	}()
 
 	for {
-		messageType, content, err := p.Connection.ReadMessage()
-		log.Println("reading message: playerColor ", p.Color, "messageType: ", messageType)
+		_, content, err := p.Connection.ReadMessage()
+		// messageType, content, err := p.Connection.ReadMessage()
+		// log.Println("reading message: playerColor ", p.Color, "messageType: ", messageType)
 
 		// this will fire for the player who is doing the abandonment
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
@@ -95,6 +97,7 @@ func (p *Player) WriteMessage() {
 		if err != nil {
 			return
 		}
+		// log.Println("writing message: ", string(message))
 		writer.Write(message)
 
 		n := len(p.WriteChan)
@@ -133,6 +136,19 @@ func deserialize(content string, messageType string) (Message, interface{}, erro
 		}
 
 		var payload TimeoutToServer
+		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
+			log.Println("cannot deserialize: ", content, err)
+			return Message{}, nil, err
+		}
+
+		return message, payload, nil
+	case "TryPremoveToServerType":
+		message, payloadData, err := toServerMessage(content)
+		if err != nil {
+			return Message{}, nil, err
+		}
+
+		var payload TryPremoveToServer
 		if err := json.Unmarshal([]byte(payloadData), &payload); err != nil {
 			log.Println("cannot deserialize: ", content, err)
 			return Message{}, nil, err

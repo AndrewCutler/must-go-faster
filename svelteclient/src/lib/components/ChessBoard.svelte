@@ -5,12 +5,14 @@
 	import * as cg from 'chessground/types';
 	import type { Api } from 'chessground/api';
 	import {
+		Action,
 		gameState,
 		isAgainstComputer,
 		type GameState
 	} from '../../store/must-go-faster.store';
 	import { sendMessage } from '$lib/socket/socket';
 	import Countdown from './Countdown.svelte';
+	import { fenToBoard } from '../../fenToBoard';
 
 	const initialConfig: ChessgroundConfig = {
 		movable: {
@@ -58,11 +60,36 @@
 			isAgainstComputer: $isAgainstComputer
 		});
 
+		console.log(fenToBoard(board!.getFen()));
+
 		board!.set({
 			turnColor: $gameState.playerColor === 'white' ? 'black' : 'white',
 			movable: {
 				color: $gameState.playerColor
 			}
+		});
+	}
+
+	function handlePremove(from: cg.Key, to: cg.Key): void {
+		// send TryPremoveToServerType message
+        const move = { from, to };
+		gameState.update((prev) => {
+			console.log((prev as GameState).boardConfig.fen);
+			return {
+				...(prev as GameState),
+				action: Action.SetPremove,
+				premove: move
+				// boardConfig: {
+				// }
+			};
+		});
+
+		sendMessage({
+			type: 'TryPremoveToServerType',
+			move,
+			playerColor: $gameState!.playerColor,
+			sessionId: $gameState!.sessionId,
+			isAgainstComputer: $isAgainstComputer
 		});
 	}
 
@@ -93,13 +120,17 @@
 					enabled: true,
 					showDests: true,
 					events: {
-						set: function (from: cg.Key, to: cg.Key) {
-							gameState.update((prev) => ({
-								...(prev as GameState),
-                                action: 'set premove',
-								premove: { from, to }
-							}));
-						}
+						set: handlePremove
+						// set: function (from: cg.Key, to: cg.Key) {
+						// 	gameState.update((prev) => {
+						// 		console.log((prev as GameState).boardConfig.fen);
+						// 		return {
+						// 			...(prev as GameState),
+						// 			action: Action.SetPremove,
+						// 			premove: { from, to }
+						// 		};
+						// 	});
+						// }
 					}
 				},
 				predroppable: {

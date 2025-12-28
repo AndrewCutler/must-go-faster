@@ -21,6 +21,9 @@ const (
 	MoveFromServerType
 	MoveToServerType
 
+	TryPremoveFromServerType
+	TryPremoveToServerType
+
 	PremoveFromServerType
 	PremoveToServerType
 
@@ -50,6 +53,10 @@ func (m MessageType) String() string {
 		return "GameStartedToServerType"
 	case MoveToServerType:
 		return "MoveToServerType"
+	case TryPremoveToServerType:
+		return "TryPremoveToServerType"
+	case TryPremoveFromServerType:
+		return "TryPremoveFromServerType"
 	case PremoveToServerType:
 		return "PremoveToServerType"
 	case TimeoutToServerType:
@@ -71,6 +78,10 @@ func MessageTypeFromString(s string) (MessageType, error) {
 		return MoveFromServerType, nil
 	case "AbandonedFromServerType":
 		return AbandonedFromServerType, nil
+	case "TryPremoveFromServerType":
+		return TryPremoveFromServerType, nil
+	case "TryPremoveToServerType":
+		return TryPremoveToServerType, nil
 	case "PremoveFromServerType":
 		return PremoveFromServerType, nil
 	case "GameOverFromServerType":
@@ -115,21 +126,21 @@ type MoveFromServer struct {
 	Move          Move                `json:"move"`
 }
 
-// type TimeoutFromServer struct {
-// 	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-// 	BlackTimeLeft float64             `json:"blackTimeLeft"`
-// 	Fen           string              `json:"fen"`
-// 	ValidMoves    map[string][]string `json:"validMoves"`
-// 	WhosNext      string              `json:"whosNext"`
-// 	Loser         string              `json:"loser"`
-// }
-
 type AbandonedFromServer struct {
 	Abandoned bool `json:"abandoned"`
 }
 
 type MoveToServer struct {
 	Move Move `json:"move"`
+}
+
+type TryPremoveToServer struct {
+	Premove Move `json:"premove"`
+}
+
+type TryPremoveFromServer struct {
+	Success bool   `json:"success"`
+	Fen     string `json:"fen"`
 }
 
 type PremoveToServer struct {
@@ -199,31 +210,9 @@ func sendGameStartedMessage(session *Session, playerColor string) []byte {
 }
 
 func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
-	// isCheckmated := ""
-	// switch session.Game.Outcome() {
-	// case "0-1":
-	// 	isCheckmated = "white"
-	// case "1-0":
-	// 	isCheckmated = "black"
-	// }
-
 	log.Println("move", move)
 
 	var message Message
-	// if isCheckmated != "" {
-	// 	message = Message{
-	// 		Type:        GameOverFromServerType.String(),
-	// 		SessionId:   session.SessionId,
-	// 		PlayerColor: playerColor,
-	// 		TimeStamp:   time.Now().Format(time.RFC3339),
-	// 		Payload: GameOverFromServer{
-	// 			Loser:   isCheckmated,
-	// 			Outcome: "checkmate",
-	// 			Move:    move,
-	// 		},
-	// 	}
-
-	// } else {
 	whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
 
 	message = Message{
@@ -243,6 +232,28 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 		},
 	}
 	// }
+
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
+}
+
+// Send fen of current position since client-side is one move behind.
+func sendTryPremoveSuccessMessage(session *Session, playerColor string) []byte {
+	message := Message{
+		Type:        TryPremoveFromServerType.String(),
+		SessionId:   session.SessionId,
+		PlayerColor: playerColor,
+		TimeStamp:   time.Now().Format(time.RFC3339),
+		Payload: TryPremoveFromServer{
+			Success: true, // todo: unnecessary?
+			Fen:     session.getFen(),
+		},
+	}
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
@@ -348,9 +359,37 @@ func handleMoveMessage(message Message, session *Session) {
 	// }
 }
 
+func handleTryPremoveMessage(message Message, session *Session) {
+	// TODO: can't evaluate now. have to wait for opponent move first.
+	payload := message.Payload.(TryPremoveToServer)
+	premove := Move{From: payload.Premove.From, To: payload.Premove.To}
+
+	player := session.White
+	if message.PlayerColor == "black" {
+		player = session.Black
+	}
+	player.CurrentPremove = &premove
+
+	// premove, err := tryPlayPremove(payload, session.Game)
+	// fmt.Println(premove)
+	// if err != nil {
+	// 	log.Println("Cannot make premove: ", err)
+	// 	return
+	// }
+
+	opponent := session.White
+	if message.PlayerColor == "white" {
+		opponent = session.Black
+	}
+
+	opponent.WriteChan <- sendTryPremoveSuccessMessage(session, opponent.Color)
+
+}
+
 func handlePremoveMessage(message Message, session *Session) {
 	payload := message.Payload.(PremoveToServer)
-	premove, err := tryPlayPremove(payload, session.Game)
+	// todo: double check change here
+	premove, err := playPremove(payload, session.Game)
 	fmt.Println(premove)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)

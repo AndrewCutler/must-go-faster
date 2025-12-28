@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import {
+		Action,
 		gameState,
 		isAgainstComputer,
 		type GameState
@@ -14,10 +15,12 @@
 	onMount(() => {
 		const unsub = gameState.subscribe((state) => {
 			console.log(state);
+			console.log('2');
 
 			// TODO: switch statement
 			if (state && state.action) {
-				if (state.action === 'game joined') {
+				if (state.action === Action.GameJoined) {
+					// if (state.action === 'game joined') {
 					whiteTime = 30;
 					blackTime = 30;
 					if (timer) {
@@ -25,10 +28,10 @@
 					}
 				}
 
-				if (state.action === 'send premove') {
+				if (state.action === Action.SendPremove) {
 					gameState.update((prev) => ({
 						...(prev as GameState),
-						action: 'move from server',
+						action: Action.ReceiveMove,
 						premove: undefined
 					}));
 					sendMessage({
@@ -41,9 +44,7 @@
 					return;
 				}
 
-				if (
-					state.action === 'move from server'
-				) {
+				if (state.action === Action.ReceiveMove) {
 					whiteTime = state.whiteTimeLeft;
 					blackTime = state.blackTimeLeft;
 					runClock({

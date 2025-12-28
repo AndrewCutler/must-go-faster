@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"log"
 	"math/rand"
 	"strings"
@@ -85,7 +86,17 @@ func tryPlayMove(m MoveToServer, g *chess.Game) (Move, error) {
 	return m.Move, nil
 }
 
-func tryPlayPremove(m PremoveToServer, g *chess.Game) (Move, error) {
+func tryPlayPremove(p *Move, g *chess.Game) (*Move, error) {
+	// log.Println("premove: ", m)
+	if err := g.MoveStr(p.From + p.To); err != nil {
+		return p, err
+	}
+
+	return p, nil
+}
+
+func playPremove(m PremoveToServer, g *chess.Game) (Move, error) {
+	// func tryPlayPremove(m PremoveToServer, g *chess.Game) (Move, error) {
 	// log.Println("premove: ", m)
 	if err := g.MoveStr(m.Premove.From + m.Premove.To); err != nil {
 		return m.Premove, err
@@ -121,7 +132,6 @@ func PlayComputer(player *Player, computer *Player) {
 		select {
 		case v := <-computer.WriteChan:
 			value := string(v)
-
 			// log.Println("value: ", value)
 
 			// lazy way to check message type
@@ -132,7 +142,6 @@ func PlayComputer(player *Player, computer *Player) {
 			// 	log.Println("GameStartedFromServerType")
 			// }
 			if strings.Contains(value, "MoveFromServerType") {
-				log.Println("MoveFromServerType in PlayComputer")
 				session, ok := player.Hub.InProgressSessions[player.SessionId]
 				if !ok {
 					log.Println("Cannot find session with id: ", player.SessionId)
@@ -160,6 +169,26 @@ func PlayComputer(player *Player, computer *Player) {
 					return
 				}
 
+				var premove *Move
+				if player.CurrentPremove != nil {
+					// if player.CurrentPremove != (Move{}) {
+					log.Println("PREMOVE")
+					// session.Game.Move(player.CurrentPremove)
+					// player.CurrentPremove = nil
+					if _premove, err := tryPlayPremove(player.CurrentPremove, session.Game); err != nil {
+						log.Println("Cannot make premove: ", err)
+						_premove = nil
+					} else {
+						premove = _premove
+					}
+				}
+
+				if premove != nil {
+					// do something
+					log.Println("make premove and send new fen")
+					return
+				}
+
 				moves := session.Game.ValidMoves()
 				nextMove := moves[rand.Intn(len(moves))]
 				session.Game.Move(nextMove)
@@ -168,44 +197,83 @@ func PlayComputer(player *Player, computer *Player) {
 					To:   nextMove.S2().String(),
 				}
 
-				c := session.White
-				if player.Color == "white" {
-					c = session.Black
+				hasOutcome := checkGameOutcome(session, player)
+				if !hasOutcome {
+					// player.WriteChan <- sendMoveMessage(session, player.Color, move)
+					player.WriteChan <- func() []byte {
+
+						log.Println("move", move)
+
+						var message Message
+						whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
+
+						message = Message{
+							Type:              "MoveAcknowledgementFromServerType",
+							SessionId:         session.SessionId,
+							PlayerColor:       player.Color,
+							TimeStamp:         time.Now().Format(time.RFC3339),
+							IsAgainstComputer: session.isAgainstComputer(),
+							Payload: MoveFromServer{
+								Fen:        session.getFen(),
+								ValidMoves: ValidMovesMap(session.Game),
+								WhosNext:   session.whoseMoveIsIt(),
+								// IsCheckmated:  isCheckmated,
+								WhiteTimeLeft: whiteTimeLeft,
+								BlackTimeLeft: blackTimeLeft,
+							},
+						}
+
+						jsonData, err := json.Marshal(message)
+						if err != nil {
+							log.Println("Error converting message to JSON: ", err)
+							return []byte{}
+						}
+
+						return jsonData
+					}()
 				}
 
-				t := time.Duration(rand.Intn(3000) * int(time.Millisecond))
-				if c.Clock.TimeLeft-t.Seconds() <= 0 {
-					t = time.Duration(c.Clock.TimeLeft * float64(time.Second))
-				}
-				time.Sleep(t)
-
-				// Update clocks after computer makes its move
-				updateClocks(session, false)
-
-				// todo: how is this used?
-				if c.Clock.TimeLeft <= 0 {
-					player.WriteChan <- sendTimeoutMessage(session, player.Color, c.Color)
-				} else {
-					// isCheckmated := ""
-					// switch session.Game.Outcome() {
-					// case "0-1":
-					// 	isCheckmated = "white"
-					// case "1-0":
-					// 	isCheckmated = "black"
-					// }
-
-					// // log.Println("is checkmated", isCheckmated)
-					// if isCheckmated != "" {
-					// 	player.WriteChan <- sendGameOverMessage(session, "checkmate", isCheckmated)
-					// } else {
-					// 	player.WriteChan <- sendMoveMessage(session, player.Color, move)
-					// }
-
-					hasOutcome := checkGameOutcome(session, player)
-					if !hasOutcome {
-						player.WriteChan <- sendMoveMessage(session, player.Color, move)
+				go func() {
+					c := session.White
+					if player.Color == "white" {
+						c = session.Black
 					}
-				}
+
+					t := time.Duration(rand.Intn(10000) * int(time.Millisecond))
+					// t := time.Duration(rand.Intn(3000) * int(time.Millisecond))
+					if c.Clock.TimeLeft-t.Seconds() <= 0 {
+						t = time.Duration(c.Clock.TimeLeft * float64(time.Second))
+					}
+					time.Sleep(t)
+
+					// Update clocks after computer makes its move
+					updateClocks(session, false)
+
+					// todo: how is this used?
+					if c.Clock.TimeLeft <= 0 {
+						player.WriteChan <- sendTimeoutMessage(session, player.Color, c.Color)
+					} else {
+						// isCheckmated := ""
+						// switch session.Game.Outcome() {
+						// case "0-1":
+						// 	isCheckmated = "white"
+						// case "1-0":
+						// 	isCheckmated = "black"
+						// }
+
+						// // log.Println("is checkmated", isCheckmated)
+						// if isCheckmated != "" {
+						// 	player.WriteChan <- sendGameOverMessage(session, "checkmate", isCheckmated)
+						// } else {
+						// 	player.WriteChan <- sendMoveMessage(session, player.Color, move)
+						// }
+
+						hasOutcome := checkGameOutcome(session, player)
+						if !hasOutcome {
+							player.WriteChan <- sendMoveMessage(session, player.Color, move)
+						}
+					}
+				}()
 			}
 			// if strings.Contains(value, "MoveToServerType") {
 			// 	log.Println("MoveToServerType")
@@ -228,6 +296,12 @@ func PlayComputer(player *Player, computer *Player) {
 			// if strings.Contains(value, "AbandonedToServerType") {
 			// 	log.Println("AbandonedToServerType")
 			// }
+			if strings.Contains(value, "TryPremoveFromServerType") {
+				log.Println("TryPremoveFromServerType")
+				// implement here
+				value := string(v)
+				log.Println("premove value: ", value)
+			}
 		case <-time.After(time.Minute):
 			close(computer.WriteChan)
 			return

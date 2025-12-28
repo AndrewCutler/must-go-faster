@@ -79,8 +79,12 @@ func (h *Hub) onMessage(message Message) {
 		handleGameStartedMessage(session)
 	case MoveToServerType.String():
 		handleMoveMessage(message, session)
+	case TryPremoveToServerType.String():
+		handleTryPremoveMessage(message, session)
 	case PremoveToServerType.String():
 		handlePremoveMessage(message, session)
+	case TryPremoveToServerType.String():
+		handleTryPremoveMessage(message, session)
 	case TimeoutToServerType.String():
 		handleTimeoutMessage(message, session)
 	case AbandonedToServerType.String():

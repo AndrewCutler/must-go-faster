@@ -42,7 +42,6 @@
 	const unsub = gameState.subscribe(function (state) {
 		if (state) {
             if (state.action === 'game over') {
-			// if (state.type === 'GameOverFromServerType') {
 				gameOver(state.outcome!, state.loser!);
 			}
 		}

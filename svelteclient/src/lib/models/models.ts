@@ -20,6 +20,8 @@ export type MessageType =
 	| 'GameStartedToServerType'
 	| 'MoveToServerType'
 	| 'PremoveToServerType'
+	| 'TryPremoveToServerType'
+	| 'TryPremoveFromServerType'
 	| 'TimeoutToServerType'
 	| 'AbandonedToServerType'
 	| 'NewGameToServerType';
@@ -122,6 +124,15 @@ export type TimeoutToServer = {
 };
 
 export type MoveToServer = { move: Move };
+
+export type TryPremoveToServer = {
+	premove: Move;
+};
+
+export type TryPremoveFromServer = {
+    success: boolean;
+    fen: string;
+};
 
 export type PremoveToServer = {
 	premove: Move;

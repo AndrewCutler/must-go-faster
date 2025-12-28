@@ -10,7 +10,8 @@ import type {
 	PremoveToServer,
 	TimeoutToServer,
 	ToMessage,
-	ToPayload
+	ToPayload,
+    TryPremoveToServer
 } from '$lib/models/models';
 import { receiveMessage } from '../../store/must-go-faster.store';
 
@@ -103,6 +104,21 @@ export function sendMessage({
 			} as ToMessage<MoveToServer>;
 			break;
 		}
+        case 'TryPremoveToServerType': {
+            if (!move) {
+                throw new Error('move was undefined when called with type try premove');
+            }
+			message = {
+				isAgainstComputer: isAgainstComputer!,
+				playerColor: playerColor,
+				payload: {
+					premove: move
+				},
+				sessionId: sessionId!,
+				type
+			} as ToMessage<TryPremoveToServer>;
+			break;
+        }
 		case 'PremoveToServerType': {
 			if (!move) {
 				throw new Error('move was undefined when called with type premove');

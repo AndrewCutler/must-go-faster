@@ -11,22 +11,30 @@ import type {
 import { writable } from 'svelte/store';
 import type { CGConfig } from '$lib/models/models';
 import { toValidMoves } from '$lib/utils/utils';
+import { fenToBoard } from '../fenToBoard';
 
 // todo: why isn't this in gameState god store
 // export const opponentType = writable<OpponentType | undefined>();
 export const isAgainstComputer = writable(false);
 export const gameState = writable<GameState | undefined>();
 
-export type Action =
-	| 'send premove'
-	| 'game joined'
-	| 'move from server'
-	| 'set premove'
-	| 'game started'
-	| 'game over';
+export const enum Action {
+	// game joined so start countdown, disable buttons, etc.
+	GameJoined = 'game joined',
+	// countdown completed so board is now actionable
+	GameStarted = 'game started',
+	// process move/fen from server and update UI/game state
+	ReceiveMove = 'move from server',
+	// premove was played; save to state and don't send anything to server
+	SetPremove = 'set premove',
+	// send premove to server; fires after receiving move from server
+	SendPremove = 'send premove',
+	// game over state reached
+	GameOver = 'game over'
+}
 
 export type GameState = {
-	action: Action; // todo: should this be a handler function?
+	action: Action;
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -47,9 +55,10 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 	switch (message.type) {
 		case 'GameJoinedFromServerType': {
 			const copy = message as FromMessage<GameJoinedFromServer>;
+			console.log(fenToBoard(copy.payload.fen));
 			gameState.update((value) => ({
 				...value,
-				action: 'game joined',
+				action: Action.GameJoined,
 				socketStatus: 'connected',
 				playerColor: copy.playerColor,
 				sessionId: copy.sessionId,
@@ -79,11 +88,13 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 		case 'MoveFromServerType': {
 			const copy = message as FromMessage<MoveFromServer>;
 			gameState.update((value) => {
-				let action: Action = 'move from server';
+				let action: Action = Action.ReceiveMove;
 				if (value?.premove) {
 					console.log('premove: ', value.premove);
-					action = 'send premove';
+					action = Action.SendPremove;
 				}
+
+				console.log(fenToBoard(copy.payload.fen));
 
 				return {
 					...(value || {}),
@@ -119,7 +130,7 @@ export function receiveMessage(message: FromMessage<FromPayload>): void {
 			const copy = message as FromMessage<GameOverFromServerType>;
 			gameState.update((value) => ({
 				...(value || {}),
-				action: 'game over',
+				action: Action.GameOver,
 				socketStatus: 'disconnected',
 				playerColor: copy.playerColor,
 				sessionId: copy.sessionId,

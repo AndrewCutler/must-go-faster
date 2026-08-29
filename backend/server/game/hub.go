@@ -26,6 +26,8 @@ type PendingLobby struct {
 	Player    *Player
 	CreatedAt time.Time
 	Cancelled bool
+	Expired   bool
+	ExpiredAt time.Time
 }
 
 type Hub struct {
@@ -149,28 +151,42 @@ func (h *Hub) onMessage(message Message) {
 func (h *Hub) expirePendingLobbies() {
 	now := time.Now()
 	for sessionId, lobby := range h.AwaitingOpponentSessions {
+		if lobby.Cancelled {
+			delete(h.AwaitingOpponentSessions, sessionId)
+			continue
+		}
+
+		if lobby.Expired {
+			if now.Sub(lobby.ExpiredAt) < time.Second {
+				continue
+			}
+
+			var connection *websocket.Conn
+			if lobby.Player != nil {
+				connection = lobby.Player.Connection
+				lobby.Player.Connection = nil
+			}
+			delete(h.AwaitingOpponentSessions, sessionId)
+			if connection != nil {
+				_ = connection.WriteControl(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(
+						websocket.CloseNormalClosure,
+						"Lobby expired after 2 minutes.",
+					),
+					time.Now().Add(time.Second),
+				)
+				_ = connection.Close()
+			}
+			continue
+		}
+
 		if now.Sub(lobby.CreatedAt) < 2*time.Minute {
 			continue
 		}
 
-		lobby.Cancelled = true
-		var connection *websocket.Conn
-		if lobby.Player != nil {
-			connection = lobby.Player.Connection
-			lobby.Player.Connection = nil
-		}
-		delete(h.AwaitingOpponentSessions, sessionId)
-		if connection != nil {
-			_ = connection.WriteControl(
-				websocket.CloseMessage,
-				websocket.FormatCloseMessage(
-					websocket.CloseNormalClosure,
-					"Lobby expired after 2 minutes.",
-				),
-				time.Now().Add(time.Second),
-			)
-			_ = connection.Close()
-		}
+		lobby.Expired = true
+		lobby.ExpiredAt = now
 	}
 }
 

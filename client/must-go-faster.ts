@@ -31,7 +31,6 @@ import {
 	BoardElement,
 	ConnectButtonElement,
 	CancelButtonElement,
-	ResignButtonElement,
 	PlayerTypeElement,
 	CountdownContainerElement,
 	ConnectionStatusElement,
@@ -86,7 +85,6 @@ export class MustGoFaster {
 		new ConnectButtonElement().reset();
 		new PlayerTypeElement().show();
 		new CancelButtonElement().hide();
-		new ResignButtonElement().hide();
 		new OpponentStatusElement().clear();
 		new ConnectionStatusElement().clear();
 
@@ -568,7 +566,6 @@ export class MustGoFaster {
 		}
 		new OpponentStatusElement().clear();
 		new CancelButtonElement().hide();
-		new ResignButtonElement().hide();
 		new ConnectionStatusElement().clear();
 		const self = this;
 		function sendNewGameMessage() {
@@ -584,8 +581,6 @@ export class MustGoFaster {
 		switch (method) {
 			case 'Checkmate':
 				return 'checkmate';
-			case 'Resignation':
-				return 'resignation';
 			case 'DrawOffer':
 				return 'draw offer';
 			case 'Stalemate':
@@ -670,7 +665,6 @@ export class MustGoFaster {
 		const opponentStatus = new OpponentStatusElement();
 
 		new CancelButtonElement().hide();
-		new ResignButtonElement().show();
 		playerType.hide();
 		opponentStatus.show(`Playing ${this.#state.opponentType ?? 'computer'}`);
 		new ConnectionStatusElement().clear();
@@ -683,14 +677,12 @@ export class MustGoFaster {
 	): void {
 		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
-		const resignButton = new ResignButtonElement();
 		const playerType = new PlayerTypeElement();
 		const opponentStatus = new OpponentStatusElement();
 		const status = new ConnectionStatusElement();
 
 		connectButton.reset();
 		cancelButton.hide();
-		resignButton.hide();
 		if (resetOpponentType) {
 			this.#state.opponentType = 'computer';
 			playerType.setSelection('computer');
@@ -703,14 +695,12 @@ export class MustGoFaster {
 	private resetConnectionUi(): void {
 		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
-		const resignButton = new ResignButtonElement();
 		const playerType = new PlayerTypeElement();
 		const opponentStatus = new OpponentStatusElement();
 		const status = new ConnectionStatusElement();
 
 		connectButton.reset();
 		cancelButton.hide();
-		resignButton.hide();
 		playerType.show();
 		opponentStatus.clear();
 		status.clear();

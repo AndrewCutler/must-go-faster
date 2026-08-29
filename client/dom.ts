@@ -401,31 +401,6 @@ export class CancelButtonElement implements IElement {
 	}
 }
 
-export class ResignButtonElement implements IElement {
-	readonly #selector = '#resign-button';
-	#element: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor() {
-		const element = document.querySelector<HTMLButtonElement>(
-			this.#selector,
-		);
-		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
-		this.#element = element;
-	}
-
-	show(): void {
-		this.#element!.style.display = '';
-	}
-
-	hide(): void {
-		this.#element!.style.display = 'none';
-	}
-}
-
 export class ConnectionStatusElement implements IElement {
 	readonly #selector = '#connection-status';
 	#element: HTMLElement | undefined;

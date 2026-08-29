@@ -41,7 +41,6 @@ When a user clicks the Play button, if a pending lobby exists on the server, tha
 - Upon clicking, the user should be added to a pending lobby.
 - Once the game is started, the chessboard should display and a 5-second countdown should overlay it to give both players time to prepare for game start.
 - A chess clock with both players' times should be displayed.
-- A 'Resign' button should be displayed as a placeholder only.
 - The board should be displayed, but pieces should not be clickable in this flow.
 
 ## Acceptance criteria
@@ -52,7 +51,6 @@ When a user clicks the Play button, if a pending lobby exists on the server, tha
 - Joining an expired lobby is not allowed.
 - The board renders with the selected PGN but is not actionable.
 - A countdown of 5 seconds overlays the board once the session is created and starts at the same time for both clients.
-- A 'Resign' button is displayed as a placeholder only.
 - A page refresh/client disconnect removes the player from the lobby and ends the game with a forfeit.
 
 ## Non-functional requirements

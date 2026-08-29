@@ -299,7 +299,7 @@ func TestOnDisconnectAbandonedActiveSessionBroadcastsAbandonment(t *testing.T) {
 	black.Hub = hub
 	hub.InProgressSessions[sessionID] = session
 
-	hub.onDisconnect(white, true)
+	hub.onDisconnect(white, false)
 
 	if _, ok := hub.InProgressSessions[sessionID]; ok {
 		t.Fatal("expected active session to be removed after abandonment")

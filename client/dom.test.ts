@@ -8,7 +8,6 @@ import {
 	ConnectionStatusElement,
 	ConnectButtonElement,
 	GameStatusModalElement,
-	ResignButtonElement,
 	OpponentStatusElement,
 	PlayerTypeElement,
 } from './dom';
@@ -23,13 +22,6 @@ function renderDom(): void {
 			class="button is-dark"
 			aria-label="Cancel pending game"
 			style="display:none"
-		></button>
-		<button
-			id="resign-button"
-			class="button is-dark"
-			aria-label="Resign game"
-			style="display:none"
-			disabled
 		></button>
 		<div id="opponent-status"></div>
 		<div id="connection-status"></div>
@@ -81,21 +73,6 @@ describe('CancelButtonElement', () => {
 		expect(button.style.display).toBe('');
 
 		cancelButton.hide();
-		expect(button.style.display).toBe('none');
-	});
-});
-
-describe('ResignButtonElement', () => {
-	it('shows and hides the placeholder resign control', () => {
-		const button = document.querySelector<HTMLButtonElement>(
-			'#resign-button',
-		)!;
-		const resignButton = new ResignButtonElement();
-
-		resignButton.show();
-		expect(button.style.display).toBe('');
-
-		resignButton.hide();
 		expect(button.style.display).toBe('none');
 	});
 });

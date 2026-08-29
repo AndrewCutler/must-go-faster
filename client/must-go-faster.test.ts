@@ -66,15 +66,6 @@ function renderDom(): void {
 			</span>
 		</button>
 		<div id="connection-status"></div>
-		<button
-			id="resign-button"
-			class="button is-dark"
-			aria-label="Resign game"
-			style="display:none"
-			disabled
-		>
-			Resign
-		</button>
 		<div id="player-type-dropdown" class="dropdown">
 			<span id="player-type-dropdown-value">Computer</span>
 		</div>
@@ -247,7 +238,7 @@ describe('MustGoFaster connect flow', () => {
 		expect(status.style.visibility).toBe('hidden');
 	});
 
-	it('shows the resign placeholder and waits for the shared countdown before starting the game', async () => {
+	it('waits for the shared countdown before starting the game', async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date('2026-08-29T12:00:00.000Z'));
 
@@ -258,15 +249,10 @@ describe('MustGoFaster connect flow', () => {
 		socket.onopen?.(new Event('open'));
 		emitJoinedMessage(socket);
 
-		const resignButton = document.querySelector<HTMLButtonElement>(
-			'#resign-button',
-		)!;
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
 		)!;
 
-		expect(resignButton.style.display).toBe('');
-		expect(resignButton.disabled).toBe(true);
 		expect(cancelButton.style.display).toBe('none');
 
 		await vi.advanceTimersByTimeAsync(999);

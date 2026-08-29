@@ -146,12 +146,11 @@ func (h *Hub) onDisconnect(player *Player, abandoned bool) {
 			close(computer.WriteChan)
 			computer.WriteChan = nil
 		}
-	} else if abandoned {
-		if session.White != nil && session.White != player {
-			session.White.WriteChan <- sendAbandonedMessage()
-		}
-		if session.Black != nil && session.Black != player {
-			session.Black.WriteChan <- sendAbandonedMessage()
+	} else if session.Game != nil && session.Game.Outcome() == chess.NoOutcome {
+		for _, other := range session.GetPlayers() {
+			if other != nil && other != player && other.WriteChan != nil {
+				other.WriteChan <- sendAbandonedMessage()
+			}
 		}
 	}
 

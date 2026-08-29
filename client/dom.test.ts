@@ -8,6 +8,7 @@ import {
 	ConnectionStatusElement,
 	ConnectButtonElement,
 	ResignButtonElement,
+	OpponentStatusElement,
 	PlayerTypeElement,
 } from './dom';
 
@@ -29,6 +30,7 @@ function renderDom(): void {
 			style="display:none"
 			disabled
 		></button>
+		<div id="opponent-status"></div>
 		<div id="connection-status"></div>
 		<div id="player-type-dropdown" class="dropdown">
 			<span id="player-type-dropdown-value">Computer</span>
@@ -136,9 +138,44 @@ describe('PlayerTypeElement', () => {
 		expect(dropdown.classList.contains('is-active')).toBe(false);
 
 		playerType.setSelection('human');
-		expect(value.innerText).toBe('Human');
+		expect(value.textContent).toBe('Human');
 
 		playerType.setSelection('computer');
-		expect(value.innerText).toBe('Computer');
+		expect(value.textContent).toBe('Computer');
+	});
+
+	it('hides, shows, and resets the selector', () => {
+		const dropdown = document.querySelector<HTMLDivElement>(
+			'#player-type-dropdown',
+		)!;
+		const value = document.querySelector<HTMLSpanElement>(
+			'#player-type-dropdown-value',
+		)!;
+		const playerType = new PlayerTypeElement();
+
+		playerType.setSelection('human');
+		playerType.hide();
+		expect(dropdown.style.display).toBe('none');
+
+		playerType.show();
+		expect(dropdown.style.display).toBe('');
+		expect(value.textContent).toBe('Human');
+	});
+});
+
+describe('OpponentStatusElement', () => {
+	it('shows and clears the opponent label above the clock', () => {
+		const status = document.querySelector<HTMLDivElement>(
+			'#opponent-status',
+		)!;
+		const opponentStatus = new OpponentStatusElement();
+
+		opponentStatus.show('Playing human');
+		expect(status.textContent).toBe('Playing human');
+		expect(status.style.visibility).toBe('visible');
+
+		opponentStatus.clear();
+		expect(status.textContent).toBe('');
+		expect(status.style.visibility).toBe('hidden');
 	});
 });

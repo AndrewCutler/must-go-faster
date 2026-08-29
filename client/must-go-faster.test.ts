@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MustGoFaster } from './must-go-faster';
+import { PlayerTypeElement } from './dom';
 
 vi.mock('chessground', () => {
 	return {
@@ -74,6 +75,10 @@ function renderDom(): void {
 		>
 			Resign
 		</button>
+		<div id="player-type-dropdown" class="dropdown">
+			<span id="player-type-dropdown-value">Computer</span>
+		</div>
+		<div id="opponent-status"></div>
 		<div id="controls">
 			<div id="white-clock"></div>
 			<div id="black-clock"></div>
@@ -96,6 +101,7 @@ function createApp(opponentType: 'computer' | 'human' = 'computer'): MustGoFaste
 
 	const app = new MustGoFaster();
 	app.setOpponentType(opponentType);
+	new PlayerTypeElement().setSelection(opponentType);
 	return app;
 }
 
@@ -160,12 +166,20 @@ describe('MustGoFaster connect flow', () => {
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
 		)!;
+		const playerType = document.querySelector<HTMLDivElement>(
+			'#player-type-dropdown',
+		)!;
+		const opponentStatus = document.querySelector<HTMLDivElement>(
+			'#opponent-status',
+		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
 		)!;
 
 		expect(connectButton.disabled).toBe(true);
 		expect(connectButton.classList.contains('is-loading')).toBe(true);
+		expect(playerType.style.display).toBe('none');
+		expect(opponentStatus.textContent).toBe('Playing human');
 		expect(status.textContent).toBe('Waiting for opponent...');
 		expect(status.dataset.tone).toBe('info');
 		expect(cancelButton.style.display).toBe('');
@@ -179,10 +193,14 @@ describe('MustGoFaster connect flow', () => {
 
 		app.connect();
 
+		const opponentStatus = document.querySelector<HTMLDivElement>(
+			'#opponent-status',
+		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
 		)!;
 
+		expect(opponentStatus.textContent).toBe('Playing computer');
 		expect(status.textContent).toBe('Starting game...');
 		expect(status.dataset.tone).toBe('info');
 	});
@@ -200,6 +218,15 @@ describe('MustGoFaster connect flow', () => {
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
 		)!;
+		const playerType = document.querySelector<HTMLDivElement>(
+			'#player-type-dropdown',
+		)!;
+		const playerTypeValue = document.querySelector<HTMLSpanElement>(
+			'#player-type-dropdown-value',
+		)!;
+		const opponentStatus = document.querySelector<HTMLDivElement>(
+			'#opponent-status',
+		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
 		)!;
@@ -212,6 +239,9 @@ describe('MustGoFaster connect flow', () => {
 		expect(connectButton.classList.contains('is-loading')).toBe(false);
 		expect(connectButton.style.display).toBe('');
 		expect(cancelButton.style.display).toBe('none');
+		expect(playerType.style.display).toBe('');
+		expect(playerTypeValue.textContent).toBe('Human');
+		expect(opponentStatus.textContent).toBe('');
 		expect(status.textContent).toBe('');
 		expect(status.dataset.tone).toBe('info');
 		expect(status.style.visibility).toBe('hidden');
@@ -249,6 +279,34 @@ describe('MustGoFaster connect flow', () => {
 		expect(socket.send).toHaveBeenCalledWith(
 			expect.stringContaining('GameStartedToServerType'),
 		);
+	});
+
+	it('resets the opponent selector to Computer after an unexpected disconnect', () => {
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket);
+		socket.onclose?.({
+			code: 1006,
+			reason: '',
+			wasClean: false,
+		} as CloseEvent);
+
+		const playerType = document.querySelector<HTMLDivElement>(
+			'#player-type-dropdown',
+		)!;
+		const playerTypeValue = document.querySelector<HTMLSpanElement>(
+			'#player-type-dropdown-value',
+		)!;
+		const opponentStatus = document.querySelector<HTMLDivElement>(
+			'#opponent-status',
+		)!;
+
+		expect(playerType.style.display).toBe('');
+		expect(playerTypeValue.textContent).toBe('Computer');
+		expect(opponentStatus.textContent).toBe('');
 	});
 
 	it('surfaces a lobby-expired close reason before the game starts', () => {

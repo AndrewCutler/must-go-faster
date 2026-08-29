@@ -32,8 +32,10 @@ import {
 	ConnectButtonElement,
 	CancelButtonElement,
 	ResignButtonElement,
+	PlayerTypeElement,
 	CountdownContainerElement,
 	ConnectionStatusElement,
+	OpponentStatusElement,
 	GameMetaElement,
 	GameStatusModalElement,
 	GettingStartedElement,
@@ -82,8 +84,10 @@ export class MustGoFaster {
 		this.#state.apiBaseUrl = process.env.API_BASE_URL;
 
 		new ConnectButtonElement().reset();
+		new PlayerTypeElement().show();
 		new CancelButtonElement().hide();
 		new ResignButtonElement().hide();
+		new OpponentStatusElement().clear();
 		new ConnectionStatusElement().clear();
 
 		this.ping();
@@ -139,7 +143,6 @@ export class MustGoFaster {
 		ws.onclose = (closeEvent) => {
 			// console.log('WebSocket closed.', { event: closeEvent });
 			const closeReason = this.#state.closeReason;
-			const wasActive = this.#state.connectionPhase === 'active';
 			this.#state.connection = undefined;
 			this.#state.connectionPhase = 'idle';
 
@@ -155,13 +158,10 @@ export class MustGoFaster {
 
 			if (closeEvent.code === 1000 && closeEvent.reason) {
 				this.setConnectionUiError(closeEvent.reason);
-			} else if (!wasActive) {
-				this.setConnectionUiError(
-					'The lobby expired before another player joined. Please click Play again.',
-				);
 			} else {
 				this.setConnectionUiError(
 					'The game connection closed unexpectedly. Please try again.',
+					true,
 				);
 			}
 			this.#state.closeReason = 'error';
@@ -530,6 +530,7 @@ export class MustGoFaster {
 			this.#state.connection.close(1000, 'Game over.');
 			this.#state.connection = undefined;
 		}
+		new OpponentStatusElement().clear();
 		new CancelButtonElement().hide();
 		new ResignButtonElement().hide();
 		new ConnectionStatusElement().clear();
@@ -580,10 +581,16 @@ export class MustGoFaster {
 	private setConnectionUiPending(): void {
 		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
+		const playerType = new PlayerTypeElement();
 		const status = new ConnectionStatusElement();
+		const opponentStatus = new OpponentStatusElement();
 
 		connectButton.setPending();
 		cancelButton.show();
+		playerType.hide();
+		opponentStatus.show(
+			`Playing ${this.#state.opponentType ?? 'computer'}`,
+		);
 		status.show(
 			this.#state.opponentType === 'computer'
 				? 'Starting game...'
@@ -593,21 +600,37 @@ export class MustGoFaster {
 	}
 
 	private setConnectionUiGameJoined(): void {
+		const playerType = new PlayerTypeElement();
+		const opponentStatus = new OpponentStatusElement();
+
 		new CancelButtonElement().hide();
 		new ResignButtonElement().show();
+		playerType.hide();
+		opponentStatus.show(`Playing ${this.#state.opponentType ?? 'computer'}`);
 		new ConnectionStatusElement().clear();
 		new ConnectButtonElement().gameJoined();
 	}
 
-	private setConnectionUiError(message: string): void {
+	private setConnectionUiError(
+		message: string,
+		resetOpponentType = false,
+	): void {
 		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
 		const resignButton = new ResignButtonElement();
+		const playerType = new PlayerTypeElement();
+		const opponentStatus = new OpponentStatusElement();
 		const status = new ConnectionStatusElement();
 
 		connectButton.reset();
 		cancelButton.hide();
 		resignButton.hide();
+		if (resetOpponentType) {
+			this.#state.opponentType = 'computer';
+			playerType.setSelection('computer');
+		}
+		playerType.show();
+		opponentStatus.clear();
 		status.show(message, 'error');
 	}
 
@@ -615,11 +638,15 @@ export class MustGoFaster {
 		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
 		const resignButton = new ResignButtonElement();
+		const playerType = new PlayerTypeElement();
+		const opponentStatus = new OpponentStatusElement();
 		const status = new ConnectionStatusElement();
 
 		connectButton.reset();
 		cancelButton.hide();
 		resignButton.hide();
+		playerType.show();
+		opponentStatus.clear();
 		status.clear();
 	}
 

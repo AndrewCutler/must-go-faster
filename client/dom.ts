@@ -324,20 +324,54 @@ export class PlayerTypeElement implements IElement {
 		}
 	}
 
+	hide(): void {
+		this.#element!.classList.remove('is-active');
+		this.#element!.style.display = 'none';
+	}
+
+	show(): void {
+		this.#element!.style.display = '';
+	}
+
 	setSelection(value: string): void {
 		const valueElement = document.querySelector<HTMLSpanElement>(
 			'#player-type-dropdown-value',
 		)!;
 		switch (value) {
 			case 'computer':
-				valueElement.innerText = 'Computer';
+				valueElement.textContent = 'Computer';
 				break;
 			case 'human':
-				valueElement.innerText = 'Human';
+				valueElement.textContent = 'Human';
 				break;
 			default:
 				throw new Error(`Invalid player type: ${value}.`);
 		}
+	}
+}
+
+export class OpponentStatusElement implements IElement {
+	readonly #selector = '#opponent-status';
+	#element: HTMLElement | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	show(message: string): void {
+		this.#element!.textContent = message;
+		this.#element!.style.visibility = 'visible';
+	}
+
+	clear(): void {
+		this.#element!.textContent = '';
+		this.#element!.style.visibility = 'hidden';
 	}
 }
 

@@ -247,6 +247,39 @@ func TestJoinComputerGameCreatesImmediateSessionAndBroadcastsJoinedMessages(t *t
 	}
 }
 
+func TestOnDisconnectClosesComputerSessionAndRemovesItImmediately(t *testing.T) {
+	hub := NewHub()
+	player := newTestPlayer()
+	computer := newTestPlayer()
+	sessionID := "session-1"
+
+	session := &Session{
+		SessionId:         sessionID,
+		Game:              chess.NewGame(),
+		White:             player,
+		Black:             computer,
+		IsAgainstComputer: true,
+	}
+	player.SessionId = sessionID
+	computer.SessionId = sessionID
+	computer.IsComputer = true
+	player.Hub = hub
+	computer.Hub = hub
+	computerWriter := computer.WriteChan
+	hub.InProgressSessions[sessionID] = session
+
+	hub.onDisconnect(player, false)
+
+	if _, ok := hub.InProgressSessions[sessionID]; ok {
+		t.Fatal("expected active computer session to be removed on disconnect")
+	}
+
+	_, ok := <-computerWriter
+	if ok {
+		t.Fatal("expected computer write channel to be closed")
+	}
+}
+
 func TestOnDisconnectAbandonedActiveSessionBroadcastsAbandonment(t *testing.T) {
 	hub := NewHub()
 	white := newTestPlayer()
@@ -376,6 +409,12 @@ type joinedPayload struct {
 	CountdownStartAt time.Time `json:"countdownStartAt"`
 }
 
+type movePayload struct {
+	GameOutcome       string `json:"gameOutcome"`
+	GameOutcomeMethod string `json:"gameOutcomeMethod"`
+	IsCheckmated      string `json:"isCheckmated"`
+}
+
 func decodeJoinedPayload(t *testing.T, msg wireMessage) joinedPayload {
 	t.Helper()
 
@@ -385,6 +424,66 @@ func decodeJoinedPayload(t *testing.T, msg wireMessage) joinedPayload {
 	}
 
 	return payload
+}
+
+func decodeMovePayload(t *testing.T, msg []byte) movePayload {
+	t.Helper()
+
+	var wire wireMessage
+	if err := json.Unmarshal(msg, &wire); err != nil {
+		t.Fatalf("failed to decode wire message: %v", err)
+	}
+
+	var payload movePayload
+	if err := json.Unmarshal(wire.Payload, &payload); err != nil {
+		t.Fatalf("failed to decode move payload: %v", err)
+	}
+
+	return payload
+}
+
+func TestNormalizeStartingFENResetsHalfMoveClock(t *testing.T) {
+	fen := "k1K5/8/8/8/8/8/8/1Q6 w - - 23 17"
+
+	normalized := normalizeStartingFEN(fen)
+
+	if normalized != "k1K5/8/8/8/8/8/8/1Q6 w - - 0 17" {
+		t.Fatalf("expected halfmove clock to be reset, got %s", normalized)
+	}
+}
+
+func TestSendMoveMessageIncludesDrawOutcomeMetadata(t *testing.T) {
+	fenStr := "k1K5/8/8/8/8/8/8/1Q6 w - - 0 1"
+	fen, err := chess.FEN(fenStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	game := chess.NewGame(fen)
+	if err := game.MoveStr("Qb6"); err != nil {
+		t.Fatal(err)
+	}
+
+	session := &Session{
+		SessionId: "session-1",
+		Game:      game,
+		White:     newTestPlayer(),
+		Black:     newTestPlayer(),
+	}
+
+	payload := decodeMovePayload(t, sendMoveMessage(session, "white", Move{From: "b1", To: "b6"}))
+
+	if payload.GameOutcome != chess.Draw.String() {
+		t.Fatalf("expected draw outcome, got %s", payload.GameOutcome)
+	}
+
+	if payload.GameOutcomeMethod != chess.Stalemate.String() {
+		t.Fatalf("expected stalemate method, got %s", payload.GameOutcomeMethod)
+	}
+
+	if payload.IsCheckmated != "" {
+		t.Fatalf("expected no checkmated color for draw, got %s", payload.IsCheckmated)
+	}
 }
 
 func readWireMessage(t *testing.T, ch chan []byte) wireMessage {

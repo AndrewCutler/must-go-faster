@@ -7,6 +7,7 @@ import {
 	CancelButtonElement,
 	ConnectionStatusElement,
 	ConnectButtonElement,
+	GameStatusModalElement,
 	ResignButtonElement,
 	OpponentStatusElement,
 	PlayerTypeElement,
@@ -35,6 +36,7 @@ function renderDom(): void {
 		<div id="player-type-dropdown" class="dropdown">
 			<span id="player-type-dropdown-value">Computer</span>
 		</div>
+		<div id="board-container"></div>
 	`;
 }
 
@@ -177,5 +179,15 @@ describe('OpponentStatusElement', () => {
 		opponentStatus.clear();
 		expect(status.textContent).toBe('');
 		expect(status.style.visibility).toBe('hidden');
+	});
+});
+
+describe('GameStatusModalElement', () => {
+	it('formats draw outcomes clearly', () => {
+		const modal = new GameStatusModalElement(() => {});
+		modal.setOutcome('draw', 'stalemate');
+
+		const header = document.querySelector<HTMLDivElement>('#modal-header')!;
+		expect(header.textContent).toBe('You drew via stalemate.');
 	});
 });

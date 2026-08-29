@@ -78,6 +78,8 @@ export type MoveFromServer = {
 	whosNext: PlayerColor;
 	validMoves: { [key: string]: string[] };
 	isCheckmated: PlayerColor;
+	gameOutcome?: string;
+	gameOutcomeMethod?: string;
 	move: Move;
 };
 

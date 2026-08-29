@@ -294,6 +294,8 @@ export class MustGoFaster {
 	private updateBoardWithMove(): void {
 		const {
 			isCheckmated,
+			gameOutcome,
+			gameOutcomeMethod,
 			whiteTimeLeft,
 			blackTimeLeft,
 			whosNext,
@@ -301,24 +303,46 @@ export class MustGoFaster {
 			validMoves,
 			move: { from, to },
 		} = (this.#state.message! as FromMessage<MoveFromServer>).payload!;
-		let gameStatus: GameStatus = 'ongoing';
+		let endState:
+			| {
+					gameStatus: Exclude<GameStatus, 'ongoing'>;
+					method: string;
+			  }
+			| undefined;
 
-		if (isCheckmated) {
-			gameStatus =
-				isCheckmated === this.#state.playerColor ? 'lost' : 'won';
-			this.gameOver(gameStatus, 'checkmate');
-			this.#state.whiteTimeLeft = 0;
-			this.#state.blackTimeLeft = 0;
-
-			return;
+		if (gameOutcome && gameOutcome !== '*') {
+			if (gameOutcome === '1/2-1/2') {
+				endState = {
+					gameStatus: 'draw',
+					method: this.formatGameOutcomeMethod(gameOutcomeMethod),
+				};
+				this.#state.whiteTimeLeft = 0;
+				this.#state.blackTimeLeft = 0;
+			} else {
+				const gameStatus: Exclude<GameStatus, 'ongoing'> =
+					gameOutcome ===
+					(this.#state.playerColor === 'white' ? '1-0' : '0-1')
+						? 'won'
+						: 'lost';
+				endState = {
+					gameStatus,
+					method: isCheckmated
+						? 'checkmate'
+						: this.formatGameOutcomeMethod(gameOutcomeMethod),
+				};
+				this.#state.whiteTimeLeft = 0;
+				this.#state.blackTimeLeft = 0;
+			}
+		} else {
+			this.#state.whiteTimeLeft = whiteTimeLeft;
+			this.#state.blackTimeLeft = blackTimeLeft;
 		}
 
-		this.#state.whiteTimeLeft = whiteTimeLeft;
-		this.#state.blackTimeLeft = blackTimeLeft;
+		if (!endState) {
+			this.toggleClock(whosNext);
+		}
 
-		this.toggleClock(whosNext);
-
-		if (this.#state.board!.state.premovable.current) {
+		if (!endState && this.#state.board!.state.premovable.current) {
 			// send premove message which checks if premove is valid
 			// if so, play response on server and send updated fen
 			const [from, to] = this.#state.board!.state.premovable.current;
@@ -334,6 +358,10 @@ export class MustGoFaster {
 			},
 			lastMove: [from, to],
 		});
+
+		if (endState) {
+			this.gameOver(endState.gameStatus, endState.method);
+		}
 	}
 
 	private timeout(): void {
@@ -520,10 +548,18 @@ export class MustGoFaster {
 	}
 
 	private gameOver(
-		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
-		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
+		gameStatus: Exclude<GameStatus, 'ongoing'>,
+		method: string,
 	): void {
 		// console.log('gameOver: ', { gameStatus, method });
+		if (this.#state.whiteTimer) {
+			cancelAnimationFrame(this.#state.whiteTimer);
+			this.#state.whiteTimer = undefined;
+		}
+		if (this.#state.blackTimer) {
+			cancelAnimationFrame(this.#state.blackTimer);
+			this.#state.blackTimer = undefined;
+		}
 		if (this.#state.connection) {
 			this.#state.closeReason = 'gameover';
 			this.#state.connectionPhase = 'idle';
@@ -542,6 +578,36 @@ export class MustGoFaster {
 		// have to add draws
 		const modal = new GameStatusModalElement(sendNewGameMessage);
 		modal.setOutcome(gameStatus, method);
+	}
+
+	private formatGameOutcomeMethod(method?: string): string {
+		switch (method) {
+			case 'Checkmate':
+				return 'checkmate';
+			case 'Resignation':
+				return 'resignation';
+			case 'DrawOffer':
+				return 'draw offer';
+			case 'Stalemate':
+				return 'stalemate';
+			case 'ThreefoldRepetition':
+				return 'threefold repetition';
+			case 'FivefoldRepetition':
+				return 'fivefold repetition';
+			case 'FiftyMoveRule':
+				return '50-move rule';
+			case 'SeventyFiveMoveRule':
+				return '75-move rule';
+			case 'InsufficientMaterial':
+				return 'insufficient material';
+			case 'NoMethod':
+			case undefined:
+				return 'game over';
+			default:
+				return method
+					.replace(/([a-z])([A-Z])/g, '$1 $2')
+					.toLowerCase();
+		}
 	}
 
 	private setupBoard(message: FromMessage<GameJoinedFromServer>) {

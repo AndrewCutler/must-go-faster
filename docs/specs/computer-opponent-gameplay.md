@@ -1,0 +1,54 @@
+# Computer-opponent gameplay
+
+## Status
+
+Existing feature; buggy; needs refinement.
+
+## Problem
+
+A user must be able to play a valid chess game with a computer opponent.
+
+## Goal
+
+After a game with a computer opponent is started, the user is able to play an actual chess game by interacting with the board UI.
+
+## Non-goals
+
+- Computer analysis
+- Chess-engine-based move generation
+- Premoves
+
+## Related behavior
+
+- Human-opponent chess games
+- Premoves
+
+## Constraints
+
+- A user can only have one active game at a time.
+- A client disconnect should discard the pending lobby.
+- A client disconnect during an active computer game should discard that game immediately.
+- No authentication is necessary.
+- Games live in memory only; no persistence is necessary.
+- The computer opponent should make moves within a random time window to make the game engaging for humans.
+- The 50-move rule clock should start from the generated game position, not from the historic PGN moves used to source that position.
+
+## User-visible behavior
+
+- The chessboard is visible and interactive according to the rules of chess.
+- The last played move is highlighted according to chessground norms to indicate to the user what has happened.
+- Any legal chess end state supported by the server should be displayed to the user, including draw states such as stalemate, repetition, and insufficient material.
+
+## Acceptance criteria
+
+- The game starts once the user creates it (after 5 second countdown).
+- Only valid chess moves are allowed.
+- The user can interact with the chessboard.
+- Moved pieces and the most recent move are highlighted according to online chess UI standards.
+- Game end states (checkmate, stalemate, repetition, insufficient material, and similar legal outcomes) are displayed to the user properly.
+
+## Non-functional requirements
+
+- Add tests for as many code paths as is practical, especially the creation, cancel, timeout, join, and disconnect flows.
+- The computer should play uniformly random legal moves chosen from the list of available legal moves for the computer player's color.
+- The computer should take between .5 and 7.5 seconds per move.

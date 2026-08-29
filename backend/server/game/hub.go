@@ -134,7 +134,19 @@ func (h *Hub) onDisconnect(player *Player, abandoned bool) {
 
 	delete(h.InProgressSessions, player.SessionId)
 
-	if abandoned {
+	if session.isAgainstComputer() {
+		var computer *Player
+		if session.White != nil && session.White.IsComputer {
+			computer = session.White
+		} else if session.Black != nil && session.Black.IsComputer {
+			computer = session.Black
+		}
+
+		if computer != nil && computer.WriteChan != nil {
+			close(computer.WriteChan)
+			computer.WriteChan = nil
+		}
+	} else if abandoned {
 		if session.White != nil && session.White != player {
 			session.White.WriteChan <- sendAbandonedMessage()
 		}
@@ -253,7 +265,7 @@ func getGameFEN() (string, error) {
 		// only use games of at least 20 full moves
 		if moveLength > 40 {
 			isGameAcceptable = true
-			result = game.MoveHistory()[moveLength-20].PrePosition.String()
+			result = normalizeStartingFEN(game.MoveHistory()[moveLength-20].PrePosition.String())
 		}
 	}
 

@@ -95,6 +95,26 @@ func tryPlayPremove(m PremoveToServer, g *chess.Game) (Move, error) {
 	return m.Premove, nil
 }
 
+func normalizeStartingFEN(fen string) string {
+	parts := strings.Split(fen, " ")
+	if len(parts) != 6 {
+		return fen
+	}
+
+	parts[4] = "0"
+	return strings.Join(parts, " ")
+}
+
+func randomComputerDelay(remainingSeconds float64) time.Duration {
+	delay := time.Duration(rand.Intn(7001)+500) * time.Millisecond
+	remaining := time.Duration(remainingSeconds * float64(time.Second))
+	if remaining > 0 && delay > remaining {
+		return remaining
+	}
+
+	return delay
+}
+
 func PlayComputer(player *Player, computer *Player) {
 	defer func() {
 		log.Println("Exiting PlayComputer")
@@ -102,7 +122,10 @@ func PlayComputer(player *Player, computer *Player) {
 
 	for {
 		select {
-		case v := <-computer.WriteChan:
+		case v, ok := <-computer.WriteChan:
+			if !ok {
+				return
+			}
 			value := string(v)
 
 			// log.Println("value: ", value)
@@ -115,57 +138,62 @@ func PlayComputer(player *Player, computer *Player) {
 			// 	log.Println("GameStartedFromServerType")
 			// }
 			if strings.Contains(value, "MoveFromServerType") {
-				// log.Println("MoveFromServerType")
 				session, ok := player.Hub.InProgressSessions[player.SessionId]
 				if !ok {
-					log.Println("Cannot find session with id: ", player.SessionId)
 					return
 				}
 
-				// create random move times, but weight towards faster moves
-				// randomTimes := make([]time.Duration, time.Duration(rand.Intn(1000)+4000)*time.Millisecond)
-				// for i := 0; i < 4; {
-				// 	randomTimes = append(randomTimes, time.Duration(rand.Intn(3000))*time.Millisecond)
-				// }
-				// t := randomTimes[rand.Intn(len(randomTimes))]
-
-				// stalemate doesn't work
-				// computer doesn't play first move
-				// premoved checkmate doesn't render in UI
-
 				if session.Game.Outcome() != chess.NoOutcome {
-					// handle stalemate here
 					delete(player.Hub.InProgressSessions, player.SessionId)
-					close(computer.WriteChan)
+					if computer.WriteChan != nil {
+						close(computer.WriteChan)
+						computer.WriteChan = nil
+					}
 					return
 				}
 
 				moves := session.Game.ValidMoves()
-				nextMove := moves[rand.Intn(len(moves))]
-				session.Game.Move(nextMove)
-				move := Move{
-					From: nextMove.S1().String(),
-					To:   nextMove.S2().String(),
+				if len(moves) == 0 {
+					return
 				}
+				nextMove := moves[rand.Intn(len(moves))]
 
 				c := session.White
 				if player.Color == "white" {
 					c = session.Black
 				}
 
-				t := time.Duration(rand.Intn(3000) * int(time.Millisecond))
-				if c.Clock.TimeLeft-t.Seconds() <= 0 {
-					t = time.Duration(c.Clock.TimeLeft * float64(time.Second))
+				delay := randomComputerDelay(c.Clock.TimeLeft)
+				time.Sleep(delay)
+
+				session, ok = player.Hub.InProgressSessions[player.SessionId]
+				if !ok {
+					return
 				}
-				time.Sleep(t)
+
+				if session.Game.Outcome() != chess.NoOutcome {
+					delete(player.Hub.InProgressSessions, player.SessionId)
+					if computer.WriteChan != nil {
+						close(computer.WriteChan)
+						computer.WriteChan = nil
+					}
+					return
+				}
 
 				updateClocks(session)
 
 				if c.Clock.TimeLeft <= 0 {
 					player.WriteChan <- sendTimeoutMessage(session, player.Color, c.Color)
-				} else {
-					player.WriteChan <- sendMoveMessage(session, player.Color, move)
+					continue
 				}
+
+				session.Game.Move(nextMove)
+				move := Move{
+					From: nextMove.S1().String(),
+					To:   nextMove.S2().String(),
+				}
+
+				player.WriteChan <- sendMoveMessage(session, player.Color, move)
 			}
 			// if strings.Contains(value, "MoveToServerType") {
 			// 	log.Println("MoveToServerType")
@@ -189,7 +217,10 @@ func PlayComputer(player *Player, computer *Player) {
 			// 	log.Println("AbandonedToServerType")
 			// }
 		case <-time.After(time.Minute):
-			close(computer.WriteChan)
+			if computer.WriteChan != nil {
+				close(computer.WriteChan)
+				computer.WriteChan = nil
+			}
 			return
 		}
 	}

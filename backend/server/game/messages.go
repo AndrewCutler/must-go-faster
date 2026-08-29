@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"server/constants"
+
+	"github.com/notnil/chess"
 )
 
 type MessageType int
@@ -106,13 +108,15 @@ type GameStartedFromServer struct {
 }
 
 type MoveFromServer struct {
-	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-	BlackTimeLeft float64             `json:"blackTimeLeft"`
-	Fen           string              `json:"fen"`
-	ValidMoves    map[string][]string `json:"validMoves"`
-	WhosNext      string              `json:"whosNext"`
-	IsCheckmated  string              `json:"isCheckmated"`
-	Move          Move                `json:"move"`
+	WhiteTimeLeft     float64             `json:"whiteTimeLeft"`
+	BlackTimeLeft     float64             `json:"blackTimeLeft"`
+	Fen               string              `json:"fen"`
+	ValidMoves        map[string][]string `json:"validMoves"`
+	WhosNext          string              `json:"whosNext"`
+	IsCheckmated      string              `json:"isCheckmated"`
+	GameOutcome       string              `json:"gameOutcome"`
+	GameOutcomeMethod string              `json:"gameOutcomeMethod"`
+	Move              Move                `json:"move"`
 }
 
 type TimeoutFromServer struct {
@@ -195,10 +199,14 @@ func sendGameStartedMessage(session *Session, playerColor string) []byte {
 func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 	isCheckmated := ""
 	switch session.Game.Outcome() {
-	case "0-1":
-		isCheckmated = "white"
-	case "1-0":
-		isCheckmated = "black"
+	case chess.BlackWon:
+		if session.Game.Method() == chess.Checkmate {
+			isCheckmated = "white"
+		}
+	case chess.WhiteWon:
+		if session.Game.Method() == chess.Checkmate {
+			isCheckmated = "black"
+		}
 	}
 
 	whiteTimeLeft, blackTimeLeft := session.getTimeLefts()
@@ -209,13 +217,15 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 		PlayerColor: playerColor,
 		TimeStamp:   time.Now().Format(time.RFC3339),
 		Payload: MoveFromServer{
-			Fen:           session.getFen(),
-			ValidMoves:    ValidMovesMap(session.Game),
-			WhosNext:      session.whoseMoveIsIt(),
-			IsCheckmated:  isCheckmated,
-			WhiteTimeLeft: whiteTimeLeft,
-			BlackTimeLeft: blackTimeLeft,
-			Move:          move,
+			Fen:               session.getFen(),
+			ValidMoves:        ValidMovesMap(session.Game),
+			WhosNext:          session.whoseMoveIsIt(),
+			IsCheckmated:      isCheckmated,
+			GameOutcome:       session.Game.Outcome().String(),
+			GameOutcomeMethod: session.Game.Method().String(),
+			WhiteTimeLeft:     whiteTimeLeft,
+			BlackTimeLeft:     blackTimeLeft,
+			Move:              move,
 		},
 	}
 

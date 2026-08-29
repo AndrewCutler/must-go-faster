@@ -201,10 +201,11 @@ export class GameStatusModalElement implements IElement {
 	}
 
 	setOutcome(
-		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
-		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
+		gameStatus: Exclude<GameStatus, 'ongoing'>,
+		method: string,
 	): void {
-		this.#headerElement!.innerText = `You ${gameStatus} via ${method}.`;
+		const verb = gameStatus === 'draw' ? 'drew' : gameStatus;
+		this.#headerElement!.textContent = `You ${verb} via ${method}.`;
 	}
 
 	private playAgain(sendMessageCallback: () => void): void {

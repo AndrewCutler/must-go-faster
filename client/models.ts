@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 import * as cg from 'chessground/types.js';
 import { Api as ChessgroundApi } from 'chessground/api';
 import { Config as CGConfig } from 'chessground/config';
@@ -124,4 +128,6 @@ export interface MustGoFasterState {
 	apiBaseUrl?: string;
 	opponentType?: OpponentType;
 	isAgainstComputer?: boolean;
+	connectionPhase?: 'idle' | 'connecting' | 'pending' | 'active';
+	closeReason?: 'cancel' | 'gameover' | 'error';
 }

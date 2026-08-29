@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 package game
 
 import (
@@ -38,25 +42,19 @@ func (p *Player) ReadMessage() {
 		// this will fire for the player who is doing the abandonment
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
 			// log.Println("playerColor ", p.Color, " close going away error: ", err)
-
-			// game is over, send game abandoned message to winner and remove from active games
-			p.Hub.ReadChan <- Message{SessionId: p.SessionId, Type: AbandonedFromServerType.String()}
-			delete(p.Hub.InProgressSessions, p.SessionId)
-			close(p.WriteChan)
+			p.Hub.onDisconnect(p, true)
 			return
 		}
 
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 			// log.Println("playerColor ", p.Color, " normal closure")
-			delete(p.Hub.InProgressSessions, p.SessionId)
-			close(p.WriteChan)
+			p.Hub.onDisconnect(p, false)
 			return
 		}
 
 		if err != nil {
 			// log.Println("playerColor ", p.Color, "Cannot read message: ", err)
-			delete(p.Hub.InProgressSessions, p.SessionId)
-			close(p.WriteChan)
+			p.Hub.onDisconnect(p, false)
 			return
 		}
 

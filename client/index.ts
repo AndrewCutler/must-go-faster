@@ -1,5 +1,9 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 import { MustGoFaster } from './must-go-faster';
-import { ConnectButtonElement, PlayerTypeElement } from './dom';
+import { PlayerTypeElement } from './dom';
 import { GAME_CLOCK_DURATION } from './constants';
 
 
@@ -8,14 +12,20 @@ window.onload = function () {
 		GAME_CLOCK_DURATION.toString();
 	document.querySelector('#black-clock')!.textContent =
 		GAME_CLOCK_DURATION.toString();
-        
+
 	try {
 		const mustGoFaster = new MustGoFaster();
-		const connectButton = new ConnectButtonElement();
-		connectButton.element!.addEventListener('click', function () {
-			connectButton.waitForOpponent();
-			mustGoFaster.connect();
-		});
+		document
+			.querySelector('#connect-button')!
+			.addEventListener('click', function () {
+				mustGoFaster.connect();
+			});
+
+		document
+			.querySelector('#cancel-button')!
+			.addEventListener('click', function () {
+				mustGoFaster.cancelPendingGame();
+			});
 
 		const playerTypeButton = new PlayerTypeElement();
 		playerTypeButton.element!.addEventListener(

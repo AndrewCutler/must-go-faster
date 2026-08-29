@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 import { Chessground } from 'chessground';
 import {
 	ChessgroundConfig,
@@ -27,7 +31,9 @@ import * as cg from 'chessground/types.js';
 import {
 	BoardElement,
 	ConnectButtonElement,
+	CancelButtonElement,
 	CountdownContainerElement,
+	ConnectionStatusElement,
 	GameMetaElement,
 	GameStatusModalElement,
 	GettingStartedElement,
@@ -40,7 +46,10 @@ export class MustGoFaster {
 	constructor() {
 		console.log('Initializing MustGoFaster.');
 		this.connect = this.connect.bind(this);
+		this.cancelPendingGame = this.cancelPendingGame.bind(this);
 		this.#state.opponentType = 'computer';
+		this.#state.connectionPhase = 'idle';
+		this.#state.closeReason = undefined;
 		const initialConfig: ChessgroundConfig = {
 			movable: {
 				free: false,
@@ -72,29 +81,89 @@ export class MustGoFaster {
 		this.#state.wsBaseUrl = process.env.WS_BASE_URL;
 		this.#state.apiBaseUrl = process.env.API_BASE_URL;
 
+		new ConnectButtonElement().reset();
+		new CancelButtonElement().hide();
+		new ConnectionStatusElement().clear();
+
 		this.ping();
 	}
 
 	connect(): void {
-		const ws = new WebSocket(
-			`${this.#state.wsBaseUrl!}/connect?opponentType=${
-				this.#state.opponentType
-			}`,
-			[],
-		);
+		if (
+			this.#state.connection &&
+			this.#state.connection.readyState !== WebSocket.CLOSED
+		) {
+			return;
+		}
+		if (this.#state.connectionPhase !== 'idle') {
+			return;
+		}
+
+		this.#state.closeReason = undefined;
+		this.#state.connectionPhase = 'connecting';
+		this.setConnectionUiPending();
+
+		let ws: WebSocket;
+		try {
+			ws = new WebSocket(
+				`${this.#state.wsBaseUrl!}/connect?opponentType=${
+					this.#state.opponentType
+				}`,
+				[],
+			);
+		} catch (error) {
+			this.#state.connectionPhase = 'idle';
+			this.#state.closeReason = 'error';
+			this.setConnectionUiError(
+				'Unable to open a game connection. Please try again.',
+			);
+			return;
+		}
 		// console.log('Creating WebSocket.');
 
-		ws.onopen = function (openEvent) {
+		ws.onopen = () => {
 			// console.log('WebSocket opened.', { event: openEvent });
-			new BoardElement()!.enable();
+			this.#state.connectionPhase = 'pending';
 		};
 
-		ws.onerror = function (errorEvent) {
-			console.error('WebSocket error.', { event: errorEvent });
+		ws.onerror = () => {
+			this.#state.closeReason = 'error';
+			this.#state.connectionPhase = 'idle';
+			this.#state.connection = undefined;
+			this.setConnectionUiError(
+				'Unable to start a game. Please try again.',
+			);
 		};
 
-		ws.onclose = function (closeEvent) {
+		ws.onclose = (closeEvent) => {
 			// console.log('WebSocket closed.', { event: closeEvent });
+			const closeReason = this.#state.closeReason;
+			const wasActive = this.#state.connectionPhase === 'active';
+			this.#state.connection = undefined;
+			this.#state.connectionPhase = 'idle';
+
+			if (closeReason === 'cancel' || closeReason === 'gameover') {
+				this.#state.closeReason = undefined;
+				return;
+			}
+
+			if (closeReason === 'error') {
+				this.#state.closeReason = undefined;
+				return;
+			}
+
+			if (closeEvent.code === 1000 && closeEvent.reason) {
+				this.setConnectionUiError(closeEvent.reason);
+			} else if (!wasActive) {
+				this.setConnectionUiError(
+					'The lobby expired before another player joined. Please click Play again.',
+				);
+			} else {
+				this.setConnectionUiError(
+					'The game connection closed unexpectedly. Please try again.',
+				);
+			}
+			this.#state.closeReason = 'error';
 		};
 
 		const self = this;
@@ -110,6 +179,22 @@ export class MustGoFaster {
 		};
 
 		this.#state.connection = ws;
+	}
+
+	cancelPendingGame(): void {
+		if (!this.#state.connection) {
+			return;
+		}
+		if (this.#state.connectionPhase === 'active') {
+			return;
+		}
+
+		this.#state.closeReason = 'cancel';
+		this.#state.connectionPhase = 'idle';
+		const connection = this.#state.connection;
+		this.#state.connection = undefined;
+		connection.close(1000, 'Canceled by user.');
+		this.resetConnectionUi();
 	}
 
 	setOpponentType(type: OpponentType): void {
@@ -133,6 +218,8 @@ export class MustGoFaster {
 		// console.log('Handle message: ', { message });
 		switch (message.type) {
 			case 'GameJoinedFromServerType':
+				this.#state.connectionPhase = 'active';
+				this.#state.closeReason = undefined;
 				await this.setupGame();
 				break;
 			case 'GameStartedFromServerType':
@@ -177,6 +264,7 @@ export class MustGoFaster {
 			.message as FromMessage<GameStartedFromServer>;
 		this.setupBoard(message);
 		this.#state.isAgainstComputer = this.#state.message!.isAgainstComputer;
+		this.setConnectionUiGameJoined();
 
 		const { payload: { whiteTimeLeft, blackTimeLeft, whosNext } = {} } =
 			message;
@@ -416,9 +504,13 @@ export class MustGoFaster {
 	): void {
 		// console.log('gameOver: ', { gameStatus, method });
 		if (this.#state.connection) {
+			this.#state.closeReason = 'gameover';
+			this.#state.connectionPhase = 'idle';
 			this.#state.connection.close(1000, 'Game over.');
 			this.#state.connection = undefined;
 		}
+		new CancelButtonElement().hide();
+		new ConnectionStatusElement().clear();
 		const self = this;
 		function sendNewGameMessage() {
 			// listen for click of modal button
@@ -461,6 +553,47 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		} as ChessgroundConfig);
+	}
+
+	private setConnectionUiPending(): void {
+		const connectButton = new ConnectButtonElement();
+		const cancelButton = new CancelButtonElement();
+		const status = new ConnectionStatusElement();
+
+		connectButton.setPending();
+		cancelButton.show();
+		status.show(
+			this.#state.opponentType === 'computer'
+				? 'Starting game...'
+				: 'Waiting for opponent...',
+			'info',
+		);
+	}
+
+	private setConnectionUiGameJoined(): void {
+		new CancelButtonElement().hide();
+		new ConnectionStatusElement().clear();
+		new ConnectButtonElement().gameJoined();
+	}
+
+	private setConnectionUiError(message: string): void {
+		const connectButton = new ConnectButtonElement();
+		const cancelButton = new CancelButtonElement();
+		const status = new ConnectionStatusElement();
+
+		connectButton.reset();
+		cancelButton.hide();
+		status.show(message, 'error');
+	}
+
+	private resetConnectionUi(): void {
+		const connectButton = new ConnectButtonElement();
+		const cancelButton = new CancelButtonElement();
+		const status = new ConnectionStatusElement();
+
+		connectButton.reset();
+		cancelButton.hide();
+		status.clear();
 	}
 
 	private sendPremoveMessage(move: Move): void {

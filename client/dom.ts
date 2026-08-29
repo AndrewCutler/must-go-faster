@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 import { GameStatus, PlayerColor } from './models';
 
 interface IElement {
@@ -275,13 +279,26 @@ export class ConnectButtonElement implements IElement {
 		this.#element = element;
 	}
 
-	waitForOpponent(): void {
+	setPending(): void {
+		this.#element!.style.display = '';
 		this.#element!.classList.add('is-loading');
+		this.#element!.setAttribute('disabled', 'true');
+		this.#element!.textContent = 'Play';
+	}
+
+	reset(): void {
+		this.#element!.style.display = '';
+		this.#element!.classList.remove('is-loading');
+		this.#element!.removeAttribute('disabled');
+		this.#element!.textContent = 'Play';
+	}
+
+	hide(): void {
+		this.#element!.style.display = 'none';
 	}
 
 	gameJoined(): void {
-		this.#element!.classList.remove('is-loading');
-		this.#element!.style.display = 'none';
+		this.hide();
 	}
 }
 
@@ -321,5 +338,57 @@ export class PlayerTypeElement implements IElement {
 			default:
 				throw new Error(`Invalid player type: ${value}.`);
 		}
+	}
+}
+
+export class CancelButtonElement implements IElement {
+	readonly #selector = '#cancel-button';
+	#element: HTMLElement | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLButtonElement>(
+			this.#selector,
+		);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	show(): void {
+		this.#element!.style.display = '';
+	}
+
+	hide(): void {
+		this.#element!.style.display = 'none';
+	}
+}
+
+export class ConnectionStatusElement implements IElement {
+	readonly #selector = '#connection-status';
+	#element: HTMLElement | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	show(message: string, tone: 'info' | 'error' = 'info'): void {
+		this.#element!.textContent = message;
+		this.#element!.dataset.tone = tone;
+		this.#element!.style.visibility = 'visible';
+	}
+
+	clear(): void {
+		this.#element!.textContent = '';
+		this.#element!.dataset.tone = 'info';
+		this.#element!.style.visibility = 'hidden';
 	}
 }

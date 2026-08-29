@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 package game
 
 import (
@@ -5,8 +9,10 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/notnil/chess"
 )
 
@@ -15,9 +21,16 @@ type Registration struct {
 	Computer *Player
 }
 
+type PendingLobby struct {
+	SessionId string
+	Player    *Player
+	CreatedAt time.Time
+	Cancelled bool
+}
+
 type Hub struct {
 	InProgressSessions       map[string]*Session
-	AwaitingOpponentSessions map[string]*Session
+	AwaitingOpponentSessions map[string]*PendingLobby
 	ReadChan                 chan Message
 	RegisterChan             chan Registration
 	UnregisterChan           chan *Player
@@ -29,15 +42,20 @@ func NewHub() *Hub {
 		RegisterChan:             make(chan Registration),
 		UnregisterChan:           make(chan *Player),
 		InProgressSessions:       make(map[string]*Session),
-		AwaitingOpponentSessions: make(map[string]*Session),
+		AwaitingOpponentSessions: make(map[string]*PendingLobby),
 	}
 }
 
 func (h *Hub) Run() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case registration := <-h.RegisterChan:
 			h.onRegister(registration.Player, registration.Computer)
+		case player := <-h.UnregisterChan:
+			h.onDisconnect(player, false)
 		case message, ok := <-h.ReadChan:
 			// 	log.Println("message, ok: ", message, ok)
 			if !ok {
@@ -49,6 +67,8 @@ func (h *Hub) Run() {
 			// todo: unregister
 			// case <-time.After(2 * time.Second):
 			// 	log.Println("No message received by Hub after 2 seconds...")
+		case <-ticker.C:
+			h.expirePendingLobbies()
 		}
 	}
 }
@@ -58,10 +78,45 @@ func (h *Hub) onRegister(player *Player, computer *Player) {
 		joinComputerGame(player, computer)
 	} else {
 		if len(h.AwaitingOpponentSessions) == 0 {
-			createNewGame(h, player)
+			createNewLobby(h, player)
 		} else {
 			joinPendingGame(h, player)
 		}
+	}
+}
+
+func (h *Hub) onDisconnect(player *Player, abandoned bool) {
+	if lobby, ok := h.AwaitingOpponentSessions[player.SessionId]; ok {
+		if lobby.Player != nil && lobby.Player.WriteChan != nil {
+			lobby.Cancelled = true
+			lobby.Player.Connection = nil
+			delete(h.AwaitingOpponentSessions, player.SessionId)
+			close(lobby.Player.WriteChan)
+			lobby.Player.WriteChan = nil
+		}
+		return
+	}
+
+	session, ok := h.InProgressSessions[player.SessionId]
+	if !ok {
+		return
+	}
+
+	delete(h.InProgressSessions, player.SessionId)
+
+	if abandoned {
+		if session.White != nil && session.White != player {
+			session.White.WriteChan <- sendAbandonedMessage()
+		}
+		if session.Black != nil && session.Black != player {
+			session.Black.WriteChan <- sendAbandonedMessage()
+		}
+	}
+
+	if player.WriteChan != nil {
+		close(player.WriteChan)
+		player.WriteChan = nil
+		return
 	}
 }
 
@@ -88,6 +143,34 @@ func (h *Hub) onMessage(message Message) {
 	default:
 		log.Println(message)
 		return
+	}
+}
+
+func (h *Hub) expirePendingLobbies() {
+	now := time.Now()
+	for sessionId, lobby := range h.AwaitingOpponentSessions {
+		if now.Sub(lobby.CreatedAt) < 2*time.Minute {
+			continue
+		}
+
+		lobby.Cancelled = true
+		var connection *websocket.Conn
+		if lobby.Player != nil {
+			connection = lobby.Player.Connection
+			lobby.Player.Connection = nil
+		}
+		delete(h.AwaitingOpponentSessions, sessionId)
+		if connection != nil {
+			_ = connection.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(
+					websocket.CloseNormalClosure,
+					"Lobby expired after 2 minutes.",
+				),
+				time.Now().Add(time.Second),
+			)
+			_ = connection.Close()
+		}
 	}
 }
 
@@ -133,6 +216,17 @@ func getGameFEN() (string, error) {
 	return result, nil
 }
 
+func createNewLobby(hub *Hub, player *Player) {
+	sessionId := uuid.New().String()
+	player.SessionId = sessionId
+
+	hub.AwaitingOpponentSessions[sessionId] = &PendingLobby{
+		SessionId: sessionId,
+		Player:    player,
+		CreatedAt: time.Now(),
+	}
+}
+
 func joinComputerGame(player *Player, computer *Player) {
 	fen, err := getGameFEN()
 	if err != nil {
@@ -171,66 +265,91 @@ func joinComputerGame(player *Player, computer *Player) {
 	computer.SessionId = session.SessionId
 
 	player.Hub.InProgressSessions[session.SessionId] = &session
-
-	// log.Println("Broadcasting game joined for player", player.Color)
-	player.WriteChan <- sendGameJoinedMessage(&session, player.Color)
-	// log.Println("Broadcasting game joined for computer player", computer.Color)
-	computer.WriteChan <- sendGameJoinedMessage(&session, computer.Color)
+	sendJoinedMessages(&session)
 }
 
-func createNewGame(hub *Hub, player *Player) {
+func joinPendingGame(hub *Hub, player *Player) {
+	var lobby *PendingLobby
+	for key := range hub.AwaitingOpponentSessions {
+		lobby = hub.AwaitingOpponentSessions[key]
+		break
+	}
+
+	if lobby == nil || lobby.Player == nil {
+		createNewLobby(hub, player)
+		return
+	}
+
+	if lobby.Cancelled || lobby.Player.Connection == nil {
+		if lobby.SessionId != "" {
+			delete(hub.AwaitingOpponentSessions, lobby.SessionId)
+		}
+		createNewLobby(hub, player)
+		return
+	}
+
+	creator := lobby.Player
 	fen, err := getGameFEN()
 	if err != nil {
 		log.Println("Cannot get game fen: ", err)
+		rejectJoiningPlayer(player)
 		return
 	}
 
 	f, err := chess.FEN(fen)
 	if err != nil {
 		log.Println("Cannot parse game fen: ", err)
+		rejectJoiningPlayer(player)
 		return
 	}
 
 	game := chess.NewGame(f, chess.UseNotation(chess.UCINotation{}))
-
-	sessionId := uuid.New().String()
-	player.SessionId = sessionId
-	session := Session{
-		SessionId: sessionId,
+	session := &Session{
+		SessionId: lobby.SessionId,
 		Game:      game,
 	}
-	if player.Color == "white" {
-		session.White = player
-	} else {
-		session.Black = player
-	}
-	hub.AwaitingOpponentSessions[sessionId] = &session
-	// log.Println("Creating new pending game for player", player.Color)
-}
 
-func joinPendingGame(hub *Hub, player *Player) {
-	var session *Session
-	for key := range hub.AwaitingOpponentSessions {
-		session = hub.AwaitingOpponentSessions[key]
-		break
-	}
-
-	player.SessionId = session.SessionId
-	if session.Black == nil {
+	if rand.Intn(100) < 50 {
+		session.White = creator
 		session.Black = player
+		creator.Color = "white"
 		player.Color = "black"
 	} else {
 		session.White = player
+		session.Black = creator
+		creator.Color = "black"
 		player.Color = "white"
 	}
-	delete(hub.AwaitingOpponentSessions, session.SessionId)
+
+	creator.SessionId = session.SessionId
+	player.SessionId = session.SessionId
+	delete(hub.AwaitingOpponentSessions, lobby.SessionId)
+
 	hub.InProgressSessions[session.SessionId] = session
 
-	// log.Println("Broadcasting game joined for player", player.Color)
-	player.WriteChan <- sendGameJoinedMessage(session, player.Color)
-	if player.Color == "white" {
-		session.Black.WriteChan <- sendGameJoinedMessage(session, session.Black.Color)
-	} else {
-		session.White.WriteChan <- sendGameJoinedMessage(session, session.White.Color)
+	sendJoinedMessages(session)
+}
+
+func sendJoinedMessages(session *Session) {
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendGameJoinedMessage(session, player.Color)
+	}
+}
+
+func rejectJoiningPlayer(player *Player) {
+	if player.Connection != nil {
+		_ = player.Connection.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(
+				websocket.CloseNormalClosure,
+				"Unable to create game. Please try again.",
+			),
+			time.Now().Add(time.Second),
+		)
+		_ = player.Connection.Close()
+	}
+	if player.WriteChan != nil {
+		close(player.WriteChan)
+		player.WriteChan = nil
 	}
 }

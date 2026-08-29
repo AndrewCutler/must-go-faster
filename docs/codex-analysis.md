@@ -14,8 +14,8 @@ The application is intentionally lightweight:
 The main runtime flow is:
 
 1. A browser loads the frontend bundle.
-2. The frontend opens a WebSocket connection to the Go server.
-3. The server creates or joins a session, assigns colors, and selects a random starting position from a PGN corpus.
+2. The frontend opens a WebSocket connection to the Go server from the Play flow.
+3. The server either creates a pending lobby or joins the oldest waiting lobby, assigns colors, and selects a random starting position from a PGN corpus when a second player joins.
 4. The client and server exchange game state messages over the socket.
 5. Clocks, premoves, timeouts, abandonment, and game-over state are handled in memory and mirrored to the UI.
 
@@ -29,7 +29,7 @@ Main responsibilities:
 
 - Serve a ping endpoint for startup checks.
 - Upgrade `/connect` requests to WebSockets.
-- Create sessions and match players.
+- Create pending lobbies, match players, and promote lobbies into active sessions.
 - Validate moves using `github.com/notnil/chess`.
 - Broadcast game state updates to all players in a session.
 - Serve the frontend as a single-page app fallback in development.
@@ -51,6 +51,7 @@ The frontend lives in `client/` and is a vanilla TypeScript application bundled 
 Main responsibilities:
 
 - Render and control the chessboard with Chessground.
+- Render the Play/cancel lobby controls and connection status.
 - Maintain client-side session state.
 - Open and manage the WebSocket connection.
 - Render clocks, countdowns, and game-over UI.
@@ -71,6 +72,7 @@ Important files:
 The game model is centered on a few small concepts:
 
 - `Hub` manages `AwaitingOpponentSessions` and `InProgressSessions`.
+- `PendingLobby` tracks a waiting player, creation time, and expiration/cancellation state.
 - `Session` wraps a `chess.Game`, the white and black players, and a session id.
 - `Player` stores the websocket connection, write channel, color, clock, and whether the opponent is a computer.
 - `Message` and the typed payload structs define the protocol between client and server.
@@ -79,7 +81,7 @@ The design is simple and highly stateful:
 
 - Session routing happens by `SessionId`.
 - The server is the authority for legal moves.
-- The client is responsible for presentation and a local countdown timer.
+- The client is responsible for presentation and rendering the countdown overlay.
 
 ## Feature Set
 
@@ -87,6 +89,7 @@ The design is simple and highly stateful:
 
 - Human-vs-human matchmaking.
 - Human-vs-computer play.
+- Pending lobby creation, join, cancel, and disconnect cleanup.
 - Random starting positions pulled from stored PGNs.
 - Legal move validation.
 - Premoves.
@@ -116,25 +119,24 @@ This strongly suggests the app is meant for:
 
 ### Initial Page Load
 
-`client/index.ts` initializes the UI, seeds the clocks with the configured game duration, and wires up the connect button and opponent-type selector.
+`client/index.ts` initializes the UI, seeds the clocks with the configured game duration, and wires up the Play button, cancel control, and opponent-type selector.
 
 `client/must-go-faster.ts` then:
 
 - creates a Chessground board,
 - points the client at `API_BASE_URL` and `WS_BASE_URL`,
 - pings the backend,
-- and waits for the user to start matchmaking.
+- and waits for the user to click Play.
 
 ### Matchmaking
 
-When the user clicks "Find a game":
+When the user clicks "Play":
 
 - the client opens `ws://.../connect?opponentType=...`,
 - the backend upgrades the request,
-- the server picks a random color for the human player,
-- and either:
-  - pairs the player with a waiting human opponent, or
-  - creates a computer opponent immediately.
+- the server either creates a pending lobby or joins the oldest pending lobby,
+- the server picks colors and creates an active session once the second player joins,
+- and computer opponents still start immediately.
 
 ### Game Start
 
@@ -143,6 +145,8 @@ When the client receives `GameJoinedFromServerType`:
 - it sets up the board state from the FEN and legal move map,
 - shows a countdown,
 - and sends `GameStartedToServerType` when the countdown ends.
+
+The current implementation starts the countdown on the client when the join message arrives. The updated spec wants that countdown to begin in sync for both players, so the implementation will need a server-coordinated start signal or timestamp to fully match that requirement.
 
 At that point the server initializes both clocks and sends `GameStartedFromServerType` to the session.
 
@@ -267,7 +271,7 @@ The tone of the UI and code suggests this is a personal or prototype-style proje
 
 ## Notes and Gaps
 
-- I did not find a `docs/specs/` directory in this checkout, so this analysis is based on implementation rather than formal product specs.
+- `docs/specs/` is present and now describes the Play/pending-lobby flow; this analysis intentionally keeps the implementation terminology aligned with that vocabulary.
 - The TODO list in `README.md` shows unfinished UX and reliability work, including promotion UI, responsive polish, abandonment messaging, and frontend resilience when the server is unavailable.
 - Draw handling appears incomplete.
 - The application is currently highly stateful and in-memory, so restarts will wipe active games.

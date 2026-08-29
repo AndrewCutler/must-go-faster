@@ -1,6 +1,6 @@
 /*
  * CODEX-GENERATED: the contents of this file were fully constructed by a Codex agent and not a human.
-*/
+ */
 
 package game
 
@@ -127,10 +127,6 @@ func TestJoinPendingGamePromotesLobbyAndBroadcastsJoinedMessages(t *testing.T) {
 	joiner := newTestPlayer()
 
 	createNewLobby(hub, creator)
-	lobby := hub.AwaitingOpponentSessions[creator.SessionId]
-	lobby.CreatedAt = time.Now().Add(-3 * time.Minute)
-	hub.expirePendingLobbies()
-
 	joinPendingGame(hub, joiner)
 
 	if _, ok := hub.AwaitingOpponentSessions[creator.SessionId]; ok {
@@ -154,8 +150,27 @@ func TestJoinPendingGamePromotesLobbyAndBroadcastsJoinedMessages(t *testing.T) {
 		t.Fatal("expected joiner to be part of the promoted session")
 	}
 
-	assertJoinedMessage(t, creator.WriteChan, session.SessionId)
-	assertJoinedMessage(t, joiner.WriteChan, session.SessionId)
+	creatorJoined := readWireMessage(t, creator.WriteChan)
+	joinerJoined := readWireMessage(t, joiner.WriteChan)
+
+	if creatorJoined.Type != GameJoinedFromServerType.String() {
+		t.Fatalf("expected creator join message, got %s", creatorJoined.Type)
+	}
+
+	if joinerJoined.Type != GameJoinedFromServerType.String() {
+		t.Fatalf("expected joiner join message, got %s", joinerJoined.Type)
+	}
+
+	creatorPayload := decodeJoinedPayload(t, creatorJoined)
+	joinerPayload := decodeJoinedPayload(t, joinerJoined)
+
+	if creatorPayload.CountdownStartAt.IsZero() {
+		t.Fatal("expected countdown start time for creator")
+	}
+
+	if !creatorPayload.CountdownStartAt.Equal(joinerPayload.CountdownStartAt) {
+		t.Fatal("expected both players to receive the same countdown start time")
+	}
 }
 
 func TestJoinPendingGameFallsBackToNewLobbyWhenPreviousLobbyWasCancelled(t *testing.T) {
@@ -260,7 +275,7 @@ func TestOnDisconnectAbandonedActiveSessionBroadcastsAbandonment(t *testing.T) {
 	assertAbandonedMessage(t, black.WriteChan)
 }
 
-func TestJoinPendingGamePromotesExpiredLobbyBeforeFinalization(t *testing.T) {
+func TestJoinPendingGameSkipsExpiredLobbyAndCreatesFreshLobby(t *testing.T) {
 	withServerWorkingDir(t)
 
 	hub := NewHub()
@@ -274,8 +289,47 @@ func TestJoinPendingGamePromotesExpiredLobbyBeforeFinalization(t *testing.T) {
 
 	joinPendingGame(hub, joiner)
 
-	if _, ok := hub.InProgressSessions[creator.SessionId]; !ok {
-		t.Fatal("expected expired-but-not-finalized lobby to still be joinable")
+	if _, ok := hub.InProgressSessions[creator.SessionId]; ok {
+		t.Fatal("expected expired lobby to remain unjoinable")
+	}
+
+	if _, ok := hub.AwaitingOpponentSessions[joiner.SessionId]; !ok {
+		t.Fatal("expected joiner to receive a new lobby")
+	}
+
+	if !hub.AwaitingOpponentSessions[creator.SessionId].Expired {
+		t.Fatal("expected the original lobby to remain expired")
+	}
+}
+
+func TestJoinPendingGameChoosesOldestJoinableLobby(t *testing.T) {
+	withServerWorkingDir(t)
+
+	hub := NewHub()
+	oldestCreator := newTestPlayerWithConn(t)
+	newestCreator := newTestPlayerWithConn(t)
+	joiner := newTestPlayer()
+
+	createNewLobby(hub, oldestCreator)
+	oldestLobby := hub.AwaitingOpponentSessions[oldestCreator.SessionId]
+	oldestLobby.CreatedAt = time.Now().Add(-3 * time.Minute)
+
+	createNewLobby(hub, newestCreator)
+	newestLobby := hub.AwaitingOpponentSessions[newestCreator.SessionId]
+	newestLobby.CreatedAt = time.Now().Add(-time.Minute)
+
+	joinPendingGame(hub, joiner)
+
+	if _, ok := hub.InProgressSessions[oldestCreator.SessionId]; !ok {
+		t.Fatal("expected oldest lobby to be promoted")
+	}
+
+	if _, ok := hub.InProgressSessions[newestCreator.SessionId]; ok {
+		t.Fatal("expected newer lobby to remain pending")
+	}
+
+	if _, ok := hub.AwaitingOpponentSessions[newestCreator.SessionId]; !ok {
+		t.Fatal("expected newer lobby to remain available")
 	}
 }
 
@@ -290,8 +344,8 @@ func newTestPlayerWithConn(t *testing.T) *Player {
 	t.Helper()
 
 	return &Player{
-		WriteChan: make(chan []byte, 4),
-		Hub:       NewHub(),
+		WriteChan:  make(chan []byte, 4),
+		Hub:        NewHub(),
 		Connection: newTestWebsocketConn(t),
 	}
 }
@@ -316,6 +370,21 @@ func assertAbandonedMessage(t *testing.T, ch chan []byte) {
 	if msg.Type != AbandonedFromServerType.String() {
 		t.Fatalf("expected abandonment message, got %s", msg.Type)
 	}
+}
+
+type joinedPayload struct {
+	CountdownStartAt time.Time `json:"countdownStartAt"`
+}
+
+func decodeJoinedPayload(t *testing.T, msg wireMessage) joinedPayload {
+	t.Helper()
+
+	var payload joinedPayload
+	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+		t.Fatalf("failed to decode joined payload: %v", err)
+	}
+
+	return payload
 }
 
 func readWireMessage(t *testing.T, ch chan []byte) wireMessage {

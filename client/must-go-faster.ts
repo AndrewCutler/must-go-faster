@@ -6,7 +6,6 @@ import { Chessground } from 'chessground';
 import {
 	ChessgroundConfig,
 	GameJoinedFromServer,
-	GameStartedFromServer,
 	GameStartedToServer,
 	GameStatus,
 	Message,
@@ -32,6 +31,7 @@ import {
 	BoardElement,
 	ConnectButtonElement,
 	CancelButtonElement,
+	ResignButtonElement,
 	CountdownContainerElement,
 	ConnectionStatusElement,
 	GameMetaElement,
@@ -83,6 +83,7 @@ export class MustGoFaster {
 
 		new ConnectButtonElement().reset();
 		new CancelButtonElement().hide();
+		new ResignButtonElement().hide();
 		new ConnectionStatusElement().clear();
 
 		this.ping();
@@ -261,16 +262,23 @@ export class MustGoFaster {
 	private async setupGame(): Promise<void> {
 		// console.log('start: ', { response: this.#state.message });
 		const message = this.#state
-			.message as FromMessage<GameStartedFromServer>;
+			.message as FromMessage<GameJoinedFromServer>;
 		this.setupBoard(message);
 		this.#state.isAgainstComputer = this.#state.message!.isAgainstComputer;
 		this.setConnectionUiGameJoined();
 
-		const { payload: { whiteTimeLeft, blackTimeLeft, whosNext } = {} } =
+		const {
+			payload: {
+				whiteTimeLeft,
+				blackTimeLeft,
+				whosNext,
+				countdownStartAt,
+			} = {},
+		} =
 			message;
 		this.initializeClock(whiteTimeLeft!, blackTimeLeft!);
 
-		await this.showCountdownToStartGame(whosNext!);
+		await this.showCountdownToStartGame(whosNext!, countdownStartAt!);
 	}
 
 	private enableBoard(): void {
@@ -352,36 +360,49 @@ export class MustGoFaster {
 	// todo: countdown-container should show "You move first/second" above countdown
 	private async showCountdownToStartGame(
 		whoMovesFirst: PlayerColor,
+		countdownStartAt: string,
 	): Promise<void> {
 		return new Promise((resolve) => {
 			const countdownDisplay = new CountdownContainerElement(
 				whoMovesFirst,
-                this.#state.playerColor!
+				this.#state.playerColor!,
 			);
-			let currentSecond = 5;
 			const self = this;
-			const countdownInterval = window.setInterval(function () {
-				if (currentSecond <= 0) {
-					window.clearInterval(countdownInterval);
-					countdownDisplay.hide(whoMovesFirst);
-
-					if (self.#state.connection) {
-						const gameStartedRequest: ToMessage<GameStartedToServer> =
-							{
-								type: 'GameStartedToServerType',
-								sessionId: self.#state.sessionId!,
-								playerColor: self.#state.playerColor!,
-								isAgainstComputer:
-									self.#state.isAgainstComputer!,
-							};
-						self.sendMessage(gameStartedRequest);
-					}
-					resolve();
-				} else {
-					countdownDisplay.setCountdownText(currentSecond);
+			const startedAt = new Date(countdownStartAt).getTime();
+			const beginCountdown = () => {
+				let currentSecond = 5;
+				countdownDisplay.setCountdownText(currentSecond);
+				const countdownInterval = window.setInterval(function () {
 					currentSecond--;
-				}
-			}, 1000);
+					if (currentSecond <= 0) {
+						window.clearInterval(countdownInterval);
+						countdownDisplay.hide(whoMovesFirst);
+
+						if (self.#state.connection) {
+							const gameStartedRequest: ToMessage<GameStartedToServer> =
+								{
+									type: 'GameStartedToServerType',
+									sessionId: self.#state.sessionId!,
+									playerColor: self.#state.playerColor!,
+									isAgainstComputer:
+										self.#state.isAgainstComputer!,
+								};
+							self.sendMessage(gameStartedRequest);
+						}
+						resolve();
+					} else {
+						countdownDisplay.setCountdownText(currentSecond);
+					}
+				}, 1000);
+			};
+
+			const delay = startedAt - Date.now();
+			if (delay <= 0) {
+				beginCountdown();
+				return;
+			}
+
+			window.setTimeout(beginCountdown, delay);
 		});
 	}
 
@@ -510,6 +531,7 @@ export class MustGoFaster {
 			this.#state.connection = undefined;
 		}
 		new CancelButtonElement().hide();
+		new ResignButtonElement().hide();
 		new ConnectionStatusElement().clear();
 		const self = this;
 		function sendNewGameMessage() {
@@ -521,7 +543,7 @@ export class MustGoFaster {
 		modal.setOutcome(gameStatus, method);
 	}
 
-	private setupBoard(message: FromMessage<GameStartedFromServer>) {
+	private setupBoard(message: FromMessage<GameJoinedFromServer>) {
 		this.#state.sessionId = message.sessionId;
 		this.#state.playerColor = message.playerColor;
 		this.#state.whiteTimeLeft = GAME_CLOCK_DURATION;
@@ -572,6 +594,7 @@ export class MustGoFaster {
 
 	private setConnectionUiGameJoined(): void {
 		new CancelButtonElement().hide();
+		new ResignButtonElement().show();
 		new ConnectionStatusElement().clear();
 		new ConnectButtonElement().gameJoined();
 	}
@@ -579,20 +602,24 @@ export class MustGoFaster {
 	private setConnectionUiError(message: string): void {
 		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
+		const resignButton = new ResignButtonElement();
 		const status = new ConnectionStatusElement();
 
 		connectButton.reset();
 		cancelButton.hide();
+		resignButton.hide();
 		status.show(message, 'error');
 	}
 
 	private resetConnectionUi(): void {
 		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
+		const resignButton = new ResignButtonElement();
 		const status = new ConnectionStatusElement();
 
 		connectButton.reset();
 		cancelButton.hide();
+		resignButton.hide();
 		status.clear();
 	}
 

@@ -89,11 +89,12 @@ type Message struct {
 }
 
 type GameJoinedFromServer struct {
-	Fen           string              `json:"fen"`
-	ValidMoves    map[string][]string `json:"validMoves"`
-	WhosNext      string              `json:"whosNext"`
-	WhiteTimeLeft float64             `json:"whiteTimeLeft"`
-	BlackTimeLeft float64             `json:"blackTimeLeft"`
+	Fen              string              `json:"fen"`
+	ValidMoves       map[string][]string `json:"validMoves"`
+	WhosNext         string              `json:"whosNext"`
+	WhiteTimeLeft    float64             `json:"whiteTimeLeft"`
+	BlackTimeLeft    float64             `json:"blackTimeLeft"`
+	CountdownStartAt time.Time           `json:"countdownStartAt"`
 }
 
 type GameStartedFromServer struct {
@@ -139,7 +140,7 @@ type TimeoutToServer struct {
 	Timeout bool `json:"timeout"`
 }
 
-func sendGameJoinedMessage(session *Session, playerColor string) []byte {
+func sendGameJoinedMessage(session *Session, playerColor string, countdownStartAt time.Time) []byte {
 	message := Message{
 		Type:              GameJoinedFromServerType.String(),
 		SessionId:         session.SessionId,
@@ -147,11 +148,12 @@ func sendGameJoinedMessage(session *Session, playerColor string) []byte {
 		TimeStamp:         time.Now().Format(time.RFC3339),
 		IsAgainstComputer: session.isAgainstComputer(),
 		Payload: GameJoinedFromServer{
-			Fen:           session.getFen(),
-			ValidMoves:    ValidMovesMap(session.Game),
-			WhosNext:      session.whoseMoveIsIt(),
-			WhiteTimeLeft: constants.GameClockDuration,
-			BlackTimeLeft: constants.GameClockDuration,
+			Fen:              session.getFen(),
+			ValidMoves:       ValidMovesMap(session.Game),
+			WhosNext:         session.whoseMoveIsIt(),
+			WhiteTimeLeft:    constants.GameClockDuration,
+			BlackTimeLeft:    constants.GameClockDuration,
+			CountdownStartAt: countdownStartAt,
 		},
 	}
 

@@ -65,6 +65,15 @@ function renderDom(): void {
 			</span>
 		</button>
 		<div id="connection-status"></div>
+		<button
+			id="resign-button"
+			class="button is-dark"
+			aria-label="Resign game"
+			style="display:none"
+			disabled
+		>
+			Resign
+		</button>
 		<div id="controls">
 			<div id="white-clock"></div>
 			<div id="black-clock"></div>
@@ -100,11 +109,39 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	vi.useRealTimers();
 	document.body.innerHTML = '';
 	process.env.WS_BASE_URL = originalEnv.WS_BASE_URL;
 	process.env.API_BASE_URL = originalEnv.API_BASE_URL;
 	vi.unstubAllGlobals();
 });
+
+function emitJoinedMessage(
+	socket: FakeWebSocket,
+	overrides: Partial<Record<string, unknown>> = {},
+): void {
+	const message = {
+		sessionId: 'session-1',
+		playerColor: 'white',
+		isAgainstComputer: false,
+		type: 'GameJoinedFromServerType',
+		payload: {
+			fen: 'test-fen',
+			validMoves: {},
+			whosNext: 'white',
+			whiteTimeLeft: 600,
+			blackTimeLeft: 600,
+			countdownStartAt: new Date(Date.now() + 1_000).toISOString(),
+			...overrides,
+		},
+	};
+	socket.readyState = FakeWebSocket.OPEN;
+	socket.onmessage?.(
+		new MessageEvent('message', {
+			data: JSON.stringify(message),
+		}),
+	);
+}
 
 describe('MustGoFaster connect flow', () => {
 	it('shows the waiting copy for a human opponent and ignores duplicate play clicks', () => {
@@ -178,6 +215,40 @@ describe('MustGoFaster connect flow', () => {
 		expect(status.textContent).toBe('');
 		expect(status.dataset.tone).toBe('info');
 		expect(status.style.visibility).toBe('hidden');
+	});
+
+	it('shows the resign placeholder and waits for the shared countdown before starting the game', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-08-29T12:00:00.000Z'));
+
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket);
+
+		const resignButton = document.querySelector<HTMLButtonElement>(
+			'#resign-button',
+		)!;
+		const cancelButton = document.querySelector<HTMLButtonElement>(
+			'#cancel-button',
+		)!;
+
+		expect(resignButton.style.display).toBe('');
+		expect(resignButton.disabled).toBe(true);
+		expect(cancelButton.style.display).toBe('none');
+
+		await vi.advanceTimersByTimeAsync(999);
+		expect(socket.send).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(1_000);
+		await vi.advanceTimersByTimeAsync(5_000);
+
+		expect(socket.send).toHaveBeenCalledTimes(1);
+		expect(socket.send).toHaveBeenCalledWith(
+			expect.stringContaining('GameStartedToServerType'),
+		);
 	});
 
 	it('surfaces a lobby-expired close reason before the game starts', () => {

@@ -64,6 +64,7 @@ export type GameJoinedFromServer = {
 	fen: string;
 	whosNext: PlayerColor;
 	validMoves: { [key: string]: string[] };
+	countdownStartAt: string;
 };
 
 export type GameStartedFromServer = GameJoinedFromServer;

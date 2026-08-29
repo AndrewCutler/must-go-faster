@@ -1,6 +1,6 @@
 /*
  * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
-*/
+ */
 
 package game
 
@@ -85,6 +85,34 @@ func (h *Hub) onRegister(player *Player, computer *Player) {
 			joinPendingGame(h, player)
 		}
 	}
+}
+
+func (h *Hub) oldestJoinableLobby() *PendingLobby {
+	var oldest *PendingLobby
+	for _, lobby := range h.AwaitingOpponentSessions {
+		if lobby == nil || lobby.Player == nil {
+			continue
+		}
+		if lobby.Cancelled || lobby.Expired || lobby.Player.Connection == nil {
+			continue
+		}
+
+		if oldest == nil {
+			oldest = lobby
+			continue
+		}
+
+		if lobby.CreatedAt.Before(oldest.CreatedAt) {
+			oldest = lobby
+			continue
+		}
+
+		if lobby.CreatedAt.Equal(oldest.CreatedAt) && lobby.SessionId < oldest.SessionId {
+			oldest = lobby
+		}
+	}
+
+	return oldest
 }
 
 func (h *Hub) onDisconnect(player *Player, abandoned bool) {
@@ -285,21 +313,8 @@ func joinComputerGame(player *Player, computer *Player) {
 }
 
 func joinPendingGame(hub *Hub, player *Player) {
-	var lobby *PendingLobby
-	for key := range hub.AwaitingOpponentSessions {
-		lobby = hub.AwaitingOpponentSessions[key]
-		break
-	}
-
-	if lobby == nil || lobby.Player == nil {
-		createNewLobby(hub, player)
-		return
-	}
-
-	if lobby.Cancelled || lobby.Player.Connection == nil {
-		if lobby.SessionId != "" {
-			delete(hub.AwaitingOpponentSessions, lobby.SessionId)
-		}
+	lobby := hub.oldestJoinableLobby()
+	if lobby == nil {
 		createNewLobby(hub, player)
 		return
 	}
@@ -347,8 +362,9 @@ func joinPendingGame(hub *Hub, player *Player) {
 }
 
 func sendJoinedMessages(session *Session) {
+	countdownStartAt := time.Now().Add(5 * time.Second)
 	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendGameJoinedMessage(session, player.Color)
+		player.WriteChan <- sendGameJoinedMessage(session, player.Color, countdownStartAt)
 	}
 }
 

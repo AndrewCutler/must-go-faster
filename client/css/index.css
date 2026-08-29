@@ -275,6 +275,10 @@ piece.black.fade {
 	min-width: 120px;
 }
 
+#resign-button {
+	min-width: 120px;
+}
+
 #cancel-button {
 	min-width: 2.75rem;
 	padding-left: 0.85rem;

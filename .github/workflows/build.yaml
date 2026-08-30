@@ -1,3 +1,4 @@
+# CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
 name: Build checks
 
 on:
@@ -11,37 +12,56 @@ jobs:
         defaults:
             run:
                 working-directory: ./backend
-        strategy:
-            matrix:
-                go-version: ['1.21.x']
         steps:
-            - uses: actions/checkout@v4
-            - name: Setup Go ${{ matrix.go-version }}
+            - &checkout_step
+              uses: actions/checkout@v4
+            - &setup_go_step
               uses: actions/setup-go@v4
               with:
-                  go-version: ${{ matrix.go-version }}
-
+                  go-version: 1.21.x
             - name: Build parser
               run: go build parser/parser.go
-
             - name: Build server
               run: go build server/server.go
+
+    test-go:
+        runs-on: windows-latest
+        defaults:
+            run:
+                working-directory: ./backend
+        steps:
+            - *checkout_step
+            - *setup_go_step
+            - name: Test server
+              run: go test ./server/...
 
     build-js:
         runs-on: windows-latest
         defaults:
             run:
                 working-directory: ./client
-        strategy:
-            matrix:
-                node-version: ['20.x']
         steps:
-            - uses: actions/checkout@v4
-            - name: Setup Node ${{ matrix.node-version }}
+            - *checkout_step
+            - &setup_node_step
               uses: actions/setup-node@v4
               with:
-                  node-version: ${{ matrix.node-version }}
-            - name: Install dependencies
-              run: npm install
+                  node-version: 20.x
+                  cache: npm
+                  cache-dependency-path: client/package-lock.json
+            - &npm_ci_step
+              run: npm ci
             - name: Build
               run: npm run build
+
+    test-js:
+        runs-on: windows-latest
+        defaults:
+            run:
+                working-directory: ./client
+        steps:
+            - *checkout_step
+            - *setup_node_step
+            - *npm_ci_step
+            - name: Test
+              run: npm run test
+

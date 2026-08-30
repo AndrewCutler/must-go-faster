@@ -1,0 +1,12 @@
+#
+# CODEX-GENERATED: the contents of this file were fully constructed by a Codex agent and not a human.
+#
+name: Setup Go
+description: Checkout the repository and install the Go toolchain.
+runs:
+    using: composite
+    steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-go@v4
+          with:
+              go-version: 1.21.x

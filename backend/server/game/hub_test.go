@@ -410,6 +410,7 @@ type joinedPayload struct {
 }
 
 type movePayload struct {
+	Accepted          bool   `json:"accepted"`
 	GameOutcome       string `json:"gameOutcome"`
 	GameOutcomeMethod string `json:"gameOutcomeMethod"`
 	IsCheckmated      string `json:"isCheckmated"`
@@ -471,7 +472,7 @@ func TestSendMoveMessageIncludesDrawOutcomeMetadata(t *testing.T) {
 		Black:     newTestPlayer(),
 	}
 
-	payload := decodeMovePayload(t, sendMoveMessage(session, "white", Move{From: "b1", To: "b6"}))
+	payload := decodeMovePayload(t, sendMoveMessage(session, "white", Move{From: "b1", To: "b6"}, true))
 
 	if payload.GameOutcome != chess.Draw.String() {
 		t.Fatalf("expected draw outcome, got %s", payload.GameOutcome)

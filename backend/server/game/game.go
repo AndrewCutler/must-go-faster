@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"strings"
@@ -14,12 +15,18 @@ type Move struct {
 	To   string `json:"to"`
 }
 
+type CachedPremove struct {
+	Color string
+	Move  Move
+}
+
 type Session struct {
 	Game              *chess.Game
 	White             *Player
 	Black             *Player
 	IsAgainstComputer bool
 	SessionId         string
+	PendingPremove    *CachedPremove
 }
 
 func (s *Session) getFen() string {
@@ -34,6 +41,28 @@ func (s *Session) isAgainstComputer() bool {
 
 func (s *Session) getTimeLefts() (float64, float64) {
 	return s.White.Clock.TimeLeft, s.Black.Clock.TimeLeft
+}
+
+func (s *Session) playerForColor(color string) *Player {
+	switch color {
+	case "white":
+		return s.White
+	case "black":
+		return s.Black
+	default:
+		return nil
+	}
+}
+
+func (s *Session) setPendingPremove(color string, move Move) {
+	s.PendingPremove = &CachedPremove{
+		Color: color,
+		Move:  move,
+	}
+}
+
+func (s *Session) clearPendingPremove() {
+	s.PendingPremove = nil
 }
 
 func (s *Session) GetPlayers() []*Player {
@@ -79,20 +108,36 @@ func ValidMovesMap(g *chess.Game) map[string][]string {
 
 func tryPlayMove(m MoveToServer, g *chess.Game) (Move, error) {
 	// log.Println("move: ", m)
-	if err := g.MoveStr(m.Move.From + m.Move.To); err != nil {
+	temp := g.Clone()
+	if err := temp.MoveStr(m.Move.From + m.Move.To); err != nil {
 		return m.Move, err
 	}
 
 	return m.Move, nil
 }
 
-func tryPlayPremove(m PremoveToServer, g *chess.Game) (Move, error) {
-	// log.Println("premove: ", m)
-	if err := g.MoveStr(m.Premove.From + m.Premove.To); err != nil {
-		return m.Premove, err
+func tryPlayMoveForColor(move Move, g *chess.Game, color string) error {
+	fenParts := strings.Split(g.Position().String(), " ")
+	if len(fenParts) != 6 {
+		return fmt.Errorf("invalid fen: %s", g.Position().String())
 	}
 
-	return m.Premove, nil
+	switch color {
+	case "white":
+		fenParts[1] = "w"
+	case "black":
+		fenParts[1] = "b"
+	default:
+		return fmt.Errorf("invalid color: %s", color)
+	}
+
+	fen, err := chess.FEN(strings.Join(fenParts, " "))
+	if err != nil {
+		return err
+	}
+
+	temp := chess.NewGame(fen, chess.UseNotation(chess.UCINotation{}))
+	return temp.MoveStr(move.From + move.To)
 }
 
 func normalizeStartingFEN(fen string) string {
@@ -106,7 +151,7 @@ func normalizeStartingFEN(fen string) string {
 }
 
 func randomComputerDelay(remainingSeconds float64) time.Duration {
-	delay := time.Duration(rand.Intn(7001)+500) * time.Millisecond
+	delay := time.Duration(rand.Intn(4001)+500) * time.Millisecond
 	remaining := time.Duration(remainingSeconds * float64(time.Second))
 	if remaining > 0 && delay > remaining {
 		return remaining
@@ -115,112 +160,16 @@ func randomComputerDelay(remainingSeconds float64) time.Duration {
 	return delay
 }
 
+var scheduleComputerMoveDelay = randomComputerDelay
+
 func PlayComputer(player *Player, computer *Player) {
 	defer func() {
 		log.Println("Exiting PlayComputer")
 	}()
 
 	for {
-		select {
-		case v, ok := <-computer.WriteChan:
-			if !ok {
-				return
-			}
-			value := string(v)
-
-			// log.Println("value: ", value)
-
-			// lazy way to check message type
-			// if strings.Contains(value, "GameStartedToServerType") {
-			// 	log.Println("GameStartedToServerType")
-			// }
-			// if strings.Contains(value, "GameStartedFromServerType") {
-			// 	log.Println("GameStartedFromServerType")
-			// }
-			if strings.Contains(value, "MoveFromServerType") {
-				session, ok := player.Hub.InProgressSessions[player.SessionId]
-				if !ok {
-					return
-				}
-
-				if session.Game.Outcome() != chess.NoOutcome {
-					delete(player.Hub.InProgressSessions, player.SessionId)
-					if computer.WriteChan != nil {
-						close(computer.WriteChan)
-						computer.WriteChan = nil
-					}
-					return
-				}
-
-				moves := session.Game.ValidMoves()
-				if len(moves) == 0 {
-					return
-				}
-				nextMove := moves[rand.Intn(len(moves))]
-
-				c := session.White
-				if player.Color == "white" {
-					c = session.Black
-				}
-
-				delay := randomComputerDelay(c.Clock.TimeLeft)
-				time.Sleep(delay)
-
-				session, ok = player.Hub.InProgressSessions[player.SessionId]
-				if !ok {
-					return
-				}
-
-				if session.Game.Outcome() != chess.NoOutcome {
-					delete(player.Hub.InProgressSessions, player.SessionId)
-					if computer.WriteChan != nil {
-						close(computer.WriteChan)
-						computer.WriteChan = nil
-					}
-					return
-				}
-
-				updateClocks(session)
-
-				if c.Clock.TimeLeft <= 0 {
-					player.WriteChan <- sendTimeoutMessage(session, player.Color, c.Color)
-					continue
-				}
-
-				session.Game.Move(nextMove)
-				move := Move{
-					From: nextMove.S1().String(),
-					To:   nextMove.S2().String(),
-				}
-
-				player.WriteChan <- sendMoveMessage(session, player.Color, move)
-			}
-			// if strings.Contains(value, "MoveToServerType") {
-			// 	log.Println("MoveToServerType")
-			// }
-			// if strings.Contains(value, "PremoveFromServerType") {
-			// 	log.Println("PremoveFromServerType")
-			// }
-			// if strings.Contains(value, "PremoveToServerType") {
-			// 	log.Println("PremoveToServerType")
-			// }
-			// if strings.Contains(value, "TimeoutFromServerType") {
-			// 	log.Println("TimeoutFromServerType")
-			// }
-			// if strings.Contains(value, "TimeoutToServerType") {
-			// 	log.Println("TimeoutToServerType")
-			// }
-			// if strings.Contains(value, "AbandonedFromServerType") {
-			// 	log.Println("AbandonedFromServerType")
-			// }
-			// if strings.Contains(value, "AbandonedToServerType") {
-			// 	log.Println("AbandonedToServerType")
-			// }
-		case <-time.After(time.Minute):
-			if computer.WriteChan != nil {
-				close(computer.WriteChan)
-				computer.WriteChan = nil
-			}
+		_, ok := <-computer.WriteChan
+		if !ok {
 			return
 		}
 	}

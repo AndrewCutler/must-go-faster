@@ -21,7 +21,6 @@ After two human users are matched into the same session, both users can play a c
 - Opponent-type selection
 - Lobby creation and join matching logic
 - Computer opponent behavior
-- Premoves
 - Chess analysis or hints
 
 ## Related behavior
@@ -43,6 +42,8 @@ After two human users are matched into the same session, both users can play a c
 
 - The board should be visible once the shared game session begins.
 - The board should become interactive after the shared countdown completes.
+- The countdown overlay should say `[player color] moves first` for the local user.
+- The local human player should be able to cache a premove while waiting for the opponent's turn.
 - The selected player color should be respected when orienting the board.
 - Legal moves should be highlighted according to the current position.
 - The last played move should be highlighted according to chessground norms.
@@ -65,3 +66,4 @@ After two human users are matched into the same session, both users can play a c
 ## Non-functional requirements
 
 - Add tests for as many code paths as is practical, especially the join, move, timeout, abandonment, disconnect, and end-state flows.
+- The frontend must not validate chess legality locally; the backend is the source of truth for move acceptance, rejection, and board state updates.

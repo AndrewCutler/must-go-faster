@@ -55,6 +55,7 @@ export type FromPayload =
 	| GameJoinedFromServer
 	| GameStartedFromServer
 	| MoveFromServer
+	| PremoveFromServer
 	| TimeoutFromServer
 	| AbandonedFromServer;
 
@@ -72,6 +73,7 @@ export type GameStartedFromServer = GameJoinedFromServer;
 export type GameStartedToServer = undefined;
 
 export type MoveFromServer = {
+	accepted: boolean;
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
@@ -81,6 +83,11 @@ export type MoveFromServer = {
 	gameOutcome?: string;
 	gameOutcomeMethod?: string;
 	move: Move;
+};
+
+export type PremoveFromServer = {
+	accepted: boolean;
+	premove: Move;
 };
 
 export type TimeoutFromServer = {
@@ -103,7 +110,8 @@ export type TimeoutToServer = {
 export type MoveToServer = { move: Move };
 
 export type PremoveToServer = {
-	premove: Move;
+	premove?: Move;
+	cancel?: boolean;
 };
 
 export type NewGameToServer = undefined;
@@ -114,7 +122,10 @@ export type Move = {
 };
 
 export interface ChessgroundConfig extends CGConfig {
-	premovable?: CGConfig['premovable'] & { current?: string[] };
+	premovable?: CGConfig['premovable'] & {
+		current?: string[];
+		customDests?: cg.Dests;
+	};
 }
 
 export interface MustGoFasterState {

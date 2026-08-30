@@ -40,6 +40,7 @@ When a user clicks the Play button, if a pending lobby exists on the server, tha
 - The Play button should only be enabled if the user does not already have a pending or active game.
 - Upon clicking, the user should be added to a pending lobby.
 - Once the game is started, the chessboard should display and a 5-second countdown should overlay it to give both players time to prepare for game start.
+- The countdown overlay should say `[player color] moves first` for the local user.
 - A chess clock with both players' times should be displayed.
 - The board should be displayed, but pieces should not be clickable in this flow.
 

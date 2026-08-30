@@ -227,10 +227,6 @@ piece.black.fade {
 	}
 }
 
-#board {
-	pointer-events: none;
-}
-
 @media screen and (min-width: 1024px) {
 	#board {
 		width: 500px;

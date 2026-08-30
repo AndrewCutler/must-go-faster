@@ -1,6 +1,6 @@
 /*
  * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
-*/
+ */
 
 package game
 

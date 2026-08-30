@@ -16,7 +16,7 @@ After a game with a computer opponent is started, the user is able to play an ac
 
 - Computer analysis
 - Chess-engine-based move generation
-- Premoves
+- Computer-generated premove automation
 
 ## Related behavior
 
@@ -36,6 +36,8 @@ After a game with a computer opponent is started, the user is able to play an ac
 ## User-visible behavior
 
 - The chessboard is visible and interactive according to the rules of chess.
+- The countdown overlay should say `[player color] moves first` for the human player.
+- The human player should be able to cache a premove while waiting for the computer's turn.
 - The last played move is highlighted according to chessground norms to indicate to the user what has happened.
 - Any legal chess end state supported by the server should be displayed to the user, including draw states such as stalemate, repetition, and insufficient material.
 
@@ -52,3 +54,4 @@ After a game with a computer opponent is started, the user is able to play an ac
 - Add tests for as many code paths as is practical, especially the creation, cancel, timeout, join, and disconnect flows.
 - The computer should play uniformly random legal moves chosen from the list of available legal moves for the computer player's color.
 - The computer should take between .5 and 7.5 seconds per move.
+- The frontend must not perform independent chess legality checks; the backend must validate and authorize all move attempts and state transitions.

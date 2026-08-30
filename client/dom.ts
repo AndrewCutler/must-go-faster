@@ -22,6 +22,10 @@ export class BoardElement implements IElement {
 		this.#element = element;
 	}
 
+	disable(): void {
+		this.#element!.style.pointerEvents = 'none';
+	}
+
 	enable(): void {
 		this.#element!.style.pointerEvents = 'auto';
 	}
@@ -61,17 +65,12 @@ export class CountdownContainerElement implements IElement {
 		element.id = this.#selector.replace('#', '');
 
 		const top = document.createElement('div');
-		if (whoMovesFirst === playerColor) {
-			top.innerText = 'Opponent moves first';
-			// top.innerText = 'You move first';
-		} else {
-			top.innerText = 'Opponent moves first';
-		}
+		top.textContent = `${playerColor} moves first`;
 		top.style.fontSize = '2rem';
 		(top.style as any)['-webkit-text-stroke'] = '1px black';
 
 		const bottom = document.createElement('div');
-		bottom.innerText = 'Get ready...';
+		bottom.textContent = 'Get ready...';
 		bottom.style.fontSize = '2rem';
 		(top.style as any)['-webkit-text-stroke'] = '1px black';
 

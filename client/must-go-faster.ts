@@ -1,6 +1,6 @@
 /*
  * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
-*/
+ */
 
 import { Chessground } from 'chessground';
 import {
@@ -14,6 +14,7 @@ import {
 	MoveToServer,
 	ToPayload,
 	PlayerColor,
+	PremoveFromServer,
 	PremoveToServer,
 	TimeoutFromServer,
 	TimeoutToServer,
@@ -53,7 +54,7 @@ export class MustGoFaster {
 		this.#state.closeReason = undefined;
 		const initialConfig: ChessgroundConfig = {
 			movable: {
-				free: false,
+				free: true,
 				color: 'white',
 			},
 		};
@@ -61,6 +62,7 @@ export class MustGoFaster {
 			new BoardElement().element!,
 			initialConfig,
 		);
+		new BoardElement().disable();
 		this.#state.board.set({
 			viewOnly: false,
 			movable: {
@@ -71,6 +73,10 @@ export class MustGoFaster {
 			premovable: {
 				enabled: false,
 				showDests: true,
+				events: {
+					set: this.handlePremoveSet(),
+					unset: this.handlePremoveUnset(),
+				},
 			},
 			predroppable: {
 				enabled: true,
@@ -227,6 +233,9 @@ export class MustGoFaster {
 			case 'MoveFromServerType':
 				this.updateBoardWithMove();
 				break;
+			case 'PremoveFromServerType':
+				this.handlePremoveResponse();
+				break;
 			case 'TimeoutFromServerType':
 				this.timeout();
 				break;
@@ -272,8 +281,7 @@ export class MustGoFaster {
 				whosNext,
 				countdownStartAt,
 			} = {},
-		} =
-			message;
+		} = message;
 		this.initializeClock(whiteTimeLeft!, blackTimeLeft!);
 
 		await this.showCountdownToStartGame(whosNext!, countdownStartAt!);
@@ -283,18 +291,31 @@ export class MustGoFaster {
 		const payload = (
 			this.#state.message as FromMessage<GameJoinedFromServer>
 		).payload!;
+		new BoardElement().enable();
 		this.toggleClock(payload.whosNext);
 		this.#state.board!.set({
 			viewOnly: false,
+			selectable: {
+				enabled: true,
+			},
+			movable: {
+				color: this.#state.playerColor!,
+				free: true,
+			},
 			premovable: {
-				enabled: !this.#state.isAgainstComputer,
+				enabled: true,
 				showDests: true,
+				customDests: this.getPremoveDests(payload.whosNext),
+			},
+			draggable: {
+				enabled: true,
 			},
 		});
 	}
 
 	private updateBoardWithMove(): void {
 		const {
+			accepted,
 			isCheckmated,
 			gameOutcome,
 			gameOutcomeMethod,
@@ -305,6 +326,37 @@ export class MustGoFaster {
 			validMoves,
 			move: { from, to },
 		} = (this.#state.message! as FromMessage<MoveFromServer>).payload!;
+		if (accepted === false) {
+			this.#state.board!.cancelMove();
+			this.#state.whiteTimeLeft = whiteTimeLeft;
+			this.#state.blackTimeLeft = blackTimeLeft;
+			this.toggleClock(whosNext);
+			this.#state.board!.set({
+				fen,
+				turnColor: whosNext,
+				selectable: {
+					enabled: true,
+				},
+				movable: {
+					color: this.#state.playerColor!,
+					free: true,
+					dests: this.toValidMoves(validMoves),
+				},
+				lastMove: undefined,
+				premovable: {
+					enabled: true,
+					showDests: true,
+					customDests: this.getPremoveDests(whosNext),
+				},
+				draggable: {
+					enabled: true,
+				},
+			});
+			return;
+		}
+
+		this.#state.board!.cancelMove();
+
 		let endState:
 			| {
 					gameStatus: Exclude<GameStatus, 'ongoing'>;
@@ -347,26 +399,24 @@ export class MustGoFaster {
 		this.#state.board!.set({
 			fen,
 			turnColor: whosNext,
+			selectable: {
+				enabled: true,
+			},
 			movable: {
+				color: this.#state.playerColor!,
+				free: true,
 				dests: this.toValidMoves(validMoves),
 			},
 			lastMove: [from, to],
 			premovable: {
-				enabled: !this.#state.isAgainstComputer,
+				enabled: true,
 				showDests: true,
+				customDests: this.getPremoveDests(whosNext),
+			},
+			draggable: {
+				enabled: true,
 			},
 		});
-
-		if (!endState && this.#state.board!.state.premovable.current) {
-			const [premoveFrom, premoveTo] =
-				this.#state.board!.state.premovable.current;
-			if (this.#state.board!.playPremove()) {
-				this.sendPremoveMessage({
-					from: premoveFrom,
-					to: premoveTo,
-				});
-			}
-		}
 
 		if (endState) {
 			this.gameOver(endState.gameStatus, endState.method);
@@ -394,7 +444,6 @@ export class MustGoFaster {
 		// wipe out all game-specific data in class?
 	}
 
-	// todo: countdown-container should show "You move first/second" above countdown
 	private async showCountdownToStartGame(
 		whoMovesFirst: PlayerColor,
 		countdownStartAt: string,
@@ -415,6 +464,7 @@ export class MustGoFaster {
 						window.clearInterval(countdownInterval);
 						countdownDisplay.hide(whoMovesFirst);
 
+						self.enableBoard();
 						if (self.#state.connection) {
 							const gameStartedRequest: ToMessage<GameStartedToServer> =
 								{
@@ -556,6 +606,34 @@ export class MustGoFaster {
 		return validMoves;
 	}
 
+	private getPremoveDests(turnColor: PlayerColor): cg.Dests | undefined {
+		if (turnColor === this.#state.playerColor) {
+			return undefined;
+		}
+
+		const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+		const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+		const dests = new Map<cg.Key, cg.Key[]>();
+
+		for (const file of files) {
+			for (const rank of ranks) {
+				const orig = `${file}${rank}` as cg.Key;
+				const values: cg.Key[] = [];
+				for (const destFile of files) {
+					for (const destRank of ranks) {
+						const dest = `${destFile}${destRank}` as cg.Key;
+						if (dest !== orig) {
+							values.push(dest);
+						}
+					}
+				}
+				dests.set(orig, values);
+			}
+		}
+
+		return dests;
+	}
+
 	private gameOver(
 		gameStatus: Exclude<GameStatus, 'ongoing'>,
 		method: string,
@@ -575,11 +653,13 @@ export class MustGoFaster {
 			this.#state.connection.close(1000, 'Game over.');
 			this.#state.connection = undefined;
 		}
+		new BoardElement().disable();
 		this.#state.board!.set({
 			viewOnly: true,
 			premovable: {
 				enabled: false,
 				showDests: true,
+				customDests: undefined,
 			},
 		});
 		this.#state.board!.stop();
@@ -618,13 +698,12 @@ export class MustGoFaster {
 			case undefined:
 				return 'game over';
 			default:
-				return method
-					.replace(/([a-z])([A-Z])/g, '$1 $2')
-					.toLowerCase();
+				return method.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
 		}
 	}
 
 	private setupBoard(message: FromMessage<GameJoinedFromServer>) {
+		new BoardElement().disable();
 		this.#state.sessionId = message.sessionId;
 		this.#state.playerColor = message.playerColor;
 		this.#state.whiteTimeLeft = GAME_CLOCK_DURATION;
@@ -641,16 +720,21 @@ export class MustGoFaster {
 
 		this.#state.board!.set({
 			viewOnly: true,
+			selectable: {
+				enabled: true,
+			},
 			fen: payload.fen,
 			turnColor: payload.whosNext,
 			orientation: this.#state.playerColor,
 			movable: {
 				dests: this.toValidMoves(payload.validMoves),
 				color: this.#state.playerColor,
+				free: true,
 			},
 			premovable: {
 				enabled: false,
 				showDests: true,
+				customDests: undefined,
 			},
 			draggable: {
 				enabled: true,
@@ -685,7 +769,9 @@ export class MustGoFaster {
 
 		new CancelButtonElement().hide();
 		playerType.hide();
-		opponentStatus.show(`Playing ${this.#state.opponentType ?? 'computer'}`);
+		opponentStatus.show(
+			`Playing ${this.#state.opponentType ?? 'computer'}`,
+		);
 		new ConnectionStatusElement().clear();
 		new ConnectButtonElement().gameJoined();
 	}
@@ -725,22 +811,43 @@ export class MustGoFaster {
 		status.clear();
 	}
 
-	private sendPremoveMessage(move: Move): void {
-		// console.log('sendPremoveMessage: ', { premove: move });
-		if (this.#state.connection) {
-			const premove: ToMessage<PremoveToServer> = {
-				type: 'PremoveToServerType',
-				sessionId: this.#state.sessionId!,
-				playerColor: this.#state.playerColor!,
-				isAgainstComputer: this.#state.isAgainstComputer!,
-				payload: {
-					premove: move,
-				},
-			};
-			this.sendMessage(premove);
-		} else {
-			throw new Error('connection is undefined.');
+	private sendPremoveMessage(move?: Move, cancel = false): void {
+		if (!this.#state.connection) {
+			return;
 		}
+
+		const premove: ToMessage<PremoveToServer> = {
+			type: 'PremoveToServerType',
+			sessionId: this.#state.sessionId!,
+			playerColor: this.#state.playerColor!,
+			isAgainstComputer: this.#state.isAgainstComputer!,
+			payload: cancel ? { cancel: true } : { premove: move! },
+		};
+		this.sendMessage(premove);
+	}
+
+	private handlePremoveSet() {
+		const self = this;
+		return function (from: cg.Key, to: cg.Key): void {
+			self.sendPremoveMessage({ from, to }, false);
+		};
+	}
+
+	private handlePremoveUnset() {
+		const self = this;
+		return function (): void {
+			self.sendPremoveMessage(undefined, true);
+		};
+	}
+
+	private handlePremoveResponse(): void {
+		const payload = (this.#state.message as FromMessage<PremoveFromServer>)
+			?.payload;
+		if (!payload || payload.accepted !== false) {
+			return;
+		}
+
+		this.#state.board!.cancelMove();
 	}
 
 	private handleClientMove() {
@@ -753,8 +860,6 @@ export class MustGoFaster {
 			// console.log('Handle move: ', { from, to });
 			// handle promotion here; autopromote to queen for now
 			to = self.checkIsPromotion(to);
-			// premove is set here
-			self.#state.board!.move(from, to);
 
 			const move: { from: cg.Key; to: cg.Key } = { from, to };
 			if (self.#state.connection) {
@@ -767,18 +872,6 @@ export class MustGoFaster {
 				};
 				self.sendMessage(moveMessage);
 			}
-			// console.log({ state: self.#state.board!.state });
-			self.#state.board!.set({
-				turnColor:
-					self.#state.playerColor === 'white' ? 'black' : 'white',
-				movable: {
-					color: self.#state.playerColor,
-				},
-				premovable: {
-					enabled: !self.#state.isAgainstComputer,
-					showDests: true,
-				},
-			});
 		};
 	}
 

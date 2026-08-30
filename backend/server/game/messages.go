@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"server/constants"
@@ -113,10 +114,16 @@ type MoveFromServer struct {
 	Fen               string              `json:"fen"`
 	ValidMoves        map[string][]string `json:"validMoves"`
 	WhosNext          string              `json:"whosNext"`
+	Accepted          bool                `json:"accepted"`
 	IsCheckmated      string              `json:"isCheckmated"`
 	GameOutcome       string              `json:"gameOutcome"`
 	GameOutcomeMethod string              `json:"gameOutcomeMethod"`
 	Move              Move                `json:"move"`
+}
+
+type PremoveFromServer struct {
+	Accepted bool `json:"accepted"`
+	Premove  Move `json:"premove"`
 }
 
 type TimeoutFromServer struct {
@@ -138,6 +145,7 @@ type MoveToServer struct {
 
 type PremoveToServer struct {
 	Premove Move `json:"premove"`
+	Cancel  bool `json:"cancel"`
 }
 
 type TimeoutToServer struct {
@@ -196,7 +204,7 @@ func sendGameStartedMessage(session *Session, playerColor string) []byte {
 	return jsonData
 }
 
-func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
+func sendMoveMessage(session *Session, playerColor string, move Move, accepted bool) []byte {
 	isCheckmated := ""
 	switch session.Game.Outcome() {
 	case chess.BlackWon:
@@ -220,12 +228,34 @@ func sendMoveMessage(session *Session, playerColor string, move Move) []byte {
 			Fen:               session.getFen(),
 			ValidMoves:        ValidMovesMap(session.Game),
 			WhosNext:          session.whoseMoveIsIt(),
+			Accepted:          accepted,
 			IsCheckmated:      isCheckmated,
 			GameOutcome:       session.Game.Outcome().String(),
 			GameOutcomeMethod: session.Game.Method().String(),
 			WhiteTimeLeft:     whiteTimeLeft,
 			BlackTimeLeft:     blackTimeLeft,
 			Move:              move,
+		},
+	}
+
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error converting message to JSON: ", err)
+		return []byte{}
+	}
+
+	return jsonData
+}
+
+func sendPremoveMessage(session *Session, playerColor string, premove Move, accepted bool) []byte {
+	message := Message{
+		Type:        PremoveFromServerType.String(),
+		SessionId:   session.SessionId,
+		PlayerColor: playerColor,
+		TimeStamp:   time.Now().Format(time.RFC3339),
+		Payload: PremoveFromServer{
+			Accepted: accepted,
+			Premove:  premove,
 		},
 	}
 
@@ -290,36 +320,65 @@ func handleAbandonedMessage(session *Session) {
 
 func handleMoveMessage(message Message, session *Session) {
 	payload := message.Payload.(MoveToServer)
+	mover := session.playerForColor(message.PlayerColor)
+	if mover == nil {
+		log.Println("Cannot resolve mover for color: ", message.PlayerColor)
+		return
+	}
+
 	move, err := tryPlayMove(payload, session.Game)
 	if err != nil {
 		log.Println("Cannot make move: ", err)
+		for _, player := range session.GetPlayers() {
+			if player.Color == message.PlayerColor {
+				player.WriteChan <- sendMoveMessage(session, player.Color, payload.Move, false)
+			}
+		}
 		return
 	}
 
-	updateClocks(session)
-
-	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendMoveMessage(session, player.Color, move)
-	}
+	broadcastMoveWithPossiblePremove(session, mover, move)
 }
 
 func handlePremoveMessage(message Message, session *Session) {
-	if session.isAgainstComputer() {
-		log.Println("Ignoring premove for computer session")
-		return
-	}
-
 	payload := message.Payload.(PremoveToServer)
-	premove, err := tryPlayPremove(payload, session.Game)
-	if err != nil {
-		log.Println("Cannot make premove: ", err)
+	mover := session.playerForColor(message.PlayerColor)
+	if mover == nil {
+		log.Println("Cannot resolve premover for color: ", message.PlayerColor)
 		return
 	}
 
-	switchClocksWithoutDeducting(session)
+	if payload.Cancel {
+		if session.PendingPremove != nil && session.PendingPremove.Color == message.PlayerColor {
+			session.clearPendingPremove()
+		}
+		return
+	}
 
+	if session.whoseMoveIsIt() == message.PlayerColor {
+		for _, player := range session.GetPlayers() {
+			if player.Color == message.PlayerColor {
+				player.WriteChan <- sendPremoveMessage(session, player.Color, payload.Premove, false)
+			}
+		}
+		return
+	}
+
+	if err := tryPlayMoveForColor(payload.Premove, session.Game, message.PlayerColor); err != nil {
+		log.Println("Cannot make premove: ", err)
+		for _, player := range session.GetPlayers() {
+			if player.Color == message.PlayerColor {
+				player.WriteChan <- sendPremoveMessage(session, player.Color, payload.Premove, false)
+			}
+		}
+		return
+	}
+
+	session.setPendingPremove(message.PlayerColor, payload.Premove)
 	for _, player := range session.GetPlayers() {
-		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
+		if player.Color == message.PlayerColor {
+			player.WriteChan <- sendPremoveMessage(session, player.Color, payload.Premove, true)
+		}
 	}
 }
 
@@ -351,16 +410,18 @@ func handleTimeoutMessage(session *Session) {
 	}
 }
 
-func updateClocks(session *Session) {
-	if session.White.Clock.IsRunning {
-		session.White.Clock.TimeLeft -= time.Since(session.White.Clock.TimeStamp).Seconds()
-		session.White.Clock.IsRunning = false
-		session.Black.Clock.IsRunning = true
-	} else {
-		session.Black.Clock.TimeLeft -= time.Since(session.Black.Clock.TimeStamp).Seconds()
-		session.White.Clock.IsRunning = true
-		session.Black.Clock.IsRunning = false
+func updateClocks(session *Session, mover *Player) {
+	if mover == nil {
+		return
 	}
+
+	mover.Clock.TimeLeft -= time.Since(mover.Clock.TimeStamp).Seconds()
+	if mover.Clock.TimeLeft < 0 {
+		mover.Clock.TimeLeft = 0
+	}
+	mover.Clock.IsRunning = false
+	session.White.Clock.IsRunning = false
+	session.Black.Clock.IsRunning = false
 	session.White.Clock.TimeStamp = time.Now()
 	session.Black.Clock.TimeStamp = time.Now()
 }
@@ -380,4 +441,119 @@ func switchClocksWithoutDeducting(session *Session) {
 	}
 	session.White.Clock.TimeStamp = now
 	session.Black.Clock.TimeStamp = now
+}
+
+func broadcastMove(session *Session, move Move, accepted bool) {
+	for _, player := range session.GetPlayers() {
+		player.WriteChan <- sendMoveMessage(session, player.Color, move, accepted)
+	}
+}
+
+func broadcastMoveWithPossiblePremove(session *Session, mover *Player, move Move) {
+	updateClocks(session, mover)
+
+	if err := session.Game.MoveStr(move.From + move.To); err != nil {
+		log.Println("Failed to apply move after validation: ", err)
+		return
+	}
+
+	switchClocksWithoutDeducting(session)
+	broadcastMove(session, move, true)
+
+	if session.Game.Outcome() != chess.NoOutcome {
+		session.clearPendingPremove()
+		return
+	}
+
+	premove := session.PendingPremove
+	if premove == nil {
+		maybeScheduleComputerMove(session)
+		return
+	}
+
+	if premove.Color != session.whoseMoveIsIt() {
+		session.clearPendingPremove()
+		maybeScheduleComputerMove(session)
+		return
+	}
+
+	if err := tryPlayMoveForColor(premove.Move, session.Game, premove.Color); err != nil {
+		log.Println("Dropping cached premove: ", err)
+		session.clearPendingPremove()
+		maybeScheduleComputerMove(session)
+		return
+	}
+
+	if err := session.Game.MoveStr(premove.Move.From + premove.Move.To); err != nil {
+		session.clearPendingPremove()
+		maybeScheduleComputerMove(session)
+		return
+	}
+
+	session.clearPendingPremove()
+	switchClocksWithoutDeducting(session)
+	broadcastMove(session, premove.Move, true)
+
+	maybeScheduleComputerMove(session)
+}
+
+func maybeScheduleComputerMove(session *Session) {
+	if session == nil || !session.isAgainstComputer() || session.Game == nil {
+		return
+	}
+
+	if session.Game.Outcome() != chess.NoOutcome {
+		return
+	}
+
+	computer := session.White
+	if computer != nil && !computer.IsComputer {
+		computer = session.Black
+	}
+
+	if computer == nil || !computer.IsComputer {
+		return
+	}
+
+	if session.whoseMoveIsIt() != computer.Color {
+		return
+	}
+
+	moves := session.Game.ValidMoves()
+	if len(moves) == 0 {
+		return
+	}
+
+	nextMove := moves[rand.Intn(len(moves))]
+	delay := scheduleComputerMoveDelay(computer.Clock.TimeLeft)
+
+	go func() {
+		time.Sleep(delay)
+
+		if session.Game.Outcome() != chess.NoOutcome {
+			return
+		}
+
+		if session.whoseMoveIsIt() != computer.Color {
+			return
+		}
+
+		if computer.Clock.TimeLeft-time.Since(computer.Clock.TimeStamp).Seconds() <= 0 {
+			human := session.White
+			if human != nil && human.IsComputer {
+				human = session.Black
+			}
+			if human != nil {
+				human.WriteChan <- sendTimeoutMessage(session, human.Color, computer.Color)
+			}
+			return
+		}
+
+		move := Move{
+			From: nextMove.S1().String(),
+			To:   nextMove.S2().String(),
+		}
+
+		broadcastMoveWithPossiblePremove(session, computer, move)
+	}()
 }

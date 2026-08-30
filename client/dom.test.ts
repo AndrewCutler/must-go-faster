@@ -4,9 +4,11 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+	BoardElement,
 	CancelButtonElement,
 	ConnectionStatusElement,
 	ConnectButtonElement,
+	CountdownContainerElement,
 	GameStatusModalElement,
 	OpponentStatusElement,
 	PlayerTypeElement,
@@ -59,6 +61,20 @@ describe('ConnectButtonElement', () => {
 
 		connectButton.gameJoined();
 		expect(button.style.display).toBe('none');
+	});
+});
+
+describe('BoardElement', () => {
+	it('disables and enables pointer events on the board container', () => {
+		const board = document.querySelector<HTMLDivElement>('#board')!;
+		const boardElement = new BoardElement();
+
+		boardElement.disable();
+		expect(board.style.pointerEvents).toBe('none');
+
+		boardElement.enable();
+
+		expect(board.style.pointerEvents).toBe('auto');
 	});
 });
 
@@ -156,6 +172,19 @@ describe('OpponentStatusElement', () => {
 		opponentStatus.clear();
 		expect(status.textContent).toBe('');
 		expect(status.style.visibility).toBe('hidden');
+	});
+});
+
+describe('CountdownContainerElement', () => {
+	it('shows the human player color above the countdown', () => {
+		const countdown = new CountdownContainerElement('white', 'black');
+		const top = document.querySelector<HTMLDivElement>(
+			'#countdown-container :nth-child(1)',
+		)!;
+
+		expect(top.textContent).toBe('black moves first');
+
+		countdown.hide('white');
 	});
 });
 

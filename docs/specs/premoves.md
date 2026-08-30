@@ -14,15 +14,15 @@ Human players need a way to queue a single move in advance while waiting for the
 
 ## Goal
 
-During a human-vs-human game, a player can cache one premove while it is not their turn. The premove is executed automatically if it is still legal when their turn arrives, or discarded if it becomes invalid.
+During an active game, the local human player can cache one premove while it is not their turn. The premove is executed automatically if it is still legal when their turn arrives, or discarded if it becomes invalid.
 
 ## Non-goals
 
-- Premoves in computer-opponent games
 - Premove chaining or multiple queued premoves
 - Chess analysis or move suggestion
 - Reconnect logic
 - Resignation or forfeiture controls
+- Computer-generated premove automation
 
 ## Related behavior
 
@@ -32,7 +32,7 @@ During a human-vs-human game, a player can cache one premove while it is not the
 
 ## Constraints
 
-- Premoves are only supported in human-vs-human games.
+- The local human player may premove in any active game.
 - A premove may only exist while the board is in an interactive, non-read-only state.
 - Read-only phases block premoves entirely, including countdown and any other non-interactive state.
 - Only one premove can be cached at a time.
@@ -54,7 +54,7 @@ During a human-vs-human game, a player can cache one premove while it is not the
 
 ## Acceptance criteria
 
-- In a human-vs-human game, a player who is waiting for their turn can cache one legal premove.
+- In any active game, a local human player who is waiting for their turn can cache one legal premove.
 - A second premove replaces the first cached premove rather than creating a queue.
 - Premoves are blocked during all read-only phases.
 - Cached premoves are highlighted by source square and destination square.
@@ -63,8 +63,9 @@ During a human-vs-human game, a player can cache one premove while it is not the
 - If the opponent makes a move that invalidates the premove, the premove is discarded silently.
 - When a premove executes, the premover's clock does not lose time because of the premove being queued.
 - The visible board position does not change to the premove result until the premover's turn actually begins.
-- Computer-opponent games do not accept premoves.
+- Computer opponents do not premove.
 
 ## Non-functional requirements
 
 - Add tests for as many code paths as is practical, especially premove creation, replacement, cancellation, invalidation, execution, and clock behavior.
+- The frontend must not perform independent chess legality checks for premoves; it should submit attempts immediately and rely on server responses for acceptance or rejection.

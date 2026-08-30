@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 import { GameStatus, PlayerColor } from './models';
 
 interface IElement {
@@ -16,6 +20,10 @@ export class BoardElement implements IElement {
 		const element = document.querySelector<HTMLElement>(this.#selector);
 		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
 		this.#element = element;
+	}
+
+	disable(): void {
+		this.#element!.style.pointerEvents = 'none';
 	}
 
 	enable(): void {
@@ -57,17 +65,12 @@ export class CountdownContainerElement implements IElement {
 		element.id = this.#selector.replace('#', '');
 
 		const top = document.createElement('div');
-		if (whoMovesFirst === playerColor) {
-			top.innerText = 'Opponent moves first';
-			// top.innerText = 'You move first';
-		} else {
-			top.innerText = 'Opponent moves first';
-		}
+		top.textContent = `${playerColor} moves first`;
 		top.style.fontSize = '2rem';
 		(top.style as any)['-webkit-text-stroke'] = '1px black';
 
 		const bottom = document.createElement('div');
-		bottom.innerText = 'Get ready...';
+		bottom.textContent = 'Get ready...';
 		bottom.style.fontSize = '2rem';
 		(top.style as any)['-webkit-text-stroke'] = '1px black';
 
@@ -197,10 +200,11 @@ export class GameStatusModalElement implements IElement {
 	}
 
 	setOutcome(
-		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
-		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
+		gameStatus: Exclude<GameStatus, 'ongoing'>,
+		method: string,
 	): void {
-		this.#headerElement!.innerText = `You ${gameStatus} via ${method}.`;
+		const verb = gameStatus === 'draw' ? 'drew' : gameStatus;
+		this.#headerElement!.textContent = `You ${verb} via ${method}.`;
 	}
 
 	private playAgain(sendMessageCallback: () => void): void {
@@ -275,13 +279,26 @@ export class ConnectButtonElement implements IElement {
 		this.#element = element;
 	}
 
-	waitForOpponent(): void {
+	setPending(): void {
+		this.#element!.style.display = '';
 		this.#element!.classList.add('is-loading');
+		this.#element!.setAttribute('disabled', 'true');
+		this.#element!.textContent = 'Play';
+	}
+
+	reset(): void {
+		this.#element!.style.display = '';
+		this.#element!.classList.remove('is-loading');
+		this.#element!.removeAttribute('disabled');
+		this.#element!.textContent = 'Play';
+	}
+
+	hide(): void {
+		this.#element!.style.display = 'none';
 	}
 
 	gameJoined(): void {
-		this.#element!.classList.remove('is-loading');
-		this.#element!.style.display = 'none';
+		this.hide();
 	}
 }
 
@@ -307,19 +324,105 @@ export class PlayerTypeElement implements IElement {
 		}
 	}
 
+	hide(): void {
+		this.#element!.classList.remove('is-active');
+		this.#element!.style.display = 'none';
+	}
+
+	show(): void {
+		this.#element!.style.display = '';
+	}
+
 	setSelection(value: string): void {
 		const valueElement = document.querySelector<HTMLSpanElement>(
 			'#player-type-dropdown-value',
 		)!;
 		switch (value) {
 			case 'computer':
-				valueElement.innerText = 'Computer';
+				valueElement.textContent = 'Computer';
 				break;
 			case 'human':
-				valueElement.innerText = 'Human';
+				valueElement.textContent = 'Human';
 				break;
 			default:
 				throw new Error(`Invalid player type: ${value}.`);
 		}
+	}
+}
+
+export class OpponentStatusElement implements IElement {
+	readonly #selector = '#opponent-status';
+	#element: HTMLElement | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	show(message: string): void {
+		this.#element!.textContent = message;
+		this.#element!.style.visibility = 'visible';
+	}
+
+	clear(): void {
+		this.#element!.textContent = '';
+		this.#element!.style.visibility = 'hidden';
+	}
+}
+
+export class CancelButtonElement implements IElement {
+	readonly #selector = '#cancel-button';
+	#element: HTMLElement | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLButtonElement>(
+			this.#selector,
+		);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	show(): void {
+		this.#element!.style.display = '';
+	}
+
+	hide(): void {
+		this.#element!.style.display = 'none';
+	}
+}
+
+export class ConnectionStatusElement implements IElement {
+	readonly #selector = '#connection-status';
+	#element: HTMLElement | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	show(message: string, tone: 'info' | 'error' = 'info'): void {
+		this.#element!.textContent = message;
+		this.#element!.dataset.tone = tone;
+		this.#element!.style.visibility = 'visible';
+	}
+
+	clear(): void {
+		this.#element!.textContent = '';
+		this.#element!.dataset.tone = 'info';
+		this.#element!.style.visibility = 'hidden';
 	}
 }

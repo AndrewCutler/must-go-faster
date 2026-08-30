@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent. -->
 <html lang="en">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -34,6 +35,7 @@
                 </div>
             </div>
             <div id="controls">
+                <div id="opponent-status" aria-live="polite"></div>
                 <div id="clocks">
                     <div class="time" id="white-clock"></div>
                     <div class="time" id="black-clock"></div>
@@ -59,9 +61,17 @@
                             </div>
                         </div>
                     </div>
-                    <button class="button is-dark" id="connect-button">
-                        Find a game
-                    </button>
+                    <div class="buttons has-addons" id="play-controls">
+                        <button class="button is-dark" id="connect-button">
+                            Play
+                        </button>
+                        <button class="button is-dark" id="cancel-button" aria-label="Cancel pending game" style="display:none">
+                            <span class="icon">
+                                <i class="fa-solid fa-xmark"></i>
+                            </span>
+                        </button>
+                    </div>
+                    <div id="connection-status" aria-live="polite"></div>
                 </div>
             </div>
         </div>

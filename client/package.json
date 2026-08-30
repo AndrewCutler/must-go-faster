@@ -2,19 +2,22 @@
 	"main": "index.ts",
 	"scripts": {
 		"watch": "webpack --watch --env=watch=true",
-        "build": "webpack --mode production"
+		"build": "webpack --mode production",
+		"test": "vitest run --environment jsdom --root . --dir .",
+		"test:watch": "vitest --environment jsdom --root . --dir ."
 	},
 	"devDependencies": {
 		"copy-webpack-plugin": "^13.0.0",
 		"css-loader": "^6.10.0",
+		"jsdom": "^26.1.0",
 		"style-loader": "^4.0.0",
 		"ts-loader": "^9.5.1",
 		"typescript": "^5.4.3",
+		"vitest": "^2.1.9",
 		"webpack": "^5.90.3",
 		"webpack-cli": "^5.1.4"
 	},
 	"dependencies": {
-		"chess.js": "^1.0.0-beta.8",
 		"chessground": "^9.0.4"
 	}
 }

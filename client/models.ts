@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 import * as cg from 'chessground/types.js';
 import { Api as ChessgroundApi } from 'chessground/api';
 import { Config as CGConfig } from 'chessground/config';
@@ -51,6 +55,7 @@ export type FromPayload =
 	| GameJoinedFromServer
 	| GameStartedFromServer
 	| MoveFromServer
+	| PremoveFromServer
 	| TimeoutFromServer
 	| AbandonedFromServer;
 
@@ -60,6 +65,7 @@ export type GameJoinedFromServer = {
 	fen: string;
 	whosNext: PlayerColor;
 	validMoves: { [key: string]: string[] };
+	countdownStartAt: string;
 };
 
 export type GameStartedFromServer = GameJoinedFromServer;
@@ -67,13 +73,21 @@ export type GameStartedFromServer = GameJoinedFromServer;
 export type GameStartedToServer = undefined;
 
 export type MoveFromServer = {
+	accepted: boolean;
 	whiteTimeLeft: number;
 	blackTimeLeft: number;
 	fen: string;
 	whosNext: PlayerColor;
 	validMoves: { [key: string]: string[] };
 	isCheckmated: PlayerColor;
+	gameOutcome?: string;
+	gameOutcomeMethod?: string;
 	move: Move;
+};
+
+export type PremoveFromServer = {
+	accepted: boolean;
+	premove: Move;
 };
 
 export type TimeoutFromServer = {
@@ -96,7 +110,8 @@ export type TimeoutToServer = {
 export type MoveToServer = { move: Move };
 
 export type PremoveToServer = {
-	premove: Move;
+	premove?: Move;
+	cancel?: boolean;
 };
 
 export type NewGameToServer = undefined;
@@ -107,7 +122,10 @@ export type Move = {
 };
 
 export interface ChessgroundConfig extends CGConfig {
-	premovable?: CGConfig['premovable'] & { current?: string[] };
+	premovable?: CGConfig['premovable'] & {
+		current?: string[];
+		customDests?: cg.Dests;
+	};
 }
 
 export interface MustGoFasterState {
@@ -124,4 +142,6 @@ export interface MustGoFasterState {
 	apiBaseUrl?: string;
 	opponentType?: OpponentType;
 	isAgainstComputer?: boolean;
+	connectionPhase?: 'idle' | 'connecting' | 'pending' | 'active';
+	closeReason?: 'cancel' | 'gameover' | 'error';
 }

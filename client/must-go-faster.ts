@@ -1,8 +1,11 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+ */
+
 import { Chessground } from 'chessground';
 import {
 	ChessgroundConfig,
 	GameJoinedFromServer,
-	GameStartedFromServer,
 	GameStartedToServer,
 	GameStatus,
 	Message,
@@ -11,6 +14,7 @@ import {
 	MoveToServer,
 	ToPayload,
 	PlayerColor,
+	PremoveFromServer,
 	PremoveToServer,
 	TimeoutFromServer,
 	TimeoutToServer,
@@ -27,7 +31,11 @@ import * as cg from 'chessground/types.js';
 import {
 	BoardElement,
 	ConnectButtonElement,
+	CancelButtonElement,
+	PlayerTypeElement,
 	CountdownContainerElement,
+	ConnectionStatusElement,
+	OpponentStatusElement,
 	GameMetaElement,
 	GameStatusModalElement,
 	GettingStartedElement,
@@ -40,10 +48,13 @@ export class MustGoFaster {
 	constructor() {
 		console.log('Initializing MustGoFaster.');
 		this.connect = this.connect.bind(this);
+		this.cancelPendingGame = this.cancelPendingGame.bind(this);
 		this.#state.opponentType = 'computer';
+		this.#state.connectionPhase = 'idle';
+		this.#state.closeReason = undefined;
 		const initialConfig: ChessgroundConfig = {
 			movable: {
-				free: false,
+				free: true,
 				color: 'white',
 			},
 		};
@@ -51,6 +62,7 @@ export class MustGoFaster {
 			new BoardElement().element!,
 			initialConfig,
 		);
+		new BoardElement().disable();
 		this.#state.board.set({
 			viewOnly: false,
 			movable: {
@@ -59,8 +71,12 @@ export class MustGoFaster {
 				},
 			},
 			premovable: {
-				enabled: true,
+				enabled: false,
 				showDests: true,
+				events: {
+					set: this.handlePremoveSet(),
+					unset: this.handlePremoveUnset(),
+				},
 			},
 			predroppable: {
 				enabled: true,
@@ -72,29 +88,87 @@ export class MustGoFaster {
 		this.#state.wsBaseUrl = process.env.WS_BASE_URL;
 		this.#state.apiBaseUrl = process.env.API_BASE_URL;
 
+		new ConnectButtonElement().reset();
+		new PlayerTypeElement().show();
+		new CancelButtonElement().hide();
+		new OpponentStatusElement().clear();
+		new ConnectionStatusElement().clear();
+
 		this.ping();
 	}
 
 	connect(): void {
-		const ws = new WebSocket(
-			`${this.#state.wsBaseUrl!}/connect?opponentType=${
-				this.#state.opponentType
-			}`,
-			[],
-		);
+		if (
+			this.#state.connection &&
+			this.#state.connection.readyState !== WebSocket.CLOSED
+		) {
+			return;
+		}
+		if (this.#state.connectionPhase !== 'idle') {
+			return;
+		}
+
+		this.#state.closeReason = undefined;
+		this.#state.connectionPhase = 'connecting';
+		this.setConnectionUiPending();
+
+		let ws: WebSocket;
+		try {
+			ws = new WebSocket(
+				`${this.#state.wsBaseUrl!}/connect?opponentType=${
+					this.#state.opponentType
+				}`,
+				[],
+			);
+		} catch (error) {
+			this.#state.connectionPhase = 'idle';
+			this.#state.closeReason = 'error';
+			this.setConnectionUiError(
+				'Unable to open a game connection. Please try again.',
+			);
+			return;
+		}
 		// console.log('Creating WebSocket.');
 
-		ws.onopen = function (openEvent) {
+		ws.onopen = () => {
 			// console.log('WebSocket opened.', { event: openEvent });
-			new BoardElement()!.enable();
+			this.#state.connectionPhase = 'pending';
 		};
 
-		ws.onerror = function (errorEvent) {
-			console.error('WebSocket error.', { event: errorEvent });
+		ws.onerror = () => {
+			this.#state.closeReason = 'error';
+			this.#state.connectionPhase = 'idle';
+			this.#state.connection = undefined;
+			this.setConnectionUiError(
+				'Unable to start a game. Please try again.',
+			);
 		};
 
-		ws.onclose = function (closeEvent) {
+		ws.onclose = (closeEvent) => {
 			// console.log('WebSocket closed.', { event: closeEvent });
+			const closeReason = this.#state.closeReason;
+			this.#state.connection = undefined;
+			this.#state.connectionPhase = 'idle';
+
+			if (closeReason === 'cancel' || closeReason === 'gameover') {
+				this.#state.closeReason = undefined;
+				return;
+			}
+
+			if (closeReason === 'error') {
+				this.#state.closeReason = undefined;
+				return;
+			}
+
+			if (closeEvent.code === 1000 && closeEvent.reason) {
+				this.setConnectionUiError(closeEvent.reason);
+			} else {
+				this.setConnectionUiError(
+					'The game connection closed unexpectedly. Please try again.',
+					true,
+				);
+			}
+			this.#state.closeReason = 'error';
 		};
 
 		const self = this;
@@ -110,6 +184,22 @@ export class MustGoFaster {
 		};
 
 		this.#state.connection = ws;
+	}
+
+	cancelPendingGame(): void {
+		if (!this.#state.connection) {
+			return;
+		}
+		if (this.#state.connectionPhase === 'active') {
+			return;
+		}
+
+		this.#state.closeReason = 'cancel';
+		this.#state.connectionPhase = 'idle';
+		const connection = this.#state.connection;
+		this.#state.connection = undefined;
+		connection.close(1000, 'Canceled by user.');
+		this.resetConnectionUi();
 	}
 
 	setOpponentType(type: OpponentType): void {
@@ -133,6 +223,8 @@ export class MustGoFaster {
 		// console.log('Handle message: ', { message });
 		switch (message.type) {
 			case 'GameJoinedFromServerType':
+				this.#state.connectionPhase = 'active';
+				this.#state.closeReason = undefined;
 				await this.setupGame();
 				break;
 			case 'GameStartedFromServerType':
@@ -140,6 +232,9 @@ export class MustGoFaster {
 				break;
 			case 'MoveFromServerType':
 				this.updateBoardWithMove();
+				break;
+			case 'PremoveFromServerType':
+				this.handlePremoveResponse();
 				break;
 			case 'TimeoutFromServerType':
 				this.timeout();
@@ -174,30 +269,56 @@ export class MustGoFaster {
 	private async setupGame(): Promise<void> {
 		// console.log('start: ', { response: this.#state.message });
 		const message = this.#state
-			.message as FromMessage<GameStartedFromServer>;
+			.message as FromMessage<GameJoinedFromServer>;
 		this.setupBoard(message);
 		this.#state.isAgainstComputer = this.#state.message!.isAgainstComputer;
+		this.setConnectionUiGameJoined();
 
-		const { payload: { whiteTimeLeft, blackTimeLeft, whosNext } = {} } =
-			message;
+		const {
+			payload: {
+				whiteTimeLeft,
+				blackTimeLeft,
+				whosNext,
+				countdownStartAt,
+			} = {},
+		} = message;
 		this.initializeClock(whiteTimeLeft!, blackTimeLeft!);
 
-		await this.showCountdownToStartGame(whosNext!);
+		await this.showCountdownToStartGame(whosNext!, countdownStartAt!);
 	}
 
 	private enableBoard(): void {
 		const payload = (
 			this.#state.message as FromMessage<GameJoinedFromServer>
 		).payload!;
+		new BoardElement().enable();
 		this.toggleClock(payload.whosNext);
 		this.#state.board!.set({
 			viewOnly: false,
+			selectable: {
+				enabled: true,
+			},
+			movable: {
+				color: this.#state.playerColor!,
+				free: true,
+			},
+			premovable: {
+				enabled: true,
+				showDests: true,
+				customDests: this.getPremoveDests(payload.whosNext),
+			},
+			draggable: {
+				enabled: true,
+			},
 		});
 	}
 
 	private updateBoardWithMove(): void {
 		const {
+			accepted,
 			isCheckmated,
+			gameOutcome,
+			gameOutcomeMethod,
 			whiteTimeLeft,
 			blackTimeLeft,
 			whosNext,
@@ -205,39 +326,101 @@ export class MustGoFaster {
 			validMoves,
 			move: { from, to },
 		} = (this.#state.message! as FromMessage<MoveFromServer>).payload!;
-		let gameStatus: GameStatus = 'ongoing';
-
-		if (isCheckmated) {
-			gameStatus =
-				isCheckmated === this.#state.playerColor ? 'lost' : 'won';
-			this.gameOver(gameStatus, 'checkmate');
-			this.#state.whiteTimeLeft = 0;
-			this.#state.blackTimeLeft = 0;
-
+		if (accepted === false) {
+			this.#state.board!.cancelMove();
+			this.#state.whiteTimeLeft = whiteTimeLeft;
+			this.#state.blackTimeLeft = blackTimeLeft;
+			this.toggleClock(whosNext);
+			this.#state.board!.set({
+				fen,
+				turnColor: whosNext,
+				selectable: {
+					enabled: true,
+				},
+				movable: {
+					color: this.#state.playerColor!,
+					free: true,
+					dests: this.toValidMoves(validMoves),
+				},
+				lastMove: undefined,
+				premovable: {
+					enabled: true,
+					showDests: true,
+					customDests: this.getPremoveDests(whosNext),
+				},
+				draggable: {
+					enabled: true,
+				},
+			});
 			return;
 		}
 
-		this.#state.whiteTimeLeft = whiteTimeLeft;
-		this.#state.blackTimeLeft = blackTimeLeft;
+		this.#state.board!.cancelMove();
 
-		this.toggleClock(whosNext);
+		let endState:
+			| {
+					gameStatus: Exclude<GameStatus, 'ongoing'>;
+					method: string;
+			  }
+			| undefined;
 
-		if (this.#state.board!.state.premovable.current) {
-			// send premove message which checks if premove is valid
-			// if so, play response on server and send updated fen
-			const [from, to] = this.#state.board!.state.premovable.current;
-			this.sendPremoveMessage({ from, to });
-			this.#state.board!.playPremove();
+		if (gameOutcome && gameOutcome !== '*') {
+			if (gameOutcome === '1/2-1/2') {
+				endState = {
+					gameStatus: 'draw',
+					method: this.formatGameOutcomeMethod(gameOutcomeMethod),
+				};
+				this.#state.whiteTimeLeft = 0;
+				this.#state.blackTimeLeft = 0;
+			} else {
+				const gameStatus: Exclude<GameStatus, 'ongoing'> =
+					gameOutcome ===
+					(this.#state.playerColor === 'white' ? '1-0' : '0-1')
+						? 'won'
+						: 'lost';
+				endState = {
+					gameStatus,
+					method: isCheckmated
+						? 'checkmate'
+						: this.formatGameOutcomeMethod(gameOutcomeMethod),
+				};
+				this.#state.whiteTimeLeft = 0;
+				this.#state.blackTimeLeft = 0;
+			}
+		} else {
+			this.#state.whiteTimeLeft = whiteTimeLeft;
+			this.#state.blackTimeLeft = blackTimeLeft;
+		}
+
+		if (!endState) {
+			this.toggleClock(whosNext);
 		}
 
 		this.#state.board!.set({
 			fen,
 			turnColor: whosNext,
+			selectable: {
+				enabled: true,
+			},
 			movable: {
+				color: this.#state.playerColor!,
+				free: true,
 				dests: this.toValidMoves(validMoves),
 			},
 			lastMove: [from, to],
+			premovable: {
+				enabled: true,
+				showDests: true,
+				customDests: this.getPremoveDests(whosNext),
+			},
+			draggable: {
+				enabled: true,
+			},
 		});
+
+		if (endState) {
+			this.gameOver(endState.gameStatus, endState.method);
+		}
 	}
 
 	private timeout(): void {
@@ -261,39 +444,52 @@ export class MustGoFaster {
 		// wipe out all game-specific data in class?
 	}
 
-	// todo: countdown-container should show "You move first/second" above countdown
 	private async showCountdownToStartGame(
 		whoMovesFirst: PlayerColor,
+		countdownStartAt: string,
 	): Promise<void> {
 		return new Promise((resolve) => {
 			const countdownDisplay = new CountdownContainerElement(
 				whoMovesFirst,
-                this.#state.playerColor!
+				this.#state.playerColor!,
 			);
-			let currentSecond = 5;
 			const self = this;
-			const countdownInterval = window.setInterval(function () {
-				if (currentSecond <= 0) {
-					window.clearInterval(countdownInterval);
-					countdownDisplay.hide(whoMovesFirst);
-
-					if (self.#state.connection) {
-						const gameStartedRequest: ToMessage<GameStartedToServer> =
-							{
-								type: 'GameStartedToServerType',
-								sessionId: self.#state.sessionId!,
-								playerColor: self.#state.playerColor!,
-								isAgainstComputer:
-									self.#state.isAgainstComputer!,
-							};
-						self.sendMessage(gameStartedRequest);
-					}
-					resolve();
-				} else {
-					countdownDisplay.setCountdownText(currentSecond);
+			const startedAt = new Date(countdownStartAt).getTime();
+			const beginCountdown = () => {
+				let currentSecond = 5;
+				countdownDisplay.setCountdownText(currentSecond);
+				const countdownInterval = window.setInterval(function () {
 					currentSecond--;
-				}
-			}, 1000);
+					if (currentSecond <= 0) {
+						window.clearInterval(countdownInterval);
+						countdownDisplay.hide(whoMovesFirst);
+
+						self.enableBoard();
+						if (self.#state.connection) {
+							const gameStartedRequest: ToMessage<GameStartedToServer> =
+								{
+									type: 'GameStartedToServerType',
+									sessionId: self.#state.sessionId!,
+									playerColor: self.#state.playerColor!,
+									isAgainstComputer:
+										self.#state.isAgainstComputer!,
+								};
+							self.sendMessage(gameStartedRequest);
+						}
+						resolve();
+					} else {
+						countdownDisplay.setCountdownText(currentSecond);
+					}
+				}, 1000);
+			};
+
+			const delay = startedAt - Date.now();
+			if (delay <= 0) {
+				beginCountdown();
+				return;
+			}
+
+			window.setTimeout(beginCountdown, delay);
 		});
 	}
 
@@ -410,15 +606,66 @@ export class MustGoFaster {
 		return validMoves;
 	}
 
+	private getPremoveDests(turnColor: PlayerColor): cg.Dests | undefined {
+		if (turnColor === this.#state.playerColor) {
+			return undefined;
+		}
+
+		const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+		const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+		const dests = new Map<cg.Key, cg.Key[]>();
+
+		for (const file of files) {
+			for (const rank of ranks) {
+				const orig = `${file}${rank}` as cg.Key;
+				const values: cg.Key[] = [];
+				for (const destFile of files) {
+					for (const destRank of ranks) {
+						const dest = `${destFile}${destRank}` as cg.Key;
+						if (dest !== orig) {
+							values.push(dest);
+						}
+					}
+				}
+				dests.set(orig, values);
+			}
+		}
+
+		return dests;
+	}
+
 	private gameOver(
-		gameStatus: Omit<GameStatus, 'ongoing' | 'draw'>,
-		method: 'timeout' | 'checkmate' | 'resignation' | 'abandonment',
+		gameStatus: Exclude<GameStatus, 'ongoing'>,
+		method: string,
 	): void {
 		// console.log('gameOver: ', { gameStatus, method });
+		if (this.#state.whiteTimer) {
+			cancelAnimationFrame(this.#state.whiteTimer);
+			this.#state.whiteTimer = undefined;
+		}
+		if (this.#state.blackTimer) {
+			cancelAnimationFrame(this.#state.blackTimer);
+			this.#state.blackTimer = undefined;
+		}
 		if (this.#state.connection) {
+			this.#state.closeReason = 'gameover';
+			this.#state.connectionPhase = 'idle';
 			this.#state.connection.close(1000, 'Game over.');
 			this.#state.connection = undefined;
 		}
+		new BoardElement().disable();
+		this.#state.board!.set({
+			viewOnly: true,
+			premovable: {
+				enabled: false,
+				showDests: true,
+				customDests: undefined,
+			},
+		});
+		this.#state.board!.stop();
+		new OpponentStatusElement().clear();
+		new CancelButtonElement().hide();
+		new ConnectionStatusElement().clear();
 		const self = this;
 		function sendNewGameMessage() {
 			// listen for click of modal button
@@ -429,7 +676,34 @@ export class MustGoFaster {
 		modal.setOutcome(gameStatus, method);
 	}
 
-	private setupBoard(message: FromMessage<GameStartedFromServer>) {
+	private formatGameOutcomeMethod(method?: string): string {
+		switch (method) {
+			case 'Checkmate':
+				return 'checkmate';
+			case 'DrawOffer':
+				return 'draw offer';
+			case 'Stalemate':
+				return 'stalemate';
+			case 'ThreefoldRepetition':
+				return 'threefold repetition';
+			case 'FivefoldRepetition':
+				return 'fivefold repetition';
+			case 'FiftyMoveRule':
+				return '50-move rule';
+			case 'SeventyFiveMoveRule':
+				return '75-move rule';
+			case 'InsufficientMaterial':
+				return 'insufficient material';
+			case 'NoMethod':
+			case undefined:
+				return 'game over';
+			default:
+				return method.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+		}
+	}
+
+	private setupBoard(message: FromMessage<GameJoinedFromServer>) {
+		new BoardElement().disable();
 		this.#state.sessionId = message.sessionId;
 		this.#state.playerColor = message.playerColor;
 		this.#state.whiteTimeLeft = GAME_CLOCK_DURATION;
@@ -446,16 +720,21 @@ export class MustGoFaster {
 
 		this.#state.board!.set({
 			viewOnly: true,
+			selectable: {
+				enabled: true,
+			},
 			fen: payload.fen,
 			turnColor: payload.whosNext,
 			orientation: this.#state.playerColor,
 			movable: {
 				dests: this.toValidMoves(payload.validMoves),
 				color: this.#state.playerColor,
+				free: true,
 			},
 			premovable: {
-				enabled: true,
+				enabled: false,
 				showDests: true,
+				customDests: undefined,
 			},
 			draggable: {
 				enabled: true,
@@ -463,22 +742,112 @@ export class MustGoFaster {
 		} as ChessgroundConfig);
 	}
 
-	private sendPremoveMessage(move: Move): void {
-		// console.log('sendPremoveMessage: ', { premove: move });
-		if (this.#state.connection) {
-			const premove: ToMessage<PremoveToServer> = {
-				type: 'PremoveToServerType',
-				sessionId: this.#state.sessionId!,
-				playerColor: this.#state.playerColor!,
-				isAgainstComputer: this.#state.isAgainstComputer!,
-				payload: {
-					premove: move,
-				},
-			};
-			this.sendMessage(premove);
-		} else {
-			throw new Error('connection is undefined.');
+	private setConnectionUiPending(): void {
+		const connectButton = new ConnectButtonElement();
+		const cancelButton = new CancelButtonElement();
+		const playerType = new PlayerTypeElement();
+		const status = new ConnectionStatusElement();
+		const opponentStatus = new OpponentStatusElement();
+
+		connectButton.setPending();
+		cancelButton.show();
+		playerType.hide();
+		opponentStatus.show(
+			`Playing ${this.#state.opponentType ?? 'computer'}`,
+		);
+		status.show(
+			this.#state.opponentType === 'computer'
+				? 'Starting game...'
+				: 'Waiting for opponent...',
+			'info',
+		);
+	}
+
+	private setConnectionUiGameJoined(): void {
+		const playerType = new PlayerTypeElement();
+		const opponentStatus = new OpponentStatusElement();
+
+		new CancelButtonElement().hide();
+		playerType.hide();
+		opponentStatus.show(
+			`Playing ${this.#state.opponentType ?? 'computer'}`,
+		);
+		new ConnectionStatusElement().clear();
+		new ConnectButtonElement().gameJoined();
+	}
+
+	private setConnectionUiError(
+		message: string,
+		resetOpponentType = false,
+	): void {
+		const connectButton = new ConnectButtonElement();
+		const cancelButton = new CancelButtonElement();
+		const playerType = new PlayerTypeElement();
+		const opponentStatus = new OpponentStatusElement();
+		const status = new ConnectionStatusElement();
+
+		connectButton.reset();
+		cancelButton.hide();
+		if (resetOpponentType) {
+			this.#state.opponentType = 'computer';
+			playerType.setSelection('computer');
 		}
+		playerType.show();
+		opponentStatus.clear();
+		status.show(message, 'error');
+	}
+
+	private resetConnectionUi(): void {
+		const connectButton = new ConnectButtonElement();
+		const cancelButton = new CancelButtonElement();
+		const playerType = new PlayerTypeElement();
+		const opponentStatus = new OpponentStatusElement();
+		const status = new ConnectionStatusElement();
+
+		connectButton.reset();
+		cancelButton.hide();
+		playerType.show();
+		opponentStatus.clear();
+		status.clear();
+	}
+
+	private sendPremoveMessage(move?: Move, cancel = false): void {
+		if (!this.#state.connection) {
+			return;
+		}
+
+		const premove: ToMessage<PremoveToServer> = {
+			type: 'PremoveToServerType',
+			sessionId: this.#state.sessionId!,
+			playerColor: this.#state.playerColor!,
+			isAgainstComputer: this.#state.isAgainstComputer!,
+			payload: cancel ? { cancel: true } : { premove: move! },
+		};
+		this.sendMessage(premove);
+	}
+
+	private handlePremoveSet() {
+		const self = this;
+		return function (from: cg.Key, to: cg.Key): void {
+			self.sendPremoveMessage({ from, to }, false);
+		};
+	}
+
+	private handlePremoveUnset() {
+		const self = this;
+		return function (): void {
+			self.sendPremoveMessage(undefined, true);
+		};
+	}
+
+	private handlePremoveResponse(): void {
+		const payload = (this.#state.message as FromMessage<PremoveFromServer>)
+			?.payload;
+		if (!payload || payload.accepted !== false) {
+			return;
+		}
+
+		this.#state.board!.cancelMove();
 	}
 
 	private handleClientMove() {
@@ -491,8 +860,6 @@ export class MustGoFaster {
 			// console.log('Handle move: ', { from, to });
 			// handle promotion here; autopromote to queen for now
 			to = self.checkIsPromotion(to);
-			// premove is set here
-			self.#state.board!.move(from, to);
 
 			const move: { from: cg.Key; to: cg.Key } = { from, to };
 			if (self.#state.connection) {
@@ -505,17 +872,6 @@ export class MustGoFaster {
 				};
 				self.sendMessage(moveMessage);
 			}
-			// console.log({ state: self.#state.board!.state });
-			self.#state.board!.set({
-				turnColor:
-					self.#state.playerColor === 'white' ? 'black' : 'white',
-				movable: {
-					color: self.#state.playerColor,
-				},
-				premovable: {
-					enabled: true,
-				},
-			});
 		};
 	}
 

@@ -6,11 +6,71 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MustGoFaster } from './must-go-faster';
 import { PlayerTypeElement } from './dom';
 
+type MockBoard = {
+	set: ReturnType<typeof vi.fn>;
+	move: ReturnType<typeof vi.fn>;
+	playPremove: ReturnType<typeof vi.fn>;
+	stop: ReturnType<typeof vi.fn>;
+	state: {
+		premovable: {
+			current?: string[];
+			enabled?: boolean;
+			showDests?: boolean;
+		};
+		viewOnly?: boolean;
+		turnColor?: string;
+		fen?: string;
+		lastMove?: string[];
+	};
+};
+
+const chessgroundMock = vi.hoisted(() => ({
+	lastBoard: undefined as MockBoard | undefined,
+}));
+
 vi.mock('chessground', () => {
 	return {
-		Chessground: vi.fn(() => ({
-			set: vi.fn(),
-		})),
+		Chessground: vi.fn(() => {
+			const board: MockBoard = {
+				set: vi.fn((config: Record<string, unknown> = {}) => {
+					if ('viewOnly' in config) {
+						board.state.viewOnly = config.viewOnly as boolean;
+					}
+					if ('fen' in config) {
+						board.state.fen = config.fen as string;
+					}
+					if ('turnColor' in config) {
+						board.state.turnColor = config.turnColor as string;
+					}
+					if ('lastMove' in config) {
+						board.state.lastMove = config.lastMove as string[];
+					}
+					if ('premovable' in config) {
+						Object.assign(
+							board.state.premovable,
+							config.premovable as Record<string, unknown>,
+						);
+					}
+				}),
+				move: vi.fn(),
+				playPremove: vi.fn(() => {
+					if (!board.state.premovable.current) {
+						return false;
+					}
+					board.state.premovable.current = undefined;
+					return true;
+				}),
+				stop: vi.fn(() => {
+					board.state.premovable.current = undefined;
+				}),
+				state: {
+					premovable: {},
+				},
+			};
+
+			chessgroundMock.lastBoard = board;
+			return board;
+		}),
 	};
 });
 
@@ -85,6 +145,7 @@ function renderDom(): void {
 function createApp(opponentType: 'computer' | 'human' = 'computer'): MustGoFaster {
 	renderDom();
 	fakeSockets.length = 0;
+	chessgroundMock.lastBoard = undefined;
 	process.env.WS_BASE_URL = 'ws://example.test';
 	process.env.API_BASE_URL = 'http://example.test';
 	vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({} as Response)));
@@ -99,6 +160,7 @@ function createApp(opponentType: 'computer' | 'human' = 'computer'): MustGoFaste
 beforeEach(() => {
 	renderDom();
 	fakeSockets.length = 0;
+	chessgroundMock.lastBoard = undefined;
 	process.env.WS_BASE_URL = 'ws://example.test';
 	process.env.API_BASE_URL = 'http://example.test';
 	vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({} as Response)));
@@ -117,10 +179,14 @@ function emitJoinedMessage(
 	socket: FakeWebSocket,
 	overrides: Partial<Record<string, unknown>> = {},
 ): void {
+	const { isAgainstComputer = false, ...payloadOverrides } =
+		overrides as Partial<Record<string, unknown>> & {
+			isAgainstComputer?: boolean;
+		};
 	const message = {
 		sessionId: 'session-1',
 		playerColor: 'white',
-		isAgainstComputer: false,
+		isAgainstComputer,
 		type: 'GameJoinedFromServerType',
 		payload: {
 			fen: 'test-fen',
@@ -129,6 +195,69 @@ function emitJoinedMessage(
 			whiteTimeLeft: 600,
 			blackTimeLeft: 600,
 			countdownStartAt: new Date(Date.now() + 1_000).toISOString(),
+			...payloadOverrides,
+		},
+	};
+	socket.readyState = FakeWebSocket.OPEN;
+	socket.onmessage?.(
+		new MessageEvent('message', {
+			data: JSON.stringify(message),
+		}),
+	);
+}
+
+function emitGameStartedMessage(
+	socket: FakeWebSocket,
+	overrides: Partial<Record<string, unknown>> = {},
+): void {
+	const { isAgainstComputer = false, ...payloadOverrides } =
+		overrides as Partial<Record<string, unknown>> & {
+			isAgainstComputer?: boolean;
+		};
+	const message = {
+		sessionId: 'session-1',
+		playerColor: 'white',
+		isAgainstComputer,
+		type: 'GameStartedFromServerType',
+		payload: {
+			fen: 'test-fen',
+			validMoves: {},
+			whosNext: 'white',
+			whiteTimeLeft: 600,
+			blackTimeLeft: 600,
+			...payloadOverrides,
+		},
+	};
+	socket.readyState = FakeWebSocket.OPEN;
+	socket.onmessage?.(
+		new MessageEvent('message', {
+			data: JSON.stringify(message),
+		}),
+	);
+}
+
+function emitMoveMessage(
+	socket: FakeWebSocket,
+	overrides: Partial<Record<string, unknown>> = {},
+): void {
+	const message = {
+		sessionId: 'session-1',
+		playerColor: 'white',
+		isAgainstComputer: false,
+		type: 'MoveFromServerType',
+		payload: {
+			whiteTimeLeft: 599.5,
+			blackTimeLeft: 600,
+			fen: 'test-fen',
+			validMoves: {},
+			whosNext: 'black',
+			isCheckmated: '',
+			gameOutcome: '*',
+			gameOutcomeMethod: 'NoMethod',
+			move: {
+				from: 'e7',
+				to: 'e5',
+			},
 			...overrides,
 		},
 	};
@@ -337,5 +466,94 @@ describe('MustGoFaster connect flow', () => {
 			'Unable to start a game. Please try again.',
 		);
 		expect(status.dataset.tone).toBe('error');
+	});
+
+	it('enables premoves for human games once the board becomes active', () => {
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket, { isAgainstComputer: false });
+		emitGameStartedMessage(socket, { isAgainstComputer: false });
+
+		expect(chessgroundMock.lastBoard?.state.premovable.enabled).toBe(true);
+		expect(chessgroundMock.lastBoard?.state.viewOnly).toBe(false);
+	});
+
+	it('keeps premoves disabled for computer games', () => {
+		const app = createApp('computer');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket, { isAgainstComputer: true });
+		emitGameStartedMessage(socket, { isAgainstComputer: true });
+
+		expect(chessgroundMock.lastBoard?.state.premovable.enabled).toBe(false);
+	});
+
+	it('fires a cached premove after an opponent move in a human game', () => {
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket, { isAgainstComputer: false });
+		emitGameStartedMessage(socket, { isAgainstComputer: false });
+
+		chessgroundMock.lastBoard!.state.premovable.current = ['g1', 'f3'];
+		emitMoveMessage(socket, {
+			move: {
+				from: 'e7',
+				to: 'e5',
+			},
+			whosNext: 'white',
+			fen: 'after-black-move',
+			whiteTimeLeft: 10.5,
+			blackTimeLeft: 9.2,
+		});
+
+		expect(chessgroundMock.lastBoard?.playPremove).toHaveBeenCalledTimes(1);
+		expect(socket.send).toHaveBeenCalledWith(
+			expect.stringContaining('PremoveToServerType'),
+		);
+		expect(chessgroundMock.lastBoard?.state.premovable.current).toBe(
+			undefined,
+		);
+	});
+
+	it('does not send an invalid premove and clears it silently', () => {
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket, { isAgainstComputer: false });
+		emitGameStartedMessage(socket, { isAgainstComputer: false });
+
+		chessgroundMock.lastBoard!.state.premovable.current = ['a1', 'a3'];
+		chessgroundMock.lastBoard!.playPremove = vi.fn(() => {
+			chessgroundMock.lastBoard!.state.premovable.current = undefined;
+			return false;
+		});
+
+		emitMoveMessage(socket, {
+			move: {
+				from: 'e7',
+				to: 'e5',
+			},
+			whosNext: 'white',
+			fen: 'after-black-move',
+			whiteTimeLeft: 10.5,
+			blackTimeLeft: 9.2,
+		});
+
+		expect(socket.send).not.toHaveBeenCalledWith(
+			expect.stringContaining('PremoveToServerType'),
+		);
+		expect(chessgroundMock.lastBoard?.state.premovable.current).toBe(
+			undefined,
+		);
 	});
 });

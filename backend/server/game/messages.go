@@ -304,16 +304,19 @@ func handleMoveMessage(message Message, session *Session) {
 }
 
 func handlePremoveMessage(message Message, session *Session) {
-	// log.Println("handlePremoveMessage")
+	if session.isAgainstComputer() {
+		log.Println("Ignoring premove for computer session")
+		return
+	}
+
 	payload := message.Payload.(PremoveToServer)
 	premove, err := tryPlayPremove(payload, session.Game)
-	fmt.Println(premove)
 	if err != nil {
 		log.Println("Cannot make premove: ", err)
 		return
 	}
 
-	updateClocks(session)
+	switchClocksWithoutDeducting(session)
 
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendMoveMessage(session, player.Color, premove)
@@ -360,4 +363,21 @@ func updateClocks(session *Session) {
 	}
 	session.White.Clock.TimeStamp = time.Now()
 	session.Black.Clock.TimeStamp = time.Now()
+}
+
+func switchClocksWithoutDeducting(session *Session) {
+	now := time.Now()
+	switch session.whoseMoveIsIt() {
+	case "white":
+		session.White.Clock.IsRunning = true
+		session.Black.Clock.IsRunning = false
+	case "black":
+		session.White.Clock.IsRunning = false
+		session.Black.Clock.IsRunning = true
+	default:
+		session.White.Clock.IsRunning = false
+		session.Black.Clock.IsRunning = false
+	}
+	session.White.Clock.TimeStamp = now
+	session.Black.Clock.TimeStamp = now
 }

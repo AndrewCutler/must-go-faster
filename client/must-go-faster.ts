@@ -69,7 +69,7 @@ export class MustGoFaster {
 				},
 			},
 			premovable: {
-				enabled: true,
+				enabled: false,
 				showDests: true,
 			},
 			predroppable: {
@@ -286,6 +286,10 @@ export class MustGoFaster {
 		this.toggleClock(payload.whosNext);
 		this.#state.board!.set({
 			viewOnly: false,
+			premovable: {
+				enabled: !this.#state.isAgainstComputer,
+				showDests: true,
+			},
 		});
 	}
 
@@ -340,14 +344,6 @@ export class MustGoFaster {
 			this.toggleClock(whosNext);
 		}
 
-		if (!endState && this.#state.board!.state.premovable.current) {
-			// send premove message which checks if premove is valid
-			// if so, play response on server and send updated fen
-			const [from, to] = this.#state.board!.state.premovable.current;
-			this.sendPremoveMessage({ from, to });
-			this.#state.board!.playPremove();
-		}
-
 		this.#state.board!.set({
 			fen,
 			turnColor: whosNext,
@@ -355,7 +351,22 @@ export class MustGoFaster {
 				dests: this.toValidMoves(validMoves),
 			},
 			lastMove: [from, to],
+			premovable: {
+				enabled: !this.#state.isAgainstComputer,
+				showDests: true,
+			},
 		});
+
+		if (!endState && this.#state.board!.state.premovable.current) {
+			const [premoveFrom, premoveTo] =
+				this.#state.board!.state.premovable.current;
+			if (this.#state.board!.playPremove()) {
+				this.sendPremoveMessage({
+					from: premoveFrom,
+					to: premoveTo,
+				});
+			}
+		}
 
 		if (endState) {
 			this.gameOver(endState.gameStatus, endState.method);
@@ -564,6 +575,14 @@ export class MustGoFaster {
 			this.#state.connection.close(1000, 'Game over.');
 			this.#state.connection = undefined;
 		}
+		this.#state.board!.set({
+			viewOnly: true,
+			premovable: {
+				enabled: false,
+				showDests: true,
+			},
+		});
+		this.#state.board!.stop();
 		new OpponentStatusElement().clear();
 		new CancelButtonElement().hide();
 		new ConnectionStatusElement().clear();
@@ -630,7 +649,7 @@ export class MustGoFaster {
 				color: this.#state.playerColor,
 			},
 			premovable: {
-				enabled: true,
+				enabled: false,
 				showDests: true,
 			},
 			draggable: {
@@ -756,7 +775,8 @@ export class MustGoFaster {
 					color: self.#state.playerColor,
 				},
 				premovable: {
-					enabled: true,
+					enabled: !self.#state.isAgainstComputer,
+					showDests: true,
 				},
 			});
 		};

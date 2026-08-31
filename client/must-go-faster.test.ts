@@ -91,6 +91,7 @@ vi.mock('chessground', () => {
 					return true;
 				}),
 				cancelMove: vi.fn(() => {
+					board.state.selected = undefined;
 					if (!board.state.premovable.current) {
 						return;
 					}
@@ -766,5 +767,37 @@ describe('MustGoFaster connect flow', () => {
 		expect(chessgroundMock.lastBoard?.cancelMove).toHaveBeenCalled();
 		expect(chessgroundMock.lastBoard?.state.fen).toBe('authoritative-fen');
 		expect(chessgroundMock.lastBoard?.state.lastMove).toBeUndefined();
+	});
+
+	it("preserves the selected piece when the opponent's move updates the board", () => {
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket, {
+			playerColor: 'white',
+			isAgainstComputer: false,
+			whosNext: 'black',
+		});
+		emitGameStartedMessage(socket, {
+			playerColor: 'white',
+			isAgainstComputer: false,
+			whosNext: 'black',
+		});
+
+		const board = chessgroundMock.lastBoard!;
+		board.selectSquare('g1');
+
+		emitMoveMessage(socket, {
+			playerColor: 'black',
+			whosNext: 'white',
+			move: { from: 'e7', to: 'e5' },
+			fen: 'opponent-move-fen',
+		});
+
+		expect(board.state.fen).toBe('opponent-move-fen');
+		expect(board.selectSquare).toHaveBeenLastCalledWith('g1', true);
+		expect(board.state.selected).toBe('g1');
 	});
 });

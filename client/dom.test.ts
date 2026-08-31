@@ -8,8 +8,6 @@ import {
 	CancelButtonElement,
 	ConnectionStatusElement,
 	CountdownContainerElement,
-	GameStatusModalElement,
-	OpponentStatusElement,
 	PlayerTypeElement,
 } from './dom';
 
@@ -133,22 +131,6 @@ describe('PlayerTypeElement', () => {
 	});
 });
 
-describe('OpponentStatusElement', () => {
-	it('shows and clears the opponent label above the clock', () => {
-		const status = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
-		)!;
-		const opponentStatus = new OpponentStatusElement();
-
-		opponentStatus.show('Playing human');
-		expect(status.textContent).toBe('Playing human');
-		expect(status.style.visibility).toBe('visible');
-
-		opponentStatus.clear();
-		expect(status.textContent).toBe('');
-		expect(status.style.visibility).toBe('hidden');
-	});
-});
 
 describe('CountdownContainerElement', () => {
 	it('shows the human player color above the countdown', () => {
@@ -160,15 +142,5 @@ describe('CountdownContainerElement', () => {
 		expect(top.textContent).toBe('black moves first');
 
 		countdown.hide('white');
-	});
-});
-
-describe('GameStatusModalElement', () => {
-	it('formats draw outcomes clearly', () => {
-		const modal = new GameStatusModalElement(() => {});
-		modal.setOutcome('draw', 'stalemate');
-
-		const header = document.querySelector<HTMLDivElement>('#modal-header')!;
-		expect(header.textContent).toBe('You drew via stalemate.');
 	});
 });

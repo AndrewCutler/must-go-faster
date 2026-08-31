@@ -355,6 +355,7 @@ export class MustGoFaster {
 			return;
 		}
 
+		const selectedSquare = this.#state.board!.state.selected;
 		this.#state.board!.cancelMove();
 
 		let endState:
@@ -417,6 +418,9 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		});
+		if (selectedSquare) {
+			this.#state.board!.selectSquare(selectedSquare, true);
+		}
 		if (endState) {
 			this.gameOver(endState.gameStatus, endState.method);
 		}

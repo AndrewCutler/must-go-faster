@@ -11,8 +11,9 @@ type MockBoard = {
 	move: ReturnType<typeof vi.fn>;
 	playPremove: ReturnType<typeof vi.fn>;
 	cancelMove: ReturnType<typeof vi.fn>;
-	stop: ReturnType<typeof vi.fn>;
-	state: {
+		stop: ReturnType<typeof vi.fn>;
+		selectSquare: ReturnType<typeof vi.fn>;
+		state: {
 		pieces: Map<string, { role?: string; color?: string }>;
 		movable: {
 			color?: string;
@@ -40,6 +41,7 @@ type MockBoard = {
 		turnColor?: string;
 		fen?: string;
 		lastMove?: string[];
+		selected?: string;
 	};
 };
 
@@ -70,6 +72,9 @@ vi.mock('chessground', () => {
 					if ('lastMove' in config) {
 						board.state.lastMove = config.lastMove as string[];
 					}
+					if ('selected' in config) {
+						board.state.selected = config.selected as string;
+					}
 					if ('premovable' in config) {
 						Object.assign(
 							board.state.premovable,
@@ -94,6 +99,9 @@ vi.mock('chessground', () => {
 				}),
 				stop: vi.fn(() => {
 					board.state.premovable.current = undefined;
+				}),
+				selectSquare: vi.fn((key: string | null) => {
+					board.state.selected = key ?? undefined;
 				}),
 				state: {
 					pieces: new Map(),
@@ -348,6 +356,35 @@ function emitPremoveResponseMessage(
 	);
 }
 
+function emitTimeoutMessage(
+	socket: FakeWebSocket,
+	overrides: Partial<Record<string, unknown>> = {},
+): void {
+	const { playerColor = 'white', ...payloadOverrides } =
+		overrides as Partial<Record<string, unknown>> & {
+			playerColor?: string;
+		};
+	const message = {
+		sessionId: 'session-1',
+		playerColor,
+		isAgainstComputer: false,
+		type: 'TimeoutFromServerType',
+		payload: {
+			fen: 'test-fen',
+			validMoves: {},
+			whosNext: 'white',
+			loser: 'black',
+			...payloadOverrides,
+		},
+	};
+	socket.readyState = FakeWebSocket.OPEN;
+	socket.onmessage?.(
+		new MessageEvent('message', {
+			data: JSON.stringify(message),
+		}),
+	);
+}
+
 describe('MustGoFaster connect flow', () => {
 	it('shows the waiting copy for a human opponent and ignores duplicate play clicks', () => {
 		const app = createApp('human');
@@ -560,11 +597,19 @@ describe('MustGoFaster connect flow', () => {
 			playerColor: 'black',
 			isAgainstComputer: false,
 			whosNext: 'white',
+			validMoves: {
+				g1: ['f3', 'h3'],
+				b1: ['a3', 'c3'],
+			},
 		});
 		emitGameStartedMessage(socket, {
 			playerColor: 'black',
 			isAgainstComputer: false,
 			whosNext: 'white',
+			validMoves: {
+				g1: ['f3', 'h3'],
+				b1: ['a3', 'c3'],
+			},
 		});
 
 		expect(chessgroundMock.lastBoard?.state.premovable.enabled).toBe(true);
@@ -587,11 +632,17 @@ describe('MustGoFaster connect flow', () => {
 			playerColor: 'black',
 			isAgainstComputer: true,
 			whosNext: 'white',
+			validMoves: {
+				g1: ['f3', 'h3'],
+			},
 		});
 		emitGameStartedMessage(socket, {
 			playerColor: 'black',
 			isAgainstComputer: true,
 			whosNext: 'white',
+			validMoves: {
+				g1: ['f3', 'h3'],
+			},
 		});
 
 		expect(chessgroundMock.lastBoard?.state.premovable.enabled).toBe(true);

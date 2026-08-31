@@ -417,7 +417,6 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		});
-
 		if (endState) {
 			this.gameOver(endState.gameStatus, endState.method);
 		}
@@ -610,27 +609,21 @@ export class MustGoFaster {
 		if (turnColor === this.#state.playerColor) {
 			return undefined;
 		}
-
 		const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 		const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
 		const dests = new Map<cg.Key, cg.Key[]>();
-
 		for (const file of files) {
 			for (const rank of ranks) {
 				const orig = `${file}${rank}` as cg.Key;
 				const values: cg.Key[] = [];
-				for (const destFile of files) {
-					for (const destRank of ranks) {
-						const dest = `${destFile}${destRank}` as cg.Key;
-						if (dest !== orig) {
-							values.push(dest);
-						}
+				for (const destinationFile of files) {
+					for (const destinationRank of ranks) {
+						values.push(`${destinationFile}${destinationRank}` as cg.Key);
 					}
 				}
 				dests.set(orig, values);
 			}
 		}
-
 		return dests;
 	}
 
@@ -740,6 +733,9 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		} as ChessgroundConfig);
+		if (this.#state.board!.state.selected) {
+			this.#state.board!.selectSquare(this.#state.board!.state.selected, true);
+		}
 	}
 
 	private setConnectionUiPending(): void {

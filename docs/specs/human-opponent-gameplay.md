@@ -44,6 +44,7 @@ After two human users are matched into the same session, both users can play a c
 - The board should become interactive after the shared countdown completes.
 - The countdown overlay should say `[player color] moves first` for the local user.
 - The local human player should be able to cache a premove while waiting for the opponent's turn.
+- If the local player has a piece selected while waiting, that selected piece should remain selected when the opponent's move arrives.
 - The selected player color should be respected when orienting the board.
 - Legal moves should be highlighted according to the current position.
 - The last played move should be highlighted according to chessground norms.
@@ -58,6 +59,7 @@ After two human users are matched into the same session, both users can play a c
 - After the countdown, the user can make legal moves on their turn.
 - Illegal moves are rejected.
 - The board updates to show the most recent move after each accepted move.
+- If the local player had a piece selected before the opponent's move arrived, the board should preserve that selected piece after updating the position.
 - The chess clock updates as turns change.
 - The game ends properly for checkmate, stalemate, repetition, insufficient material, timeout, abandonment, and any other legal draw or win state the server supports for the session.
 - A client disconnect ends the active game immediately for both players.

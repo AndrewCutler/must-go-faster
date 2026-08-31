@@ -32,7 +32,7 @@ type Player struct {
 func (p *Player) ReadMessage() {
 	defer func() {
 		// log.Println("Closing in ReadMessage for player ", p.Color)
-		p.Connection.Close()
+		safeCloseConnection(p.Connection)
 	}()
 
 	for {
@@ -85,7 +85,7 @@ func (p *Player) ReadMessage() {
 func (p *Player) WriteMessage() {
 	defer func() {
 		// log.Println("Closing in WriteMessage for player ", p.Color)
-		p.Connection.Close()
+		safeCloseConnection(p.Connection)
 	}()
 
 	for message := range p.WriteChan {
@@ -106,6 +106,14 @@ func (p *Player) WriteMessage() {
 			return
 		}
 	}
+}
+
+func safeCloseConnection(conn *websocket.Conn) {
+	if conn == nil {
+		return
+	}
+
+	_ = conn.Close()
 }
 
 func deserialize(content string, messageType string) (Message, interface{}, error) {

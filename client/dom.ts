@@ -132,72 +132,6 @@ export class ControlsElement implements IElement {
 	}
 }
 
-// todo: bulma
-export class GameStatusModalElement implements IElement {
-	readonly #selector: string = '#game-status-modal';
-	#element: HTMLElement | undefined;
-	#headerElement: HTMLElement | undefined;
-	#playAgainButtonElement: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor(sendMessageCallback: () => void) {
-		const self = this;
-		const parent = document.querySelector('#board-container')!;
-		const element = document.createElement('div');
-		element.id = this.#selector.replace('#', '');
-		const headerElement = document.createElement('div');
-		headerElement.id = 'modal-header';
-		const contentElement = document.createElement('div');
-		contentElement.id = 'modal-content';
-		const modalButtonContainer = document.createElement('div');
-		modalButtonContainer.id = 'modal-button-container';
-		const playAgainButton = document.createElement('button');
-		playAgainButton.id = 'play-again-button';
-		playAgainButton.classList.add('button');
-		playAgainButton.classList.add('is-dark');
-		playAgainButton.innerText = 'Play again';
-
-		modalButtonContainer.appendChild(playAgainButton);
-		contentElement.appendChild(modalButtonContainer);
-
-		element.appendChild(headerElement);
-		element.appendChild(contentElement);
-		parent.prepend(element);
-
-		this.#element = element;
-		this.#headerElement = headerElement;
-		this.#playAgainButtonElement = playAgainButton;
-		this.#playAgainButtonElement.addEventListener('click', function () {
-			self.playAgain(sendMessageCallback);
-		});
-	}
-
-	setTime(time: number): void {
-		this.#element!.innerHTML =
-			'<div>' + (time > 0 ? time : 0).toFixed(1) + 's</div>';
-	}
-
-	hide(): void {
-		this.#element!.remove();
-	}
-
-	setOutcome(
-		gameStatus: Exclude<GameStatus, 'ongoing'>,
-		method: string,
-	): void {
-		const verb = gameStatus === 'draw' ? 'drew' : gameStatus;
-		this.#headerElement!.textContent = `You ${verb} via ${method}.`;
-	}
-
-	private playAgain(sendMessageCallback: () => void): void {
-		this.hide();
-		sendMessageCallback();
-	}
-}
-
 export class GameMetaElement implements IElement {
 	readonly #selector: string = '#game-meta';
 	#element: HTMLElement | undefined;
@@ -366,5 +300,40 @@ export class ConnectionStatusElement implements IElement {
 		this.#element!.textContent = '';
 		this.#element!.dataset.tone = 'info';
 		this.#element!.style.visibility = 'hidden';
+	}
+}
+
+export class ConfettiElement implements IElement {
+	readonly #selector = '#confetti-stage';
+	#element: HTMLElement | undefined;
+	#hideTimer: number | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	show(): void {
+		if (this.#hideTimer !== undefined) {
+			window.clearTimeout(this.#hideTimer);
+			this.#hideTimer = undefined;
+		}
+
+		this.#element!.classList.remove('is-fading');
+		this.#element!.style.display = 'flex';
+
+		window.setTimeout(() => {
+			this.#element!.classList.add('is-fading');
+			this.#hideTimer = window.setTimeout(() => {
+				this.#element!.style.display = 'none';
+				this.#element!.classList.remove('is-fading');
+				this.#hideTimer = undefined;
+			}, 750);
+		}, 1250);
 	}
 }

@@ -170,7 +170,6 @@ body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 0.5rem;
 }
 
 #player-type-panel .button {
@@ -181,6 +180,16 @@ body {
 #player-type-panel .button.is-selected {
 	border-color: var(--bulma-primary);
 	box-shadow: 0 0 0 1px var(--bulma-primary) inset;
+}
+
+.button#player-type-computer {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.button#player-type-human {
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
 }
 
 /* #game-meta {

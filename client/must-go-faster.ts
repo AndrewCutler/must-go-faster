@@ -31,11 +31,10 @@ import * as cg from 'chessground/types.js';
 import {
 	BoardElement,
 	CancelButtonElement,
+	ConfettiElement,
 	PlayerTypeElement,
 	CountdownContainerElement,
 	ConnectionStatusElement,
-	GameMetaElement,
-	GameStatusModalElement,
 	ControlsElement,
 } from './dom';
 
@@ -96,7 +95,6 @@ export class MustGoFaster {
 			this.connect();
 		});
 		new CancelButtonElement().hide();
-		new OpponentStatusElement().clear();
 		new ConnectionStatusElement().clear();
 
 		this.ping();
@@ -668,8 +666,9 @@ export class MustGoFaster {
 			self.connect();
 		}
 		// have to add draws
-		const modal = new GameStatusModalElement(sendNewGameMessage);
-		modal.setOutcome(gameStatus, method);
+		if (gameStatus === 'won') {
+			new ConfettiElement().show();
+		}
 	}
 
 	private formatGameOutcomeMethod(method?: string): string {

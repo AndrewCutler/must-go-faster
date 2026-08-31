@@ -20,17 +20,24 @@
 			href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css"
 		/>
 		<link rel="stylesheet" href="css/index.css" />
+		<link rel="stylesheet" href="css/confetti.css" />
 	</head>
 
 	<body>
 		<div id="container">
 			<div id="controls">
-				<div class=" time" id="black-clock"></div>
+				<div class="time" id="black-clock"></div>
 				<div id="player-type-panel">
-					<button class="button is-dark" id="player-type-computer">
+					<button
+						class="button is-primary is-outlined"
+						id="player-type-computer"
+					>
 						Play computer
 					</button>
-					<button class="button is-dark" id="player-type-human">
+					<button
+						class="button is-primary is-outlined"
+						id="player-type-human"
+					>
 						Play human
 					</button>
 				</div>
@@ -44,7 +51,7 @@
 						<i class="fa-solid fa-xmark"></i>
 					</span>
 				</button>
-				<div class=" time" id="white-clock"></div>
+				<div class="time" id="white-clock"></div>
 				<!-- TODO: what are these -->
 				<div id="connection-status" aria-live="polite"></div>
 			</div>
@@ -119,6 +126,42 @@
 				</svg>
 			</div>
 			<div></div>
+		</div>
+		<div id="confetti-stage">
+			<div class="confetti-field" aria-hidden="true">
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+				<i class="piece"></i>
+			</div>
 		</div>
 	</body>
 </html>

@@ -373,7 +373,8 @@ func joinPendingGame(hub *Hub, player *Player) {
 }
 
 func sendJoinedMessages(session *Session) {
-	countdownStartAt := time.Now().Add(5 * time.Second)
+	// The client countdown is the single five-second preparation period.
+	countdownStartAt := time.Now()
 	for _, player := range session.GetPlayers() {
 		player.WriteChan <- sendGameJoinedMessage(session, player.Color, countdownStartAt)
 	}

@@ -1,0 +1,193 @@
+#confetti-stage {
+	position: absolute;
+	width: 100%;
+	height: 240px;
+	overflow: hidden;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	opacity: 1;
+	transition: opacity 0.5s ease;
+}
+
+#confetti-stage.is-fading {
+	opacity: 0;
+}
+
+.confetti-text {
+	position: relative;
+	z-index: 1;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: #f0f0f0;
+}
+
+.confetti-field {
+	position: absolute;
+	inset: 0 3%;
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+}
+
+.piece {
+	position: relative;
+	top: -18px;
+	flex: 0 0 auto;
+	border-radius: 2px;
+	animation: confetti-fall 1.8s linear infinite;
+}
+
+/* CSS has no random(). It does have nth-child cycles, and cycles
+   whose lengths share no common factor behave like one.
+
+   Colors repeat every 8, shapes every 5, durations every 7, delays
+   every 11, the nudge every 3. Two pieces match only when all five
+   line up again: 8 x 5 x 7 x 11 x 3 = 9240 pieces apart.
+
+   The values inside each cycle are out of order on purpose. In
+   order the cycles march in step at first and it reads as a
+   gradient instead of a scatter. */
+
+/* color, every 8 */
+.piece:nth-child(8n + 1) {
+	background: #ff6b6b;
+}
+.piece:nth-child(8n + 2) {
+	background: #38bdf8;
+}
+.piece:nth-child(8n + 3) {
+	background: #ffd444;
+}
+.piece:nth-child(8n + 4) {
+	background: #b8ff57;
+}
+.piece:nth-child(8n + 5) {
+	background: #f472b6;
+}
+.piece:nth-child(8n + 6) {
+	background: #57d9a3;
+}
+.piece:nth-child(8n + 7) {
+	background: #c084fc;
+}
+.piece:nth-child(8n) {
+	background: #ff9040;
+}
+
+/* shape, every 5 */
+.piece:nth-child(5n + 1) {
+	width: 8px;
+	height: 12px;
+}
+.piece:nth-child(5n + 2) {
+	width: 12px;
+	height: 8px;
+	border-radius: 50%;
+}
+.piece:nth-child(5n + 3) {
+	width: 6px;
+	height: 14px;
+}
+.piece:nth-child(5n + 4) {
+	width: 14px;
+	height: 6px;
+}
+.piece:nth-child(5n) {
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+}
+
+/* fall time, every 7 */
+.piece:nth-child(7n + 1) {
+	animation-duration: 1.86s;
+}
+.piece:nth-child(7n + 2) {
+	animation-duration: 1.5s;
+}
+.piece:nth-child(7n + 3) {
+	animation-duration: 2.1s;
+}
+.piece:nth-child(7n + 4) {
+	animation-duration: 1.62s;
+}
+.piece:nth-child(7n + 5) {
+	animation-duration: 2.22s;
+}
+.piece:nth-child(7n + 6) {
+	animation-duration: 1.74s;
+}
+.piece:nth-child(7n) {
+	animation-duration: 1.98s;
+}
+
+/* start offset, every 11. All negative, which starts a piece part
+   way through its own fall instead of making it wait, so the first
+   frame is already full. */
+.piece:nth-child(11n + 1) {
+	animation-delay: -0.9s;
+}
+.piece:nth-child(11n + 2) {
+	animation-delay: -1.7s;
+}
+.piece:nth-child(11n + 3) {
+	animation-delay: -0.3s;
+}
+.piece:nth-child(11n + 4) {
+	animation-delay: -2.05s;
+}
+.piece:nth-child(11n + 5) {
+	animation-delay: -1.2s;
+}
+.piece:nth-child(11n + 6) {
+	animation-delay: -0.55s;
+}
+.piece:nth-child(11n + 7) {
+	animation-delay: -1.95s;
+}
+.piece:nth-child(11n + 8) {
+	animation-delay: -0.75s;
+}
+.piece:nth-child(11n + 9) {
+	animation-delay: -1.45s;
+}
+.piece:nth-child(11n + 10) {
+	animation-delay: -0.15s;
+}
+.piece:nth-child(11n) {
+	animation-delay: -2.3s;
+}
+
+/* a nudge off the even spacing, every 3 */
+.piece:nth-child(3n + 2) {
+	margin-left: 1.4%;
+}
+.piece:nth-child(3n) {
+	margin-right: 1.8%;
+}
+
+/* A timing function applies to each keyframe segment, not to the
+   animation as a whole, so an eased segment restarts its curve at
+   every stop and the piece stalls mid-fall. Timing stays linear and
+   the acceleration lives in the distances: 260px * t squared. */
+@keyframes confetti-fall {
+	0% {
+		transform: translateY(0) rotate(0deg) scaleX(1);
+		opacity: 1;
+	}
+	25% {
+		transform: translateY(16px) rotate(90deg) scaleX(0);
+	}
+	50% {
+		transform: translateY(65px) rotate(180deg) scaleX(-1);
+	}
+	75% {
+		transform: translateY(146px) rotate(270deg) scaleX(0);
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(260px) rotate(360deg) scaleX(1);
+		opacity: 0;
+	}
+}

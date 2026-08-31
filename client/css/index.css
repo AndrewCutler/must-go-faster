@@ -406,20 +406,9 @@ piece.black.fade {
 #footer {
 	width: 100%;
 	display: flex;
-	gap: 3rem;
 	flex-wrap: wrap;
 	justify-content: center;
 	padding: 1rem 0;
-}
-
-#test-board {
-	z-index: 11;
-	margin-left: clamp(0px, 4vw, 40px);
-	display: none;
-	width: min(100vw, 400px);
-	aspect-ratio: 1;
-	position: absolute;
-	border: 18px solid black;
 }
 
 @media screen and (max-width: 768px) {

@@ -155,8 +155,6 @@ const originalEnv = {
 function renderDom(): void {
 	document.body.innerHTML = `
 		<div id="board"></div>
-		<div id="getting-started"></div>
-		<button id="connect-button" class="button is-dark">Play</button>
 		<button
 			id="cancel-button"
 			class="button is-dark"
@@ -168,13 +166,19 @@ function renderDom(): void {
 			</span>
 		</button>
 		<div id="connection-status"></div>
-		<div id="player-type-dropdown" class="dropdown">
-			<span id="player-type-dropdown-value">Computer</span>
+		<div id="player-type-dropdown">
+			<div id="player-type-panel">
+				<button id="player-type-computer" class="button is-dark">
+					Play computer
+				</button>
+				<button id="player-type-human" class="button is-dark">
+					Play human
+				</button>
+			</div>
 		</div>
-		<div id="opponent-status"></div>
 		<div id="controls">
-			<div id="white-clock"></div>
 			<div id="black-clock"></div>
+			<div id="white-clock"></div>
 		</div>
 		<div id="board-container"></div>
 		<div id="game-meta">
@@ -391,13 +395,16 @@ describe('MustGoFaster connect flow', () => {
 
 		app.connect();
 
-		expect(fakeSockets).toHaveLength(1);
-		expect(fakeSockets[0].url).toBe(
+	expect(fakeSockets).toHaveLength(1);
+	expect(fakeSockets[0].url).toBe(
 			'ws://example.test/connect?opponentType=human',
 		);
 
-		const connectButton = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
+		const computerButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
+		)!;
+		const humanButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
@@ -412,9 +419,9 @@ describe('MustGoFaster connect flow', () => {
 			'#connection-status',
 		)!;
 
-		expect(connectButton.disabled).toBe(true);
-		expect(connectButton.classList.contains('is-loading')).toBe(true);
-		expect(playerType.style.display).toBe('none');
+		expect(computerButton.disabled).toBe(true);
+		expect(humanButton.disabled).toBe(true);
+		expect(playerType.dataset.pending).toBe('human');
 		expect(opponentStatus.textContent).toBe('Playing human');
 		expect(status.textContent).toBe('Waiting for opponent...');
 		expect(status.dataset.tone).toBe('info');
@@ -448,17 +455,17 @@ describe('MustGoFaster connect flow', () => {
 		const socket = fakeSockets[0];
 		app.cancelPendingGame();
 
-		const connectButton = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
+		const computerButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
+		)!;
+		const humanButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
 		)!;
 		const playerType = document.querySelector<HTMLDivElement>(
 			'#player-type-dropdown',
-		)!;
-		const playerTypeValue = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
 		)!;
 		const opponentStatus = document.querySelector<HTMLDivElement>(
 			'#opponent-status',
@@ -471,12 +478,10 @@ describe('MustGoFaster connect flow', () => {
 			1000,
 			'Canceled by user.',
 		);
-		expect(connectButton.disabled).toBe(false);
-		expect(connectButton.classList.contains('is-loading')).toBe(false);
-		expect(connectButton.style.display).toBe('');
+		expect(computerButton.disabled).toBe(false);
+		expect(humanButton.disabled).toBe(false);
 		expect(cancelButton.style.display).toBe('none');
 		expect(playerType.style.display).toBe('');
-		expect(playerTypeValue.textContent).toBe('Human');
 		expect(opponentStatus.textContent).toBe('');
 		expect(status.textContent).toBe('');
 		expect(status.dataset.tone).toBe('info');
@@ -531,15 +536,11 @@ describe('MustGoFaster connect flow', () => {
 		const playerType = document.querySelector<HTMLDivElement>(
 			'#player-type-dropdown',
 		)!;
-		const playerTypeValue = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
-		)!;
 		const opponentStatus = document.querySelector<HTMLDivElement>(
 			'#opponent-status',
 		)!;
 
 		expect(playerType.style.display).toBe('');
-		expect(playerTypeValue.textContent).toBe('Computer');
 		expect(opponentStatus.textContent).toBe('');
 	});
 
@@ -549,15 +550,18 @@ describe('MustGoFaster connect flow', () => {
 		app.connect();
 		fakeSockets[0].close(1000, 'Lobby expired after 2 minutes.');
 
-		const connectButton = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
+		const computerButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
+		)!;
+		const humanButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
 		)!;
 
-		expect(connectButton.disabled).toBe(false);
-		expect(connectButton.classList.contains('is-loading')).toBe(false);
+		expect(computerButton.disabled).toBe(false);
+		expect(humanButton.disabled).toBe(false);
 		expect(status.textContent).toBe('Lobby expired after 2 minutes.');
 		expect(status.dataset.tone).toBe('error');
 	});
@@ -568,8 +572,11 @@ describe('MustGoFaster connect flow', () => {
 		app.connect();
 		fakeSockets[0].onerror?.(new Event('error'));
 
-		const connectButton = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
+		const computerButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
+		)!;
+		const humanButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
@@ -578,8 +585,8 @@ describe('MustGoFaster connect flow', () => {
 			'#connection-status',
 		)!;
 
-		expect(connectButton.disabled).toBe(false);
-		expect(connectButton.classList.contains('is-loading')).toBe(false);
+		expect(computerButton.disabled).toBe(false);
+		expect(humanButton.disabled).toBe(false);
 		expect(cancelButton.style.display).toBe('none');
 		expect(status.textContent).toBe(
 			'Unable to start a game. Please try again.',

@@ -30,15 +30,12 @@ import { Api as ChessgroundApi } from 'chessground/api';
 import * as cg from 'chessground/types.js';
 import {
 	BoardElement,
-	ConnectButtonElement,
 	CancelButtonElement,
 	PlayerTypeElement,
 	CountdownContainerElement,
 	ConnectionStatusElement,
-	OpponentStatusElement,
 	GameMetaElement,
 	GameStatusModalElement,
-	GettingStartedElement,
 	ControlsElement,
 } from './dom';
 
@@ -88,8 +85,16 @@ export class MustGoFaster {
 		this.#state.wsBaseUrl = process.env.WS_BASE_URL;
 		this.#state.apiBaseUrl = process.env.API_BASE_URL;
 
-		new ConnectButtonElement().reset();
-		new PlayerTypeElement().show();
+		const playerType = new PlayerTypeElement();
+		playerType.show();
+		playerType.onComputerClick(() => {
+			this.setOpponentType('computer');
+			this.connect();
+		});
+		playerType.onHumanClick(() => {
+			this.setOpponentType('human');
+			this.connect();
+		});
 		new CancelButtonElement().hide();
 		new OpponentStatusElement().clear();
 		new ConnectionStatusElement().clear();
@@ -207,13 +212,10 @@ export class MustGoFaster {
 	}
 
 	private async ping() {
-		const gettingStarted = new GettingStartedElement();
 		try {
 			await fetch(`${this.#state.apiBaseUrl!}/ping`);
 		} catch (error) {
 			console.error(error);
-		} finally {
-			gettingStarted.hide();
 		}
 	}
 
@@ -618,7 +620,9 @@ export class MustGoFaster {
 				const values: cg.Key[] = [];
 				for (const destinationFile of files) {
 					for (const destinationRank of ranks) {
-						values.push(`${destinationFile}${destinationRank}` as cg.Key);
+						values.push(
+							`${destinationFile}${destinationRank}` as cg.Key,
+						);
 					}
 				}
 				dests.set(orig, values);
@@ -656,7 +660,6 @@ export class MustGoFaster {
 			},
 		});
 		this.#state.board!.stop();
-		new OpponentStatusElement().clear();
 		new CancelButtonElement().hide();
 		new ConnectionStatusElement().clear();
 		const self = this;
@@ -703,13 +706,10 @@ export class MustGoFaster {
 		this.#state.blackTimeLeft = GAME_CLOCK_DURATION;
 
 		const payload = message.payload as GameJoinedFromServer;
-		const gameMeta = new GameMetaElement({
-			playerColor: this.#state.playerColor,
-			whosNext: payload.whosNext,
-		});
-
-		const connectButton = new ConnectButtonElement();
-		connectButton.gameJoined();
+		// const gameMeta = new GameMetaElement({
+		// 	playerColor: this.#state.playerColor,
+		// 	whosNext: payload.whosNext,
+		// });
 
 		this.#state.board!.set({
 			viewOnly: true,
@@ -734,23 +734,20 @@ export class MustGoFaster {
 			},
 		} as ChessgroundConfig);
 		if (this.#state.board!.state.selected) {
-			this.#state.board!.selectSquare(this.#state.board!.state.selected, true);
+			this.#state.board!.selectSquare(
+				this.#state.board!.state.selected,
+				true,
+			);
 		}
 	}
 
 	private setConnectionUiPending(): void {
-		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
 		const playerType = new PlayerTypeElement();
 		const status = new ConnectionStatusElement();
-		const opponentStatus = new OpponentStatusElement();
 
-		connectButton.setPending();
+		playerType.setPending(this.#state.opponentType);
 		cancelButton.show();
-		playerType.hide();
-		opponentStatus.show(
-			`Playing ${this.#state.opponentType ?? 'computer'}`,
-		);
 		status.show(
 			this.#state.opponentType === 'computer'
 				? 'Starting game...'
@@ -761,49 +758,36 @@ export class MustGoFaster {
 
 	private setConnectionUiGameJoined(): void {
 		const playerType = new PlayerTypeElement();
-		const opponentStatus = new OpponentStatusElement();
 
 		new CancelButtonElement().hide();
-		playerType.hide();
-		opponentStatus.show(
-			`Playing ${this.#state.opponentType ?? 'computer'}`,
-		);
+		playerType.clearPending();
 		new ConnectionStatusElement().clear();
-		new ConnectButtonElement().gameJoined();
 	}
 
 	private setConnectionUiError(
 		message: string,
 		resetOpponentType = false,
 	): void {
-		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
 		const playerType = new PlayerTypeElement();
-		const opponentStatus = new OpponentStatusElement();
 		const status = new ConnectionStatusElement();
 
-		connectButton.reset();
+		playerType.clearPending();
 		cancelButton.hide();
 		if (resetOpponentType) {
 			this.#state.opponentType = 'computer';
 			playerType.setSelection('computer');
 		}
-		playerType.show();
-		opponentStatus.clear();
 		status.show(message, 'error');
 	}
 
 	private resetConnectionUi(): void {
-		const connectButton = new ConnectButtonElement();
 		const cancelButton = new CancelButtonElement();
 		const playerType = new PlayerTypeElement();
-		const opponentStatus = new OpponentStatusElement();
 		const status = new ConnectionStatusElement();
 
-		connectButton.reset();
+		playerType.clearPending();
 		cancelButton.hide();
-		playerType.show();
-		opponentStatus.clear();
 		status.clear();
 	}
 

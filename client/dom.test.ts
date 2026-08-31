@@ -7,7 +7,6 @@ import {
 	BoardElement,
 	CancelButtonElement,
 	ConnectionStatusElement,
-	ConnectButtonElement,
 	CountdownContainerElement,
 	GameStatusModalElement,
 	OpponentStatusElement,
@@ -18,7 +17,6 @@ function renderDom(): void {
 	document.body.innerHTML = `
 		<div id="board"></div>
 		<div id="getting-started"></div>
-		<button id="connect-button" class="button is-dark">Play</button>
 		<button
 			id="cancel-button"
 			class="button is-dark"
@@ -27,8 +25,15 @@ function renderDom(): void {
 		></button>
 		<div id="opponent-status"></div>
 		<div id="connection-status"></div>
-		<div id="player-type-dropdown" class="dropdown">
-			<span id="player-type-dropdown-value">Computer</span>
+		<div id="player-type-dropdown">
+			<div id="player-type-panel">
+				<button id="player-type-computer" class="button is-dark">
+					Play computer
+				</button>
+				<button id="player-type-human" class="button is-dark">
+					Play human
+				</button>
+			</div>
 		</div>
 		<div id="board-container"></div>
 	`;
@@ -40,28 +45,6 @@ beforeEach(() => {
 
 afterEach(() => {
 	document.body.innerHTML = '';
-});
-
-describe('ConnectButtonElement', () => {
-	it('switches the play button into pending, reset, and joined states', () => {
-		const button = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
-		)!;
-		const connectButton = new ConnectButtonElement();
-
-		connectButton.setPending();
-		expect(button.textContent).toBe('Play');
-		expect(button.disabled).toBe(true);
-		expect(button.classList.contains('is-loading')).toBe(true);
-
-		connectButton.reset();
-		expect(button.disabled).toBe(false);
-		expect(button.classList.contains('is-loading')).toBe(false);
-		expect(button.style.display).toBe('');
-
-		connectButton.gameJoined();
-		expect(button.style.display).toBe('none');
-	});
 });
 
 describe('BoardElement', () => {
@@ -117,34 +100,27 @@ describe('ConnectionStatusElement', () => {
 });
 
 describe('PlayerTypeElement', () => {
-	it('toggles the dropdown and updates the displayed selection', () => {
-		const dropdown = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
+	it('updates selection classes', () => {
+		const computer = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
 		)!;
-		const value = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
+		const human = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const playerType = new PlayerTypeElement();
 
-		playerType.toggleActive();
-		expect(dropdown.classList.contains('is-active')).toBe(true);
-
-		playerType.toggleActive();
-		expect(dropdown.classList.contains('is-active')).toBe(false);
-
 		playerType.setSelection('human');
-		expect(value.textContent).toBe('Human');
+		expect(human.classList.contains('is-selected')).toBe(true);
+		expect(computer.classList.contains('is-selected')).toBe(false);
 
 		playerType.setSelection('computer');
-		expect(value.textContent).toBe('Computer');
+		expect(computer.classList.contains('is-selected')).toBe(true);
+		expect(human.classList.contains('is-selected')).toBe(false);
 	});
 
-	it('hides, shows, and resets the selector', () => {
+	it('hides and shows the selector block', () => {
 		const dropdown = document.querySelector<HTMLDivElement>(
 			'#player-type-dropdown',
-		)!;
-		const value = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
 		)!;
 		const playerType = new PlayerTypeElement();
 
@@ -154,7 +130,6 @@ describe('PlayerTypeElement', () => {
 
 		playerType.show();
 		expect(dropdown.style.display).toBe('');
-		expect(value.textContent).toBe('Human');
 	});
 });
 

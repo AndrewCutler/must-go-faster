@@ -31,25 +31,6 @@ export class BoardElement implements IElement {
 	}
 }
 
-export class GettingStartedElement implements IElement {
-	#element: HTMLElement | undefined;
-	readonly #selector: string = '#getting-started';
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor() {
-		const element = document.querySelector<HTMLDivElement>(this.#selector);
-		if (!element) throw new Error('Cannot find #getting-started');
-		this.#element = element;
-	}
-
-	hide(): void {
-		this.#element!.remove();
-	}
-}
-
 export class CountdownContainerElement implements IElement {
 	#element: HTMLElement | undefined;
 	readonly #selector: string = '#countdown-container';
@@ -137,6 +118,10 @@ export class ControlsElement implements IElement {
 	}
 
 	setActive(color: PlayerColor) {
+		const clocks = document.querySelector<HTMLDivElement>('#clocks');
+		if (clocks) {
+			clocks.dataset.activeColor = color;
+		}
 		if (color === 'white') {
 			this.#whiteClockElement!.classList.add('is-running');
 			this.#blackClockElement!.classList.remove('is-running');
@@ -263,69 +248,32 @@ export class GameMetaElement implements IElement {
 	}
 }
 
-export class ConnectButtonElement implements IElement {
-	readonly #selector = '#connect-button';
-	#element: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor() {
-		const element = document.querySelector<HTMLButtonElement>(
-			this.#selector,
-		);
-		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
-		this.#element = element;
-	}
-
-	setPending(): void {
-		this.#element!.style.display = '';
-		this.#element!.classList.add('is-loading');
-		this.#element!.setAttribute('disabled', 'true');
-		this.#element!.textContent = 'Play';
-	}
-
-	reset(): void {
-		this.#element!.style.display = '';
-		this.#element!.classList.remove('is-loading');
-		this.#element!.removeAttribute('disabled');
-		this.#element!.textContent = 'Play';
-	}
-
-	hide(): void {
-		this.#element!.style.display = 'none';
-	}
-
-	gameJoined(): void {
-		this.hide();
-	}
-}
-
 export class PlayerTypeElement implements IElement {
 	#element: HTMLElement | undefined;
-	readonly #selector = '#player-type-dropdown';
+	#computerButton: HTMLButtonElement | undefined;
+	#humanButton: HTMLButtonElement | undefined;
+	readonly #selector = '#player-type-panel';
 
 	get element(): HTMLElement | undefined {
 		return this.#element;
 	}
 
 	constructor() {
-		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		const element = document.querySelector<HTMLElement>(this.#selector);
 		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
 		this.#element = element;
-	}
-
-	toggleActive(): void {
-		if (this.#element!.classList.contains('is-active')) {
-			this.#element!.classList.remove('is-active');
-		} else {
-			this.#element!.classList.add('is-active');
+		const computerButton =
+			document.querySelector<HTMLButtonElement>('#player-type-computer');
+		const humanButton =
+			document.querySelector<HTMLButtonElement>('#player-type-human');
+		if (!computerButton || !humanButton) {
+			throw new Error('Cannot find player type buttons.');
 		}
+		this.#computerButton = computerButton;
+		this.#humanButton = humanButton;
 	}
 
 	hide(): void {
-		this.#element!.classList.remove('is-active');
 		this.#element!.style.display = 'none';
 	}
 
@@ -334,44 +282,38 @@ export class PlayerTypeElement implements IElement {
 	}
 
 	setSelection(value: string): void {
-		const valueElement = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
-		)!;
 		switch (value) {
 			case 'computer':
-				valueElement.textContent = 'Computer';
+				this.#computerButton!.classList.add('is-selected');
+				this.#humanButton!.classList.remove('is-selected');
 				break;
 			case 'human':
-				valueElement.textContent = 'Human';
+				this.#humanButton!.classList.add('is-selected');
+				this.#computerButton!.classList.remove('is-selected');
 				break;
 			default:
 				throw new Error(`Invalid player type: ${value}.`);
 		}
 	}
-}
 
-export class OpponentStatusElement implements IElement {
-	readonly #selector = '#opponent-status';
-	#element: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
+	setPending(value?: string): void {
+		this.#computerButton!.disabled = true;
+		this.#humanButton!.disabled = true;
+		this.#element!.dataset.pending = value ?? '';
 	}
 
-	constructor() {
-		const element = document.querySelector<HTMLDivElement>(this.#selector);
-		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
-		this.#element = element;
+	clearPending(): void {
+		this.#computerButton!.disabled = false;
+		this.#humanButton!.disabled = false;
+		delete this.#element!.dataset.pending;
 	}
 
-	show(message: string): void {
-		this.#element!.textContent = message;
-		this.#element!.style.visibility = 'visible';
+	onComputerClick(handler: () => void): void {
+		this.#computerButton!.addEventListener('click', handler);
 	}
 
-	clear(): void {
-		this.#element!.textContent = '';
-		this.#element!.style.visibility = 'hidden';
+	onHumanClick(handler: () => void): void {
+		this.#humanButton!.addEventListener('click', handler);
 	}
 }
 

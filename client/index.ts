@@ -16,12 +16,6 @@ window.onload = function () {
 	try {
 		const mustGoFaster = new MustGoFaster();
 		document
-			.querySelector('#connect-button')!
-			.addEventListener('click', function () {
-				mustGoFaster.connect();
-			});
-
-		document
 			.querySelector('#cancel-button')!
 			.addEventListener('click', function () {
 				mustGoFaster.cancelPendingGame();
@@ -31,9 +25,7 @@ window.onload = function () {
 		playerTypeButton.element!.addEventListener(
 			'click',
 			function ({ target }) {
-				playerTypeButton.toggleActive();
-
-				switch ((target as any)?.id) {
+				switch ((target as HTMLElement)?.id) {
 					case 'player-type-computer':
 						playerTypeButton.setSelection('computer');
 						mustGoFaster.setOpponentType('computer');

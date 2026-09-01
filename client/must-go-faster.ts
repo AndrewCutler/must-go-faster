@@ -528,7 +528,6 @@ export class MustGoFaster {
 		const self = this;
 
 		if (whosNext === 'white') {
-			controlsDiv.setActive('white');
 			function updateWhiteTimer(): void {
 				if (!self.#state.whiteTimeLeft) {
 					return;
@@ -565,7 +564,6 @@ export class MustGoFaster {
 			}
 			this.#state.whiteTimer = requestAnimationFrame(updateWhiteTimer);
 		} else {
-			controlsDiv.setActive('black');
 			function updateBlackTimer(): void {
 				if (!self.#state.blackTimeLeft) {
 					return;
@@ -713,11 +711,6 @@ export class MustGoFaster {
 		this.#state.blackTimeLeft = GAME_CLOCK_DURATION;
 
 		const payload = message.payload as GameJoinedFromServer;
-		// const gameMeta = new GameMetaElement({
-		// 	playerColor: this.#state.playerColor,
-		// 	whosNext: payload.whosNext,
-		// });
-
 		this.#state.board!.set({
 			viewOnly: true,
 			selectable: {

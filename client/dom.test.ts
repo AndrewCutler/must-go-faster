@@ -2,10 +2,11 @@
  * CODEX-GENERATED: the contents of this file were fully constructed by a Codex agent and not a human.
 */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	BoardElement,
 	CancelButtonElement,
+	ConfettiElement,
 	ConnectionStatusElement,
 	CountdownContainerElement,
 	PlayerTypeElement,
@@ -21,19 +22,17 @@ function renderDom(): void {
 			aria-label="Cancel pending game"
 			style="display:none"
 		></button>
-		<div id="opponent-status"></div>
 		<div id="connection-status"></div>
-		<div id="player-type-dropdown">
-			<div id="player-type-panel">
-				<button id="player-type-computer" class="button is-dark">
-					Play computer
-				</button>
-				<button id="player-type-human" class="button is-dark">
-					Play human
-				</button>
-			</div>
+		<div id="player-type-panel">
+			<button id="player-type-computer" class="button is-dark">
+				Play computer
+			</button>
+			<button id="player-type-human" class="button is-dark">
+				Play human
+			</button>
 		</div>
 		<div id="board-container"></div>
+		<div id="confetti-stage"></div>
 	`;
 }
 
@@ -42,6 +41,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	vi.useRealTimers();
 	document.body.innerHTML = '';
 });
 
@@ -117,17 +117,17 @@ describe('PlayerTypeElement', () => {
 	});
 
 	it('hides and shows the selector block', () => {
-		const dropdown = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
+		const panel = document.querySelector<HTMLDivElement>(
+			'#player-type-panel',
 		)!;
 		const playerType = new PlayerTypeElement();
 
 		playerType.setSelection('human');
 		playerType.hide();
-		expect(dropdown.style.display).toBe('none');
+		expect(panel.style.display).toBe('none');
 
 		playerType.show();
-		expect(dropdown.style.display).toBe('');
+		expect(panel.style.display).toBe('');
 	});
 });
 
@@ -142,5 +142,29 @@ describe('CountdownContainerElement', () => {
 		expect(top.textContent).toBe('black moves first');
 
 		countdown.hide('white');
+	});
+});
+
+describe('ConfettiElement', () => {
+	it('shows for one second, fades for half a second, then hides', () => {
+		vi.useFakeTimers();
+		const confetti = new ConfettiElement();
+		const element = confetti.element!;
+
+		confetti.show();
+		expect(element.style.display).toBe('flex');
+
+		vi.advanceTimersByTime(999);
+		expect(element.classList.contains('is-fading')).toBe(false);
+
+		vi.advanceTimersByTime(1);
+		expect(element.classList.contains('is-fading')).toBe(true);
+		expect(element.style.display).toBe('flex');
+
+		vi.advanceTimersByTime(499);
+		expect(element.style.display).toBe('flex');
+
+		vi.advanceTimersByTime(1);
+		expect(element.style.display).toBe('none');
 	});
 });

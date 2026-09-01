@@ -2,7 +2,7 @@
  * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
 */
 
-import { GameStatus, PlayerColor } from './models';
+import { PlayerColor } from './models';
 
 interface IElement {
 	get element(): HTMLElement | undefined;
@@ -117,69 +117,6 @@ export class ControlsElement implements IElement {
 			'<div>' + (blackTime > 0 ? blackTime : 0).toFixed(1) + 's</div>';
 	}
 
-	setActive(color: PlayerColor) {
-		const clocks = document.querySelector<HTMLDivElement>('#clocks');
-		if (clocks) {
-			clocks.dataset.activeColor = color;
-		}
-		if (color === 'white') {
-			this.#whiteClockElement!.classList.add('is-running');
-			this.#blackClockElement!.classList.remove('is-running');
-		} else {
-			this.#whiteClockElement!.classList.remove('is-running');
-			this.#blackClockElement!.classList.add('is-running');
-		}
-	}
-}
-
-export class GameMetaElement implements IElement {
-	readonly #selector: string = '#game-meta';
-	#element: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor({
-		playerColor,
-		whosNext,
-	}: {
-		playerColor: PlayerColor;
-		whosNext: PlayerColor;
-	}) {
-		const element = document.querySelector<HTMLDivElement>(this.#selector);
-		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
-		this.#element = element;
-		this.show({
-			playerColor,
-			whosNext,
-		});
-	}
-
-	private show({
-		playerColor,
-		whosNext,
-	}: {
-		playerColor: PlayerColor;
-		whosNext: PlayerColor;
-	}) {
-		this.#element!.style.visibility = 'inherit';
-
-		const gameMetaIcon =
-			document.querySelector<HTMLElement>('#game-meta .icon i');
-		if (playerColor === 'black') {
-			gameMetaIcon?.classList.add('is-black');
-		} else {
-			gameMetaIcon?.classList.remove('is-black');
-		}
-
-		const whoseMove = document.querySelector<HTMLDivElement>(
-			'#game-meta #whose-move',
-		)!;
-		whoseMove.innerText = `${
-			whosNext === 'white' ? 'White' : 'Black'
-		} to play.`;
-	}
 }
 
 export class PlayerTypeElement implements IElement {
@@ -333,7 +270,7 @@ export class ConfettiElement implements IElement {
 				this.#element!.style.display = 'none';
 				this.#element!.classList.remove('is-fading');
 				this.#hideTimer = undefined;
-			}, 750);
-		}, 1250);
+		}, 500);
+		}, 1000);
 	}
 }

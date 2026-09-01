@@ -26,7 +26,15 @@
 	<body>
 		<div id="container">
 			<div id="controls">
-				<div class="time" id="black-clock"></div>
+				<div class="clock-row">
+					<img
+						src="chess-clock.svg"
+						alt="Black chess clock"
+						height="30"
+						width="30"
+					/>
+					<div class="time" id="black-clock"></div>
+				</div>
 				<div id="player-type-panel">
 					<button
 						class="button is-primary is-outlined"
@@ -51,20 +59,19 @@
 						<i class="fa-solid fa-xmark"></i>
 					</span>
 				</button>
-				<div class="time" id="white-clock"></div>
+				<div class="clock-row">
+					<img
+						src="chess-clock.svg"
+						alt="Black chess clock"
+						height="30"
+						width="30"
+					/>
+					<div class="time" id="white-clock"></div>
+				</div>
 				<!-- TODO: what are these -->
 				<div id="connection-status" aria-live="polite"></div>
 			</div>
 			<div id="board-container">
-				<!-- <div id="game-meta">
-					<div style="display: flex; gap: 1rem">
-						<div class="icon">
-							<i class="fa-solid fa-chess-king is-black"></i>
-						</div>
-					</div>
-					<div id="whose-move">Black to move you play black</div>
-				</div> -->
-
 				<div id="board-ui">
 					<div id="board"></div>
 				</div>

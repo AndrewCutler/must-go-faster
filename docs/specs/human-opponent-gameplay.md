@@ -49,8 +49,6 @@ After two human users are matched into the same session, both users can play a c
 - Legal moves should be highlighted according to the current position.
 - The last played move should be highlighted according to chessground norms.
 - A chess clock should be visible for both players.
-- The active side should be indicated clearly while the game is in progress.
-- Game-end messaging should be shown when the game finishes.
 
 ## Acceptance criteria
 
@@ -61,7 +59,7 @@ After two human users are matched into the same session, both users can play a c
 - The board updates to show the most recent move after each accepted move.
 - If the local player had a piece selected before the opponent's move arrived, the board should preserve that selected piece after updating the position.
 - The chess clock updates as turns change.
-- The game ends properly for checkmate, stalemate, repetition, insufficient material, timeout, abandonment, and any other legal draw or win state the server supports for the session.
+- The game state is finalized properly for checkmate, stalemate, repetition, insufficient material, timeout, abandonment, and any other legal draw or win state the server supports for the session.
 - A client disconnect ends the active game immediately for both players.
 - A refresh does not preserve the active human game.
 

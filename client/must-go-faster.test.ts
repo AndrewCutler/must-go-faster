@@ -171,25 +171,19 @@ function renderDom(): void {
 			</span>
 		</button>
 		<div id="connection-status"></div>
-		<div id="player-type-dropdown">
-			<div id="player-type-panel">
-				<button id="player-type-computer" class="button is-dark">
-					Play computer
-				</button>
-				<button id="player-type-human" class="button is-dark">
-					Play human
-				</button>
-			</div>
+		<div id="player-type-panel">
+			<button id="player-type-computer" class="button is-dark">
+				Play computer
+			</button>
+			<button id="player-type-human" class="button is-dark">
+				Play human
+			</button>
 		</div>
 		<div id="controls">
 			<div id="black-clock"></div>
 			<div id="white-clock"></div>
 		</div>
 		<div id="board-container"></div>
-		<div id="game-meta">
-			<div class="icon"><i class="fa-solid fa-chess-king"></i></div>
-			<div id="whose-move"></div>
-		</div>
 	`;
 }
 
@@ -415,10 +409,7 @@ describe('MustGoFaster connect flow', () => {
 			'#cancel-button',
 		)!;
 		const playerType = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
-		)!;
-		const opponentStatus = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
+			'#player-type-panel',
 		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
@@ -427,7 +418,6 @@ describe('MustGoFaster connect flow', () => {
 		expect(computerButton.disabled).toBe(true);
 		expect(humanButton.disabled).toBe(true);
 		expect(playerType.dataset.pending).toBe('human');
-		expect(opponentStatus.textContent).toBe('Playing human');
 		expect(status.textContent).toBe('Waiting for opponent...');
 		expect(status.dataset.tone).toBe('info');
 		expect(cancelButton.style.display).toBe('');
@@ -441,14 +431,10 @@ describe('MustGoFaster connect flow', () => {
 
 		app.connect();
 
-		const opponentStatus = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
-		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
 		)!;
 
-		expect(opponentStatus.textContent).toBe('Playing computer');
 		expect(status.textContent).toBe('Starting game...');
 		expect(status.dataset.tone).toBe('info');
 	});
@@ -470,10 +456,7 @@ describe('MustGoFaster connect flow', () => {
 			'#cancel-button',
 		)!;
 		const playerType = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
-		)!;
-		const opponentStatus = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
+			'#player-type-panel',
 		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
@@ -487,7 +470,6 @@ describe('MustGoFaster connect flow', () => {
 		expect(humanButton.disabled).toBe(false);
 		expect(cancelButton.style.display).toBe('none');
 		expect(playerType.style.display).toBe('');
-		expect(opponentStatus.textContent).toBe('');
 		expect(status.textContent).toBe('');
 		expect(status.dataset.tone).toBe('info');
 		expect(status.style.visibility).toBe('hidden');
@@ -539,14 +521,9 @@ describe('MustGoFaster connect flow', () => {
 		} as CloseEvent);
 
 		const playerType = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
+			'#player-type-panel',
 		)!;
-		const opponentStatus = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
-		)!;
-
 		expect(playerType.style.display).toBe('');
-		expect(opponentStatus.textContent).toBe('');
 	});
 
 	it('surfaces a lobby-expired close reason before the game starts', () => {

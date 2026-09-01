@@ -14,7 +14,7 @@ A user needs to be able to create a new chess game if no pending lobbies exist.
 
 ## Goal
 
-When a user clicks the Play button, if no pending lobbies exist on the server, a new pending lobby record is created and left open until another user joins or the creating user disconnects.
+When a user clicks the "Play human" button, if no pending lobbies exist on the server, a new pending lobby record is created and left open until another user joins or the creating user disconnects.
 
 ## Non-goals
 
@@ -24,7 +24,7 @@ When a user clicks the Play button, if no pending lobbies exist on the server, a
 
 ## Related behavior
 
-- Opponent type selection is part of this flow.
+- The "Play human" button is the entry point for this flow.
 - If the computer opponent is selected, the existing immediate game-start behavior remains in effect and is not part of this spec.
 - PGN selection happens only when an opponent joins the lobby and the active session is created.
 
@@ -37,19 +37,17 @@ When a user clicks the Play button, if no pending lobbies exist on the server, a
 
 ## User-visible behavior
 
-- The Play button should be displayed on app load.
-- The Play button should only be enabled if the user does not already have a pending or active game.
-- Upon clicking, the Play button should change into a split-button state with a loading spinner on the left and a cancel `X` icon on the right.
-- The left side of the split-button is not actionable while the lobby is pending.
+- The "Play human" button should be displayed on app load.
+- The "Play human" button should only be enabled if the user does not already have a pending or active game.
+- Upon clicking, the "Play human" button should become disabled while the lobby is pending, and a cancel `X` control should be shown.
 - The right-side cancel control is actionable while the lobby is pending.
 - If game creation fails, the user should be shown an error message.
 - The user should be able to cancel a pending lobby via some interactive UI element.
 
 ## Acceptance criteria
 
-- Users with no existing games can click a Play button.
-- The Play button becomes disabled immediately after being clicked so duplicate clicks do not send duplicate game creation requests.
-- The Play button shows a loading spinner while the pending lobby is open and as long as it remains in an "unjoined" state.
+- Users with no existing games can click the "Play human" button.
+- The "Play human" button becomes disabled immediately after being clicked so duplicate game creation requests are not sent.
 - The pending lobby times out after 2 minutes without being joined.
 - A join takes precedence over the 2 minute timeout.
 - Cancel or websocket disconnect takes precedence over a concurrent join.

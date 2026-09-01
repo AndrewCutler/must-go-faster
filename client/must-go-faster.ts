@@ -356,7 +356,11 @@ export class MustGoFaster {
 		}
 
 		const selectedSquare = this.#state.board!.state.selected;
-		this.#state.board!.cancelMove();
+		const isOpponentMove =
+			this.#state.message!.playerColor !== this.#state.playerColor;
+		if (!isOpponentMove) {
+			this.#state.board!.cancelMove();
+		}
 
 		let endState:
 			| {

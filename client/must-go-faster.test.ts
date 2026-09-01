@@ -37,6 +37,9 @@ type MockBoard = {
 				unset?: () => void;
 			};
 		};
+		draggable: {
+			current?: { orig: string; pos: [number, number] };
+		};
 		viewOnly?: boolean;
 		turnColor?: string;
 		fen?: string;
@@ -108,6 +111,7 @@ vi.mock('chessground', () => {
 					pieces: new Map(),
 					movable: {},
 					premovable: {},
+					draggable: {},
 				},
 			};
 
@@ -788,6 +792,7 @@ describe('MustGoFaster connect flow', () => {
 
 		const board = chessgroundMock.lastBoard!;
 		board.selectSquare('g1');
+		board.state.draggable.current = { orig: 'g1', pos: [100, 100] };
 
 		emitMoveMessage(socket, {
 			playerColor: 'black',
@@ -799,5 +804,10 @@ describe('MustGoFaster connect flow', () => {
 		expect(board.state.fen).toBe('opponent-move-fen');
 		expect(board.selectSquare).toHaveBeenLastCalledWith('g1', true);
 		expect(board.state.selected).toBe('g1');
+		expect(board.state.draggable.current).toEqual({
+			orig: 'g1',
+			pos: [100, 100],
+		});
+		expect(board.cancelMove).not.toHaveBeenCalled();
 	});
 });

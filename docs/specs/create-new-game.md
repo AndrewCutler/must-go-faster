@@ -39,7 +39,9 @@ When a user clicks the "Play human" button, if no pending lobbies exist on the s
 
 - The "Play human" button should be displayed on app load.
 - The "Play human" button should only be enabled if the user does not already have a pending or active game.
-- Upon clicking, the "Play human" button should become disabled while the lobby is pending, and a cancel `X` control should be shown.
+- Upon clicking, the opponent Play buttons should be hidden while the lobby is pending, and a cancel `X` control should be shown.
+- The opponent Play buttons should remain hidden if the pending lobby becomes an active game.
+- The opponent Play buttons should become available again when the pending or active game ends.
 - The right-side cancel control is actionable while the lobby is pending.
 - If game creation fails, the user should be shown an error message.
 - The user should be able to cancel a pending lobby via some interactive UI element.
@@ -48,6 +50,8 @@ When a user clicks the "Play human" button, if no pending lobbies exist on the s
 
 - Users with no existing games can click the "Play human" button.
 - The "Play human" button becomes disabled immediately after being clicked so duplicate game creation requests are not sent.
+- The opponent Play buttons are hidden immediately after game creation begins and remain hidden while the lobby or resulting game is active.
+- The opponent Play buttons become available again after cancellation, disconnect, or game over.
 - The pending lobby times out after 2 minutes without being joined.
 - A join takes precedence over the 2 minute timeout.
 - Cancel or websocket disconnect takes precedence over a concurrent join.

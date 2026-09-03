@@ -23,7 +23,7 @@ A user can select either a human or computer opponent. If human, the game starts
 
 ## Related behavior
 
-- Joining/creating a game with the Play button
+- Joining/creating a game with the opponent buttons
 
 ## Constraints
 
@@ -33,22 +33,19 @@ A user can select either a human or computer opponent. If human, the game starts
 
 ## User-visible behavior
 
-- A dropdown should appear with Human and Computer as options.
-- By default, Computer should be selected.
-- The dropdown disappears immediately once Play is clicked.
-- The selected opponent type is locked once Play is clicked.
-- A "Playing computer" or "Playing human" message is shown above the chess clock while the game is in action.
-- The dropdown resets to Computer if the page refreshes or the socket disconnects.
+- Separate "Play computer" and "Play human" buttons should appear.
+- Selecting either button immediately starts that opponent type.
+- Both buttons are disabled while the connection is pending or the game is active.
+- The buttons become available again if the socket disconnects.
 - Computer play starts an active session immediately instead of waiting in a pending lobby.
 
 ## Acceptance Criteria
 
-- A user can change the opponent type before the Play button is clicked.
-- Once Play is clicked, the selected opponent type is locked and cannot be changed for that attempt.
-- The dropdown disappears once Play is clicked.
-- Messaging is displayed above the chess clock to indicate opponent type while game is in action.
+- A user can start a computer game by clicking the "Play computer" button.
+- A user can start a human game by clicking the "Play human" button.
+- Both buttons are disabled immediately after either button is clicked.
 - Selecting Computer starts a game immediately instead of creating a pending lobby.
-- Refreshing or disconnecting resets the dropdown to Computer.
+- Disconnecting makes both opponent buttons available again.
 
 ## Non-functional requirements
 

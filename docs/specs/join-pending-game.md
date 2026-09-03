@@ -14,7 +14,7 @@ A user needs to be able to join an existing lobby that is waiting for a second p
 
 ## Goal
 
-When a user clicks the Play button, if a pending lobby exists on the server, that second player is added to the oldest pending lobby.
+When a user clicks the "Play human" button, if a pending lobby exists on the server, that second player is added to the oldest pending lobby.
 
 ## Non-goals
 
@@ -36,9 +36,9 @@ When a user clicks the Play button, if a pending lobby exists on the server, tha
 
 ## User-visible behavior
 
-- The Play button should be displayed on app load.
-- The Play button should only be enabled if the user does not already have a pending or active game.
-- Upon clicking, the user should be added to a pending lobby.
+- The "Play human" button should be displayed on app load.
+- The "Play human" button should only be enabled if the user does not already have a pending or active game.
+- Upon clicking the "Play human" button, the user should be added to a pending lobby.
 - Once the game is started, the chessboard should display and a 5-second countdown should overlay it to give both players time to prepare for game start.
 - The countdown overlay should say `[player color] moves first` for the local user.
 - A chess clock with both players' times should be displayed.
@@ -46,8 +46,8 @@ When a user clicks the Play button, if a pending lobby exists on the server, tha
 
 ## Acceptance criteria
 
-- Users with no existing games can click a Play button.
-- The Play button becomes disabled immediately after being clicked so duplicate clicks do not send duplicate game join requests.
+- Users with no existing games can click the "Play human" button.
+- The "Play human" button becomes disabled immediately after being clicked so duplicate game join requests are not sent.
 - If multiple pending lobbies exist, the oldest one is joined.
 - Joining an expired lobby is not allowed.
 - The board renders with the selected PGN but is not actionable.

@@ -2,7 +2,7 @@
  * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
 */
 
-import { GameStatus, PlayerColor } from './models';
+import { PlayerColor } from './models';
 
 interface IElement {
 	get element(): HTMLElement | undefined;
@@ -28,25 +28,6 @@ export class BoardElement implements IElement {
 
 	enable(): void {
 		this.#element!.style.pointerEvents = 'auto';
-	}
-}
-
-export class GettingStartedElement implements IElement {
-	#element: HTMLElement | undefined;
-	readonly #selector: string = '#getting-started';
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor() {
-		const element = document.querySelector<HTMLDivElement>(this.#selector);
-		if (!element) throw new Error('Cannot find #getting-started');
-		this.#element = element;
-	}
-
-	hide(): void {
-		this.#element!.remove();
 	}
 }
 
@@ -136,196 +117,58 @@ export class ControlsElement implements IElement {
 			'<div>' + (blackTime > 0 ? blackTime : 0).toFixed(1) + 's</div>';
 	}
 
-	setActive(color: PlayerColor) {
-		if (color === 'white') {
-			this.#whiteClockElement!.classList.add('is-running');
-			this.#blackClockElement!.classList.remove('is-running');
-		} else {
-			this.#whiteClockElement!.classList.remove('is-running');
-			this.#blackClockElement!.classList.add('is-running');
-		}
-	}
-}
-
-// todo: bulma
-export class GameStatusModalElement implements IElement {
-	readonly #selector: string = '#game-status-modal';
-	#element: HTMLElement | undefined;
-	#headerElement: HTMLElement | undefined;
-	#playAgainButtonElement: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor(sendMessageCallback: () => void) {
-		const self = this;
-		const parent = document.querySelector('#board-container')!;
-		const element = document.createElement('div');
-		element.id = this.#selector.replace('#', '');
-		const headerElement = document.createElement('div');
-		headerElement.id = 'modal-header';
-		const contentElement = document.createElement('div');
-		contentElement.id = 'modal-content';
-		const modalButtonContainer = document.createElement('div');
-		modalButtonContainer.id = 'modal-button-container';
-		const playAgainButton = document.createElement('button');
-		playAgainButton.id = 'play-again-button';
-		playAgainButton.classList.add('button');
-		playAgainButton.classList.add('is-dark');
-		playAgainButton.innerText = 'Play again';
-
-		modalButtonContainer.appendChild(playAgainButton);
-		contentElement.appendChild(modalButtonContainer);
-
-		element.appendChild(headerElement);
-		element.appendChild(contentElement);
-		parent.prepend(element);
-
-		this.#element = element;
-		this.#headerElement = headerElement;
-		this.#playAgainButtonElement = playAgainButton;
-		this.#playAgainButtonElement.addEventListener('click', function () {
-			self.playAgain(sendMessageCallback);
-		});
-	}
-
-	setTime(time: number): void {
-		this.#element!.innerHTML =
-			'<div>' + (time > 0 ? time : 0).toFixed(1) + 's</div>';
-	}
-
-	hide(): void {
-		this.#element!.remove();
-	}
-
-	setOutcome(
-		gameStatus: Exclude<GameStatus, 'ongoing'>,
-		method: string,
-	): void {
-		const verb = gameStatus === 'draw' ? 'drew' : gameStatus;
-		this.#headerElement!.textContent = `You ${verb} via ${method}.`;
-	}
-
-	private playAgain(sendMessageCallback: () => void): void {
-		this.hide();
-		sendMessageCallback();
-	}
-}
-
-export class GameMetaElement implements IElement {
-	readonly #selector: string = '#game-meta';
-	#element: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor({
-		playerColor,
-		whosNext,
-	}: {
-		playerColor: PlayerColor;
-		whosNext: PlayerColor;
-	}) {
-		const element = document.querySelector<HTMLDivElement>(this.#selector);
-		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
-		this.#element = element;
-		this.show({
-			playerColor,
-			whosNext,
-		});
-	}
-
-	private show({
-		playerColor,
-		whosNext,
-	}: {
-		playerColor: PlayerColor;
-		whosNext: PlayerColor;
-	}) {
-		this.#element!.style.visibility = 'inherit';
-
-		const gameMetaIcon =
-			document.querySelector<HTMLElement>('#game-meta .icon i');
-		if (playerColor === 'black') {
-			gameMetaIcon?.classList.add('is-black');
-		} else {
-			gameMetaIcon?.classList.remove('is-black');
-		}
-
-		const whoseMove = document.querySelector<HTMLDivElement>(
-			'#game-meta #whose-move',
-		)!;
-		whoseMove.innerText = `${
-			whosNext === 'white' ? 'White' : 'Black'
-		} to play.`;
-	}
-}
-
-export class ConnectButtonElement implements IElement {
-	readonly #selector = '#connect-button';
-	#element: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
-	}
-
-	constructor() {
-		const element = document.querySelector<HTMLButtonElement>(
-			this.#selector,
+	setActive(color: PlayerColor): void {
+		this.#whiteClockElement!.parentElement
+			?.querySelector<HTMLImageElement>('img')
+			?.classList.toggle(
+			'is-turn',
+			color === 'white',
 		);
-		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
-		this.#element = element;
+		this.#blackClockElement!.parentElement
+			?.querySelector<HTMLImageElement>('img')
+			?.classList.toggle(
+			'is-turn',
+			color === 'black',
+		);
 	}
 
-	setPending(): void {
-		this.#element!.style.display = '';
-		this.#element!.classList.add('is-loading');
-		this.#element!.setAttribute('disabled', 'true');
-		this.#element!.textContent = 'Play';
+	clearActive(): void {
+		this.#whiteClockElement!.parentElement
+			?.querySelector<HTMLImageElement>('img')
+			?.classList.remove('is-turn');
+		this.#blackClockElement!.parentElement
+			?.querySelector<HTMLImageElement>('img')
+			?.classList.remove('is-turn');
 	}
 
-	reset(): void {
-		this.#element!.style.display = '';
-		this.#element!.classList.remove('is-loading');
-		this.#element!.removeAttribute('disabled');
-		this.#element!.textContent = 'Play';
-	}
-
-	hide(): void {
-		this.#element!.style.display = 'none';
-	}
-
-	gameJoined(): void {
-		this.hide();
-	}
 }
 
 export class PlayerTypeElement implements IElement {
 	#element: HTMLElement | undefined;
-	readonly #selector = '#player-type-dropdown';
+	#computerButton: HTMLButtonElement | undefined;
+	#humanButton: HTMLButtonElement | undefined;
+	readonly #selector = '#player-type-panel';
 
 	get element(): HTMLElement | undefined {
 		return this.#element;
 	}
 
 	constructor() {
-		const element = document.querySelector<HTMLDivElement>(this.#selector);
+		const element = document.querySelector<HTMLElement>(this.#selector);
 		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
 		this.#element = element;
-	}
-
-	toggleActive(): void {
-		if (this.#element!.classList.contains('is-active')) {
-			this.#element!.classList.remove('is-active');
-		} else {
-			this.#element!.classList.add('is-active');
+		const computerButton =
+			document.querySelector<HTMLButtonElement>('#player-type-computer');
+		const humanButton =
+			document.querySelector<HTMLButtonElement>('#player-type-human');
+		if (!computerButton || !humanButton) {
+			throw new Error('Cannot find player type buttons.');
 		}
+		this.#computerButton = computerButton;
+		this.#humanButton = humanButton;
 	}
 
 	hide(): void {
-		this.#element!.classList.remove('is-active');
 		this.#element!.style.display = 'none';
 	}
 
@@ -334,44 +177,38 @@ export class PlayerTypeElement implements IElement {
 	}
 
 	setSelection(value: string): void {
-		const valueElement = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
-		)!;
 		switch (value) {
 			case 'computer':
-				valueElement.textContent = 'Computer';
+				this.#computerButton!.classList.add('is-selected');
+				this.#humanButton!.classList.remove('is-selected');
 				break;
 			case 'human':
-				valueElement.textContent = 'Human';
+				this.#humanButton!.classList.add('is-selected');
+				this.#computerButton!.classList.remove('is-selected');
 				break;
 			default:
 				throw new Error(`Invalid player type: ${value}.`);
 		}
 	}
-}
 
-export class OpponentStatusElement implements IElement {
-	readonly #selector = '#opponent-status';
-	#element: HTMLElement | undefined;
-
-	get element(): HTMLElement | undefined {
-		return this.#element;
+	setPending(value?: string): void {
+		this.#computerButton!.disabled = true;
+		this.#humanButton!.disabled = true;
+		this.#element!.dataset.pending = value ?? '';
 	}
 
-	constructor() {
-		const element = document.querySelector<HTMLDivElement>(this.#selector);
-		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
-		this.#element = element;
+	clearPending(): void {
+		this.#computerButton!.disabled = false;
+		this.#humanButton!.disabled = false;
+		delete this.#element!.dataset.pending;
 	}
 
-	show(message: string): void {
-		this.#element!.textContent = message;
-		this.#element!.style.visibility = 'visible';
+	onComputerClick(handler: () => void): void {
+		this.#computerButton!.addEventListener('click', handler);
 	}
 
-	clear(): void {
-		this.#element!.textContent = '';
-		this.#element!.style.visibility = 'hidden';
+	onHumanClick(handler: () => void): void {
+		this.#humanButton!.addEventListener('click', handler);
 	}
 }
 
@@ -424,5 +261,40 @@ export class ConnectionStatusElement implements IElement {
 		this.#element!.textContent = '';
 		this.#element!.dataset.tone = 'info';
 		this.#element!.style.visibility = 'hidden';
+	}
+}
+
+export class ConfettiElement implements IElement {
+	readonly #selector = '#confetti-stage';
+	#element: HTMLElement | undefined;
+	#hideTimer: number | undefined;
+
+	get element(): HTMLElement | undefined {
+		return this.#element;
+	}
+
+	constructor() {
+		const element = document.querySelector<HTMLElement>(this.#selector);
+		if (!element) throw new Error(`Cannot find ${this.#selector}.`);
+		this.#element = element;
+	}
+
+	show(): void {
+		if (this.#hideTimer !== undefined) {
+			window.clearTimeout(this.#hideTimer);
+			this.#hideTimer = undefined;
+		}
+
+		this.#element!.classList.remove('is-fading');
+		this.#element!.style.display = 'flex';
+
+		window.setTimeout(() => {
+			this.#element!.classList.add('is-fading');
+			this.#hideTimer = window.setTimeout(() => {
+				this.#element!.style.display = 'none';
+				this.#element!.classList.remove('is-fading');
+				this.#hideTimer = undefined;
+		}, 500);
+		}, 1000);
 	}
 }

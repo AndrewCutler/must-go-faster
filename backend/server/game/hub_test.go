@@ -119,6 +119,39 @@ func TestExpirePendingLobbiesFinalizesExpiredLobbyOnSecondPass(t *testing.T) {
 	}
 }
 
+func TestExpirePendingLobbiesHandlesNilConnectionsWithoutPanicking(t *testing.T) {
+	hub := NewHub()
+	player := newTestPlayerWithConn(t)
+	createNewLobby(hub, player)
+
+	lobby := hub.AwaitingOpponentSessions[player.SessionId]
+	lobby.CreatedAt = time.Now().Add(-3 * time.Minute)
+	lobby.Player.Connection = nil
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected lobby expiration to ignore nil connections, panicked with %v", r)
+		}
+	}()
+
+	hub.expirePendingLobbies()
+	lobby = hub.AwaitingOpponentSessions[player.SessionId]
+	lobby.Expired = true
+	lobby.ExpiredAt = time.Now().Add(-2 * time.Second)
+
+	hub.expirePendingLobbies()
+}
+
+func TestSafeCloseConnectionAllowsNil(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected safeCloseConnection to tolerate nil, panicked with %v", r)
+		}
+	}()
+
+	safeCloseConnection(nil)
+}
+
 func TestJoinPendingGamePromotesLobbyAndBroadcastsJoinedMessages(t *testing.T) {
 	withServerWorkingDir(t)
 

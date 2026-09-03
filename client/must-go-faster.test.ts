@@ -11,8 +11,9 @@ type MockBoard = {
 	move: ReturnType<typeof vi.fn>;
 	playPremove: ReturnType<typeof vi.fn>;
 	cancelMove: ReturnType<typeof vi.fn>;
-	stop: ReturnType<typeof vi.fn>;
-	state: {
+		stop: ReturnType<typeof vi.fn>;
+		selectSquare: ReturnType<typeof vi.fn>;
+		state: {
 		pieces: Map<string, { role?: string; color?: string }>;
 		movable: {
 			color?: string;
@@ -36,10 +37,14 @@ type MockBoard = {
 				unset?: () => void;
 			};
 		};
+		draggable: {
+			current?: { orig: string; pos: [number, number] };
+		};
 		viewOnly?: boolean;
 		turnColor?: string;
 		fen?: string;
 		lastMove?: string[];
+		selected?: string;
 	};
 };
 
@@ -70,6 +75,9 @@ vi.mock('chessground', () => {
 					if ('lastMove' in config) {
 						board.state.lastMove = config.lastMove as string[];
 					}
+					if ('selected' in config) {
+						board.state.selected = config.selected as string;
+					}
 					if ('premovable' in config) {
 						Object.assign(
 							board.state.premovable,
@@ -86,6 +94,7 @@ vi.mock('chessground', () => {
 					return true;
 				}),
 				cancelMove: vi.fn(() => {
+					board.state.selected = undefined;
 					if (!board.state.premovable.current) {
 						return;
 					}
@@ -95,10 +104,14 @@ vi.mock('chessground', () => {
 				stop: vi.fn(() => {
 					board.state.premovable.current = undefined;
 				}),
+				selectSquare: vi.fn((key: string | null) => {
+					board.state.selected = key ?? undefined;
+				}),
 				state: {
 					pieces: new Map(),
 					movable: {},
 					premovable: {},
+					draggable: {},
 				},
 			};
 
@@ -147,8 +160,6 @@ const originalEnv = {
 function renderDom(): void {
 	document.body.innerHTML = `
 		<div id="board"></div>
-		<div id="getting-started"></div>
-		<button id="connect-button" class="button is-dark">Play</button>
 		<button
 			id="cancel-button"
 			class="button is-dark"
@@ -160,19 +171,19 @@ function renderDom(): void {
 			</span>
 		</button>
 		<div id="connection-status"></div>
-		<div id="player-type-dropdown" class="dropdown">
-			<span id="player-type-dropdown-value">Computer</span>
+		<div id="player-type-panel">
+			<button id="player-type-computer" class="button is-dark">
+				Play computer
+			</button>
+			<button id="player-type-human" class="button is-dark">
+				Play human
+			</button>
 		</div>
-		<div id="opponent-status"></div>
 		<div id="controls">
-			<div id="white-clock"></div>
 			<div id="black-clock"></div>
+			<div id="white-clock"></div>
 		</div>
 		<div id="board-container"></div>
-		<div id="game-meta">
-			<div class="icon"><i class="fa-solid fa-chess-king"></i></div>
-			<div id="whose-move"></div>
-		</div>
 	`;
 }
 
@@ -348,37 +359,65 @@ function emitPremoveResponseMessage(
 	);
 }
 
+function emitTimeoutMessage(
+	socket: FakeWebSocket,
+	overrides: Partial<Record<string, unknown>> = {},
+): void {
+	const { playerColor = 'white', ...payloadOverrides } =
+		overrides as Partial<Record<string, unknown>> & {
+			playerColor?: string;
+		};
+	const message = {
+		sessionId: 'session-1',
+		playerColor,
+		isAgainstComputer: false,
+		type: 'TimeoutFromServerType',
+		payload: {
+			fen: 'test-fen',
+			validMoves: {},
+			whosNext: 'white',
+			loser: 'black',
+			...payloadOverrides,
+		},
+	};
+	socket.readyState = FakeWebSocket.OPEN;
+	socket.onmessage?.(
+		new MessageEvent('message', {
+			data: JSON.stringify(message),
+		}),
+	);
+}
+
 describe('MustGoFaster connect flow', () => {
 	it('shows the waiting copy for a human opponent and ignores duplicate play clicks', () => {
 		const app = createApp('human');
 
 		app.connect();
 
-		expect(fakeSockets).toHaveLength(1);
-		expect(fakeSockets[0].url).toBe(
+	expect(fakeSockets).toHaveLength(1);
+	expect(fakeSockets[0].url).toBe(
 			'ws://example.test/connect?opponentType=human',
 		);
 
-		const connectButton = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
+		const computerButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
+		)!;
+		const humanButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
 		)!;
 		const playerType = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
-		)!;
-		const opponentStatus = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
+			'#player-type-panel',
 		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
 		)!;
 
-		expect(connectButton.disabled).toBe(true);
-		expect(connectButton.classList.contains('is-loading')).toBe(true);
-		expect(playerType.style.display).toBe('none');
-		expect(opponentStatus.textContent).toBe('Playing human');
+		expect(computerButton.disabled).toBe(true);
+		expect(humanButton.disabled).toBe(true);
+		expect(playerType.dataset.pending).toBe('human');
 		expect(status.textContent).toBe('Waiting for opponent...');
 		expect(status.dataset.tone).toBe('info');
 		expect(cancelButton.style.display).toBe('');
@@ -392,14 +431,10 @@ describe('MustGoFaster connect flow', () => {
 
 		app.connect();
 
-		const opponentStatus = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
-		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
 		)!;
 
-		expect(opponentStatus.textContent).toBe('Playing computer');
 		expect(status.textContent).toBe('Starting game...');
 		expect(status.dataset.tone).toBe('info');
 	});
@@ -411,20 +446,17 @@ describe('MustGoFaster connect flow', () => {
 		const socket = fakeSockets[0];
 		app.cancelPendingGame();
 
-		const connectButton = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
+		const computerButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
+		)!;
+		const humanButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
 		)!;
 		const playerType = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
-		)!;
-		const playerTypeValue = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
-		)!;
-		const opponentStatus = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
+			'#player-type-panel',
 		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
@@ -434,13 +466,10 @@ describe('MustGoFaster connect flow', () => {
 			1000,
 			'Canceled by user.',
 		);
-		expect(connectButton.disabled).toBe(false);
-		expect(connectButton.classList.contains('is-loading')).toBe(false);
-		expect(connectButton.style.display).toBe('');
+		expect(computerButton.disabled).toBe(false);
+		expect(humanButton.disabled).toBe(false);
 		expect(cancelButton.style.display).toBe('none');
 		expect(playerType.style.display).toBe('');
-		expect(playerTypeValue.textContent).toBe('Human');
-		expect(opponentStatus.textContent).toBe('');
 		expect(status.textContent).toBe('');
 		expect(status.dataset.tone).toBe('info');
 		expect(status.style.visibility).toBe('hidden');
@@ -492,18 +521,9 @@ describe('MustGoFaster connect flow', () => {
 		} as CloseEvent);
 
 		const playerType = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
+			'#player-type-panel',
 		)!;
-		const playerTypeValue = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
-		)!;
-		const opponentStatus = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
-		)!;
-
 		expect(playerType.style.display).toBe('');
-		expect(playerTypeValue.textContent).toBe('Computer');
-		expect(opponentStatus.textContent).toBe('');
 	});
 
 	it('surfaces a lobby-expired close reason before the game starts', () => {
@@ -512,15 +532,18 @@ describe('MustGoFaster connect flow', () => {
 		app.connect();
 		fakeSockets[0].close(1000, 'Lobby expired after 2 minutes.');
 
-		const connectButton = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
+		const computerButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
+		)!;
+		const humanButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const status = document.querySelector<HTMLDivElement>(
 			'#connection-status',
 		)!;
 
-		expect(connectButton.disabled).toBe(false);
-		expect(connectButton.classList.contains('is-loading')).toBe(false);
+		expect(computerButton.disabled).toBe(false);
+		expect(humanButton.disabled).toBe(false);
 		expect(status.textContent).toBe('Lobby expired after 2 minutes.');
 		expect(status.dataset.tone).toBe('error');
 	});
@@ -531,8 +554,11 @@ describe('MustGoFaster connect flow', () => {
 		app.connect();
 		fakeSockets[0].onerror?.(new Event('error'));
 
-		const connectButton = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
+		const computerButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
+		)!;
+		const humanButton = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const cancelButton = document.querySelector<HTMLButtonElement>(
 			'#cancel-button',
@@ -541,8 +567,8 @@ describe('MustGoFaster connect flow', () => {
 			'#connection-status',
 		)!;
 
-		expect(connectButton.disabled).toBe(false);
-		expect(connectButton.classList.contains('is-loading')).toBe(false);
+		expect(computerButton.disabled).toBe(false);
+		expect(humanButton.disabled).toBe(false);
 		expect(cancelButton.style.display).toBe('none');
 		expect(status.textContent).toBe(
 			'Unable to start a game. Please try again.',
@@ -560,11 +586,19 @@ describe('MustGoFaster connect flow', () => {
 			playerColor: 'black',
 			isAgainstComputer: false,
 			whosNext: 'white',
+			validMoves: {
+				g1: ['f3', 'h3'],
+				b1: ['a3', 'c3'],
+			},
 		});
 		emitGameStartedMessage(socket, {
 			playerColor: 'black',
 			isAgainstComputer: false,
 			whosNext: 'white',
+			validMoves: {
+				g1: ['f3', 'h3'],
+				b1: ['a3', 'c3'],
+			},
 		});
 
 		expect(chessgroundMock.lastBoard?.state.premovable.enabled).toBe(true);
@@ -587,11 +621,17 @@ describe('MustGoFaster connect flow', () => {
 			playerColor: 'black',
 			isAgainstComputer: true,
 			whosNext: 'white',
+			validMoves: {
+				g1: ['f3', 'h3'],
+			},
 		});
 		emitGameStartedMessage(socket, {
 			playerColor: 'black',
 			isAgainstComputer: true,
 			whosNext: 'white',
+			validMoves: {
+				g1: ['f3', 'h3'],
+			},
 		});
 
 		expect(chessgroundMock.lastBoard?.state.premovable.enabled).toBe(true);
@@ -708,5 +748,43 @@ describe('MustGoFaster connect flow', () => {
 		expect(chessgroundMock.lastBoard?.cancelMove).toHaveBeenCalled();
 		expect(chessgroundMock.lastBoard?.state.fen).toBe('authoritative-fen');
 		expect(chessgroundMock.lastBoard?.state.lastMove).toBeUndefined();
+	});
+
+	it("preserves the selected piece when the opponent's move updates the board", () => {
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket, {
+			playerColor: 'white',
+			isAgainstComputer: false,
+			whosNext: 'black',
+		});
+		emitGameStartedMessage(socket, {
+			playerColor: 'white',
+			isAgainstComputer: false,
+			whosNext: 'black',
+		});
+
+		const board = chessgroundMock.lastBoard!;
+		board.selectSquare('g1');
+		board.state.draggable.current = { orig: 'g1', pos: [100, 100] };
+
+		emitMoveMessage(socket, {
+			playerColor: 'black',
+			whosNext: 'white',
+			move: { from: 'e7', to: 'e5' },
+			fen: 'opponent-move-fen',
+		});
+
+		expect(board.state.fen).toBe('opponent-move-fen');
+		expect(board.selectSquare).toHaveBeenLastCalledWith('g1', true);
+		expect(board.state.selected).toBe('g1');
+		expect(board.state.draggable.current).toEqual({
+			orig: 'g1',
+			pos: [100, 100],
+		});
+		expect(board.cancelMove).not.toHaveBeenCalled();
 	});
 });

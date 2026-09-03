@@ -131,6 +131,7 @@ export interface ChessgroundConfig extends CGConfig {
 export interface MustGoFasterState {
 	sessionId?: string;
 	playerColor?: PlayerColor;
+	selected?: cg.Key;
 	whiteTimeLeft?: number;
 	blackTimeLeft?: number;
 	whiteTimer?: number;

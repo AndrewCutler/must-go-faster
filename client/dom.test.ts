@@ -2,15 +2,13 @@
  * CODEX-GENERATED: the contents of this file were fully constructed by a Codex agent and not a human.
 */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	BoardElement,
 	CancelButtonElement,
+	ConfettiElement,
 	ConnectionStatusElement,
-	ConnectButtonElement,
 	CountdownContainerElement,
-	GameStatusModalElement,
-	OpponentStatusElement,
 	PlayerTypeElement,
 } from './dom';
 
@@ -18,19 +16,23 @@ function renderDom(): void {
 	document.body.innerHTML = `
 		<div id="board"></div>
 		<div id="getting-started"></div>
-		<button id="connect-button" class="button is-dark">Play</button>
 		<button
 			id="cancel-button"
 			class="button is-dark"
 			aria-label="Cancel pending game"
 			style="display:none"
 		></button>
-		<div id="opponent-status"></div>
 		<div id="connection-status"></div>
-		<div id="player-type-dropdown" class="dropdown">
-			<span id="player-type-dropdown-value">Computer</span>
+		<div id="player-type-panel">
+			<button id="player-type-computer" class="button is-dark">
+				Play computer
+			</button>
+			<button id="player-type-human" class="button is-dark">
+				Play human
+			</button>
 		</div>
 		<div id="board-container"></div>
+		<div id="confetti-stage"></div>
 	`;
 }
 
@@ -39,29 +41,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	vi.useRealTimers();
 	document.body.innerHTML = '';
-});
-
-describe('ConnectButtonElement', () => {
-	it('switches the play button into pending, reset, and joined states', () => {
-		const button = document.querySelector<HTMLButtonElement>(
-			'#connect-button',
-		)!;
-		const connectButton = new ConnectButtonElement();
-
-		connectButton.setPending();
-		expect(button.textContent).toBe('Play');
-		expect(button.disabled).toBe(true);
-		expect(button.classList.contains('is-loading')).toBe(true);
-
-		connectButton.reset();
-		expect(button.disabled).toBe(false);
-		expect(button.classList.contains('is-loading')).toBe(false);
-		expect(button.style.display).toBe('');
-
-		connectButton.gameJoined();
-		expect(button.style.display).toBe('none');
-	});
 });
 
 describe('BoardElement', () => {
@@ -117,63 +98,39 @@ describe('ConnectionStatusElement', () => {
 });
 
 describe('PlayerTypeElement', () => {
-	it('toggles the dropdown and updates the displayed selection', () => {
-		const dropdown = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
+	it('updates selection classes', () => {
+		const computer = document.querySelector<HTMLButtonElement>(
+			'#player-type-computer',
 		)!;
-		const value = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
+		const human = document.querySelector<HTMLButtonElement>(
+			'#player-type-human',
 		)!;
 		const playerType = new PlayerTypeElement();
 
-		playerType.toggleActive();
-		expect(dropdown.classList.contains('is-active')).toBe(true);
-
-		playerType.toggleActive();
-		expect(dropdown.classList.contains('is-active')).toBe(false);
-
 		playerType.setSelection('human');
-		expect(value.textContent).toBe('Human');
+		expect(human.classList.contains('is-selected')).toBe(true);
+		expect(computer.classList.contains('is-selected')).toBe(false);
 
 		playerType.setSelection('computer');
-		expect(value.textContent).toBe('Computer');
+		expect(computer.classList.contains('is-selected')).toBe(true);
+		expect(human.classList.contains('is-selected')).toBe(false);
 	});
 
-	it('hides, shows, and resets the selector', () => {
-		const dropdown = document.querySelector<HTMLDivElement>(
-			'#player-type-dropdown',
-		)!;
-		const value = document.querySelector<HTMLSpanElement>(
-			'#player-type-dropdown-value',
+	it('hides and shows the selector block', () => {
+		const panel = document.querySelector<HTMLDivElement>(
+			'#player-type-panel',
 		)!;
 		const playerType = new PlayerTypeElement();
 
 		playerType.setSelection('human');
 		playerType.hide();
-		expect(dropdown.style.display).toBe('none');
+		expect(panel.style.display).toBe('none');
 
 		playerType.show();
-		expect(dropdown.style.display).toBe('');
-		expect(value.textContent).toBe('Human');
+		expect(panel.style.display).toBe('');
 	});
 });
 
-describe('OpponentStatusElement', () => {
-	it('shows and clears the opponent label above the clock', () => {
-		const status = document.querySelector<HTMLDivElement>(
-			'#opponent-status',
-		)!;
-		const opponentStatus = new OpponentStatusElement();
-
-		opponentStatus.show('Playing human');
-		expect(status.textContent).toBe('Playing human');
-		expect(status.style.visibility).toBe('visible');
-
-		opponentStatus.clear();
-		expect(status.textContent).toBe('');
-		expect(status.style.visibility).toBe('hidden');
-	});
-});
 
 describe('CountdownContainerElement', () => {
 	it('shows the human player color above the countdown', () => {
@@ -188,12 +145,26 @@ describe('CountdownContainerElement', () => {
 	});
 });
 
-describe('GameStatusModalElement', () => {
-	it('formats draw outcomes clearly', () => {
-		const modal = new GameStatusModalElement(() => {});
-		modal.setOutcome('draw', 'stalemate');
+describe('ConfettiElement', () => {
+	it('shows for one second, fades for half a second, then hides', () => {
+		vi.useFakeTimers();
+		const confetti = new ConfettiElement();
+		const element = confetti.element!;
 
-		const header = document.querySelector<HTMLDivElement>('#modal-header')!;
-		expect(header.textContent).toBe('You drew via stalemate.');
+		confetti.show();
+		expect(element.style.display).toBe('flex');
+
+		vi.advanceTimersByTime(999);
+		expect(element.classList.contains('is-fading')).toBe(false);
+
+		vi.advanceTimersByTime(1);
+		expect(element.classList.contains('is-fading')).toBe(true);
+		expect(element.style.display).toBe('flex');
+
+		vi.advanceTimersByTime(499);
+		expect(element.style.display).toBe('flex');
+
+		vi.advanceTimersByTime(1);
+		expect(element.style.display).toBe('none');
 	});
 });

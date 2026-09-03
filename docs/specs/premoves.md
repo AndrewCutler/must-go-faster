@@ -68,4 +68,3 @@ During an active game, the local human player can cache one premove while it is 
 ## Non-functional requirements
 
 - Add tests for as many code paths as is practical, especially premove creation, replacement, cancellation, invalidation, execution, and clock behavior.
-- The frontend must not perform independent chess legality checks for premoves; it should submit attempts immediately and rely on server responses for acceptance or rejection.

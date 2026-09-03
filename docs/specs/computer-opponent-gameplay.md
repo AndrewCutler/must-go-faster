@@ -38,8 +38,8 @@ After a game with a computer opponent is started, the user is able to play an ac
 - The chessboard is visible and interactive according to the rules of chess.
 - The countdown overlay should say `[player color] moves first` for the human player.
 - The human player should be able to cache a premove while waiting for the computer's turn.
+- If the human player has a piece selected while waiting, that selected piece should remain selected when the computer's move arrives.
 - The last played move is highlighted according to chessground norms to indicate to the user what has happened.
-- Any legal chess end state supported by the server should be displayed to the user, including draw states such as stalemate, repetition, and insufficient material.
 
 ## Acceptance criteria
 
@@ -47,7 +47,8 @@ After a game with a computer opponent is started, the user is able to play an ac
 - Only valid chess moves are allowed.
 - The user can interact with the chessboard.
 - Moved pieces and the most recent move are highlighted according to online chess UI standards.
-- Game end states (checkmate, stalemate, repetition, insufficient material, and similar legal outcomes) are displayed to the user properly.
+- If the user has a piece selected before an opponent move is rendered, the selected piece remains selected after the board updates.
+- Game state is finalized for checkmate, stalemate, repetition, insufficient material, and similar legal outcomes.
 
 ## Non-functional requirements
 

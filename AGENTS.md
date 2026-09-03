@@ -2,7 +2,7 @@
 
 ## Repository overview
 
-must-go-faster is a cross-platform application consisting of:
+must-go-faster is web application consisting of:
 
 - A golang backend
 - A vanilla TypeScript frontend

@@ -117,6 +117,30 @@ export class ControlsElement implements IElement {
 			'<div>' + (blackTime > 0 ? blackTime : 0).toFixed(1) + 's</div>';
 	}
 
+	setActive(color: PlayerColor): void {
+		this.#whiteClockElement!.parentElement
+			?.querySelector<HTMLImageElement>('img')
+			?.classList.toggle(
+			'is-turn',
+			color === 'white',
+		);
+		this.#blackClockElement!.parentElement
+			?.querySelector<HTMLImageElement>('img')
+			?.classList.toggle(
+			'is-turn',
+			color === 'black',
+		);
+	}
+
+	clearActive(): void {
+		this.#whiteClockElement!.parentElement
+			?.querySelector<HTMLImageElement>('img')
+			?.classList.remove('is-turn');
+		this.#blackClockElement!.parentElement
+			?.querySelector<HTMLImageElement>('img')
+			?.classList.remove('is-turn');
+	}
+
 }
 
 export class PlayerTypeElement implements IElement {

@@ -121,6 +121,14 @@ body {
 	width: min(100%, 12rem);
 }
 
+.clock-row img {
+	transform-origin: center;
+}
+
+.clock-row img.is-turn {
+	animation: clock-mirror 1s step-end infinite;
+}
+
 .time {
 	border-radius: 0.25rem;
 	border: 2px solid hsl(220deg 14.02% 20.98%);
@@ -177,6 +185,16 @@ body {
 	}
 }
 
+@keyframes clock-mirror {
+    0%, 49.999% {
+        transform: scaleX(1);
+    }
+
+    50%, 100% {
+        transform: scaleX(-1);
+    }
+}
+
 piece.black.fade {
 	animation: fade 2.5s ease-in-out infinite;
 }
@@ -207,20 +225,6 @@ piece.black.fade {
 		height: 500px;
 	}
 }
-/* 
-@media screen and (min-width: 768px) and (max-width: 1023px) {
-	#board {
-		width: 400px;
-		height: 400px;
-	}
-}
-
-@media screen and (min-width: 480px) and (max-width: 767px) {
-	#board {
-		width: 300px;
-		height: 300px;
-	}
-} */
 
 #getting-started {
 	z-index: 5;

@@ -139,6 +139,7 @@ export class MustGoFaster {
 		};
 
 		ws.onerror = () => {
+			new ControlsElement().clearActive();
 			this.#state.closeReason = 'error';
 			this.#state.connectionPhase = 'idle';
 			this.#state.connection = undefined;
@@ -149,6 +150,7 @@ export class MustGoFaster {
 
 		ws.onclose = (closeEvent) => {
 			// console.log('WebSocket closed.', { event: closeEvent });
+			new ControlsElement().clearActive();
 			const closeReason = this.#state.closeReason;
 			this.#state.connection = undefined;
 			this.#state.connectionPhase = 'idle';
@@ -358,9 +360,6 @@ export class MustGoFaster {
 		const selectedSquare = this.#state.board!.state.selected;
 		const isOpponentMove =
 			this.#state.message!.playerColor !== this.#state.playerColor;
-		if (!isOpponentMove) {
-			this.#state.board!.cancelMove();
-		}
 
 		let endState:
 			| {
@@ -411,6 +410,12 @@ export class MustGoFaster {
 				color: this.#state.playerColor!,
 				free: true,
 				dests: this.toValidMoves(validMoves),
+				events: {
+					after: (orig, dest, metadata) => {
+						console.log({ orig, dest, metadata, selectedSquare });
+                        this.handleClientMove()(orig, dest, metadata)
+					},
+				},
 			},
 			lastMove: [from, to],
 			premovable: {
@@ -422,7 +427,7 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		});
-		if (selectedSquare) {
+		if (isOpponentMove && selectedSquare) {
 			this.#state.board!.selectSquare(selectedSquare, true);
 		}
 		if (endState) {
@@ -528,6 +533,7 @@ export class MustGoFaster {
 		const self = this;
 
 		if (whosNext === 'white') {
+			controlsDiv.setActive('white');
 			function updateWhiteTimer(): void {
 				if (!self.#state.whiteTimeLeft) {
 					return;
@@ -564,6 +570,7 @@ export class MustGoFaster {
 			}
 			this.#state.whiteTimer = requestAnimationFrame(updateWhiteTimer);
 		} else {
+			controlsDiv.setActive('black');
 			function updateBlackTimer(): void {
 				if (!self.#state.blackTimeLeft) {
 					return;
@@ -640,6 +647,7 @@ export class MustGoFaster {
 		method: string,
 	): void {
 		// console.log('gameOver: ', { gameStatus, method });
+		new ControlsElement().clearActive();
 		if (this.#state.whiteTimer) {
 			cancelAnimationFrame(this.#state.whiteTimer);
 			this.#state.whiteTimer = undefined;

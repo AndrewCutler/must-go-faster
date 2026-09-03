@@ -410,12 +410,6 @@ export class MustGoFaster {
 				color: this.#state.playerColor!,
 				free: true,
 				dests: this.toValidMoves(validMoves),
-				events: {
-					after: (orig, dest, metadata) => {
-						console.log({ orig, dest, metadata, selectedSquare });
-                        this.handleClientMove()(orig, dest, metadata)
-					},
-				},
 			},
 			lastMove: [from, to],
 			premovable: {
@@ -673,6 +667,7 @@ export class MustGoFaster {
 		});
 		this.#state.board!.stop();
 		new CancelButtonElement().hide();
+		new PlayerTypeElement().show();
 		new ConnectionStatusElement().clear();
 		const self = this;
 		function sendNewGameMessage() {
@@ -754,6 +749,7 @@ export class MustGoFaster {
 		const playerType = new PlayerTypeElement();
 		const status = new ConnectionStatusElement();
 
+		playerType.hide();
 		playerType.setPending(this.#state.opponentType);
 		cancelButton.show();
 		status.show(
@@ -768,6 +764,7 @@ export class MustGoFaster {
 		const playerType = new PlayerTypeElement();
 
 		new CancelButtonElement().hide();
+		playerType.hide();
 		playerType.clearPending();
 		new ConnectionStatusElement().clear();
 	}
@@ -781,6 +778,7 @@ export class MustGoFaster {
 		const status = new ConnectionStatusElement();
 
 		playerType.clearPending();
+		playerType.show();
 		cancelButton.hide();
 		if (resetOpponentType) {
 			this.#state.opponentType = 'computer';
@@ -795,6 +793,7 @@ export class MustGoFaster {
 		const status = new ConnectionStatusElement();
 
 		playerType.clearPending();
+		playerType.show();
 		cancelButton.hide();
 		status.clear();
 	}

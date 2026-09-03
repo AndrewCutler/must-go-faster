@@ -38,7 +38,9 @@ When a user clicks the "Play human" button, if a pending lobby exists on the ser
 
 - The "Play human" button should be displayed on app load.
 - The "Play human" button should only be enabled if the user does not already have a pending or active game.
-- Upon clicking the "Play human" button, the user should be added to a pending lobby.
+- Upon clicking the "Play human" button, the opponent Play buttons should be hidden and the user should be added to a pending lobby.
+- The opponent Play buttons should remain hidden while the lobby becomes an active game and throughout that game.
+- The opponent Play buttons should become available again when the game ends or the connection is closed.
 - Once the game is started, the chessboard should display and a 5-second countdown should overlay it to give both players time to prepare for game start.
 - The countdown overlay should say `[player color] moves first` for the local user.
 - A chess clock with both players' times should be displayed.
@@ -48,6 +50,8 @@ When a user clicks the "Play human" button, if a pending lobby exists on the ser
 
 - Users with no existing games can click the "Play human" button.
 - The "Play human" button becomes disabled immediately after being clicked so duplicate game join requests are not sent.
+- The opponent Play buttons are hidden immediately after joining begins and remain hidden while the lobby or resulting game is active.
+- The opponent Play buttons become available again after cancellation, disconnect, or game over.
 - If multiple pending lobbies exist, the oldest one is joined.
 - Joining an expired lobby is not allowed.
 - The board renders with the selected PGN but is not actionable.

@@ -97,7 +97,6 @@ export class MustGoFaster {
 		new CancelButtonElement().hide();
 		new ConnectionStatusElement().clear();
 
-		this.ping();
 	}
 
 	connect(): void {
@@ -209,14 +208,6 @@ export class MustGoFaster {
 
 	setOpponentType(type: OpponentType): void {
 		this.#state.opponentType = type;
-	}
-
-	private async ping() {
-		try {
-			await fetch(`${this.#state.apiBaseUrl!}/ping`);
-		} catch (error) {
-			console.error(error);
-		}
 	}
 
 	private async handleMessage(message: FromMessage<FromPayload>) {

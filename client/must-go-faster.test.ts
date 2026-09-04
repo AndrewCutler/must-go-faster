@@ -669,6 +669,38 @@ describe('MustGoFaster connect flow', () => {
 		});
 	});
 
+	it('adds queen promotion notation to a premove', () => {
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket, {
+			playerColor: 'black',
+			isAgainstComputer: false,
+			whosNext: 'white',
+		});
+		emitGameStartedMessage(socket, {
+			playerColor: 'black',
+			isAgainstComputer: false,
+			whosNext: 'white',
+		});
+
+		chessgroundMock.lastBoard!.state.pieces.set('a7', {
+			role: 'pawn',
+			color: 'white',
+		});
+		chessgroundMock.lastBoard!.state.premovable.events?.set?.('a7', 'a8');
+
+		const sent = JSON.parse(
+			socket.send.mock.calls[socket.send.mock.calls.length - 1][0] as string,
+		);
+		expect(sent.payload.premove).toEqual({
+			from: 'a7',
+			to: 'a8q',
+		});
+	});
+
 	it('sends a premove cancellation when the server rejects the premove', () => {
 		const app = createApp('human');
 

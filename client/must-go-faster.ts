@@ -816,6 +816,7 @@ export class MustGoFaster {
 	private handlePremoveSet() {
 		const self = this;
 		return function (from: cg.Key, to: cg.Key): void {
+			to = self.checkIsPromotion(from, to);
 			self.sendPremoveMessage({ from, to }, false);
 		};
 	}
@@ -846,7 +847,7 @@ export class MustGoFaster {
 		): void {
 			// console.log('Handle move: ', { from, to });
 			// handle promotion here; autopromote to queen for now
-			to = self.checkIsPromotion(to);
+			to = self.checkIsPromotion(from, to);
 
 			const move: { from: cg.Key; to: cg.Key } = { from, to };
 			if (self.#state.connection) {
@@ -862,8 +863,11 @@ export class MustGoFaster {
 		};
 	}
 
-	private checkIsPromotion(to: cg.Key): cg.Key {
-		const movedPiece = this.#state.board!.state.pieces.get(to);
+	private checkIsPromotion(from: cg.Key, to: cg.Key): cg.Key {
+		// Normal moves leave the pawn on the destination; premoves leave it on the origin.
+		const movedPiece =
+			this.#state.board!.state.pieces.get(from) ??
+			this.#state.board!.state.pieces.get(to);
 		// any pawn move ending in 1 or 8, i.e. last rank
 		if (movedPiece?.role === 'pawn' && /(1|8)$/.test(to)) {
 			to += 'q';

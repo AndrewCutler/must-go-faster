@@ -24,7 +24,14 @@
 	</head>
 
 	<body>
-		<div id="container">
+		<div id="startup-state" aria-live="polite">
+			<div id="startup-spinner" role="status" aria-label="Loading"></div>
+			<div id="startup-error" class="notification is-danger" hidden>
+				Unable to connect to the game server. Please refresh the page to try again.
+			</div>
+		</div>
+		<div id="app-shell" hidden>
+			<div id="container">
 			<div id="controls">
 				<div class="clock-row">
 					<img
@@ -76,8 +83,8 @@
 					<div id="board"></div>
 				</div>
 			</div>
-		</div>
-		<div id="footer">
+			</div>
+			<div id="footer">
 			<div class="footer-mark">
 				<svg
 					class="footer-mark__svg"
@@ -133,8 +140,8 @@
 				</svg>
 			</div>
 			<div></div>
-		</div>
-		<div id="confetti-stage">
+			</div>
+			<div id="confetti-stage">
 			<div class="confetti-field" aria-hidden="true">
 				<i class="piece"></i>
 				<i class="piece"></i>
@@ -168,6 +175,7 @@
 				<i class="piece"></i>
 				<i class="piece"></i>
 				<i class="piece"></i>
+			</div>
 			</div>
 		</div>
 	</body>

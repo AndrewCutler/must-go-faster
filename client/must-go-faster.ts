@@ -61,6 +61,19 @@ export class MustGoFaster {
 		new BoardElement().disable();
 		this.#state.board.set({
 			viewOnly: false,
+			events: {
+				select: (key) => {
+					const selected = this.#state.board!.state.selected;
+					const piece = this.#state.board!.state.pieces.get(key);
+					if (
+						selected &&
+						selected !== key &&
+						piece?.color === this.#state.playerColor
+					) {
+						this.#state.board!.selectSquare(null);
+					}
+				},
+			},
 			movable: {
 				events: {
 					after: this.handleClientMove(),
@@ -656,7 +669,6 @@ export class MustGoFaster {
 				customDests: undefined,
 			},
 		});
-		this.#state.board!.stop();
 		new CancelButtonElement().hide();
 		new PlayerTypeElement().show();
 		new ConnectionStatusElement().clear();

@@ -317,6 +317,8 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		});
+		// Orientation changes while view-only rebuild the board without input handlers.
+		this.#state.board!.redrawAll();
 	}
 
 	private updateBoardWithMove(): void {
@@ -461,7 +463,6 @@ export class MustGoFaster {
 		return new Promise((resolve) => {
 			const countdownDisplay = new CountdownContainerElement(
 				whoMovesFirst,
-				this.#state.playerColor!,
 			);
 			const self = this;
 			const startedAt = new Date(countdownStartAt).getTime();

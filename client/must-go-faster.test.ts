@@ -7,6 +7,7 @@ import { MustGoFaster } from './must-go-faster';
 import { PlayerTypeElement } from './dom';
 
 type MockBoard = {
+	redrawAll: ReturnType<typeof vi.fn>;
 	set: ReturnType<typeof vi.fn>;
 	move: ReturnType<typeof vi.fn>;
 	playPremove: ReturnType<typeof vi.fn>;
@@ -59,6 +60,7 @@ vi.mock('chessground', () => {
 	return {
 		Chessground: vi.fn(() => {
 			const board: MockBoard = {
+				redrawAll: vi.fn(),
 				set: vi.fn((config: Record<string, unknown> = {}) => {
 					if ('viewOnly' in config) {
 						board.state.viewOnly = config.viewOnly as boolean;
@@ -653,18 +655,18 @@ describe('MustGoFaster connect flow', () => {
 		expect(chessgroundMock.lastBoard?.state.premovable.customDests).toBeDefined();
 	});
 
-	it('re-enables the board when starting a second computer game after game over', async () => {
+	it.each(['computer', 'human'] as const)('re-enables the board when starting a second %s game after game over', async (opponentType) => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date('2026-08-29T12:00:00.000Z'));
 
-		const app = createApp('computer');
+		const app = createApp(opponentType);
 
 		app.connect();
 		const firstSocket = fakeSockets[0];
 		firstSocket.onopen?.(new Event('open'));
 		emitJoinedMessage(firstSocket, {
 			playerColor: 'white',
-			isAgainstComputer: true,
+			isAgainstComputer: opponentType === 'computer',
 			whosNext: 'white',
 		});
 		await vi.advanceTimersByTimeAsync(6_000);
@@ -674,7 +676,7 @@ describe('MustGoFaster connect flow', () => {
 
 		emitMoveMessage(firstSocket, {
 			playerColor: 'white',
-			isAgainstComputer: true,
+			isAgainstComputer: opponentType === 'computer',
 			whosNext: 'white',
 			gameOutcome: '1-0',
 			isCheckmated: 'black',
@@ -688,8 +690,8 @@ describe('MustGoFaster connect flow', () => {
 		const secondSocket = fakeSockets[1];
 		secondSocket.onopen?.(new Event('open'));
 		emitJoinedMessage(secondSocket, {
-			playerColor: 'white',
-			isAgainstComputer: true,
+			playerColor: 'black',
+			isAgainstComputer: opponentType === 'computer',
 			whosNext: 'white',
 		});
 		await vi.advanceTimersByTimeAsync(6_000);
@@ -698,6 +700,7 @@ describe('MustGoFaster connect flow', () => {
 			'auto',
 		);
 		expect(chessgroundMock.lastBoard?.state.viewOnly).toBe(false);
+		expect(chessgroundMock.lastBoard?.redrawAll).toHaveBeenCalledTimes(2);
 	});
 
 	it('sends a premove immediately when the player queues one', () => {

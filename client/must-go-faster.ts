@@ -61,6 +61,19 @@ export class MustGoFaster {
 		new BoardElement().disable();
 		this.#state.board.set({
 			viewOnly: false,
+			events: {
+				select: (key) => {
+					const selected = this.#state.board!.state.selected;
+					const piece = this.#state.board!.state.pieces.get(key);
+					if (
+						selected &&
+						selected !== key &&
+						piece?.color === this.#state.playerColor
+					) {
+						this.#state.board!.selectSquare(null);
+					}
+				},
+			},
 			movable: {
 				events: {
 					after: this.handleClientMove(),
@@ -304,6 +317,8 @@ export class MustGoFaster {
 				enabled: true,
 			},
 		});
+		// Orientation changes while view-only rebuild the board without input handlers.
+		this.#state.board!.redrawAll();
 	}
 
 	private updateBoardWithMove(): void {
@@ -448,7 +463,6 @@ export class MustGoFaster {
 		return new Promise((resolve) => {
 			const countdownDisplay = new CountdownContainerElement(
 				whoMovesFirst,
-				this.#state.playerColor!,
 			);
 			const self = this;
 			const startedAt = new Date(countdownStartAt).getTime();
@@ -656,7 +670,6 @@ export class MustGoFaster {
 				customDests: undefined,
 			},
 		});
-		this.#state.board!.stop();
 		new CancelButtonElement().hide();
 		new PlayerTypeElement().show();
 		new ConnectionStatusElement().clear();

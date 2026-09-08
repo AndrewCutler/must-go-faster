@@ -133,15 +133,29 @@ describe('PlayerTypeElement', () => {
 
 
 describe('CountdownContainerElement', () => {
-	it('shows the human player color above the countdown', () => {
-		const countdown = new CountdownContainerElement('white', 'black');
+	it('keeps the flashing color through piece replacement and resets between games', () => {
+		const board = document.querySelector<HTMLElement>('#board')!;
+		for (const color of ['white', 'black'] as const) {
+			const countdown = new CountdownContainerElement(color);
+			const piece = document.createElement('piece');
+			piece.className = color;
+			board.appendChild(piece);
+			piece.replaceWith(piece.cloneNode());
+			expect(board.dataset.countdownColor).toBe(color);
+			countdown.hide(color);
+			expect(board.dataset.countdownColor).toBeUndefined();
+		}
+	});
+
+	it.each(['white', 'black'] as const)('shows %s as the starting color above the countdown', (whoMovesFirst) => {
+		const countdown = new CountdownContainerElement(whoMovesFirst);
 		const top = document.querySelector<HTMLDivElement>(
 			'#countdown-container :nth-child(1)',
 		)!;
 
-		expect(top.textContent).toBe('black moves first');
+		expect(top.textContent).toBe(`${whoMovesFirst} moves first`);
 
-		countdown.hide('white');
+		countdown.hide(whoMovesFirst);
 	});
 });
 

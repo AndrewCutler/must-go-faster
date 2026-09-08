@@ -42,7 +42,7 @@ After two human users are matched into the same session, both users can play a c
 
 - The board should be visible once the shared game session begins.
 - The board should become interactive after the shared countdown completes.
-- The countdown overlay should say `[player color] moves first` for the local user.
+- The countdown overlay should say `[whosNext] moves first`, using the server-provided starting color for both users.
 - The local human player should be able to cache a premove while waiting for the opponent's turn.
 - If the local player has a piece selected while waiting, that selected piece should remain selected when the opponent's move arrives.
 - The selected player color should be respected when orienting the board.

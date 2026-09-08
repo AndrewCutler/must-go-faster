@@ -39,14 +39,14 @@ export class CountdownContainerElement implements IElement {
 		return this.#element;
 	}
 
-	constructor(whoMovesFirst: PlayerColor, playerColor: PlayerColor) {
+	constructor(whoMovesFirst: PlayerColor) {
 		const parent = document.querySelector('#board')!;
 
 		const element = document.createElement('div');
 		element.id = this.#selector.replace('#', '');
 
 		const top = document.createElement('div');
-		top.textContent = `${playerColor} moves first`;
+		top.textContent = `${whoMovesFirst} moves first`;
 		top.style.fontSize = '2rem';
 		(top.style as any)['-webkit-text-stroke'] = '1px black';
 
@@ -77,12 +77,11 @@ export class CountdownContainerElement implements IElement {
 }
 
 export function fadePieces(playerColor: PlayerColor, on = true): void {
-	for (const node of document.querySelectorAll(`piece.${playerColor}`)) {
-		if (on) {
-			node.classList.add('fade');
-		} else {
-			node.classList.remove('fade');
-		}
+	const board = document.querySelector<HTMLElement>('#board')!;
+	if (on) {
+		board.dataset.countdownColor = playerColor;
+	} else {
+		delete board.dataset.countdownColor;
 	}
 }
 

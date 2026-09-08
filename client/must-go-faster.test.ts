@@ -7,6 +7,7 @@ import { MustGoFaster } from './must-go-faster';
 import { PlayerTypeElement } from './dom';
 
 type MockBoard = {
+	redrawAll: ReturnType<typeof vi.fn>;
 	set: ReturnType<typeof vi.fn>;
 	move: ReturnType<typeof vi.fn>;
 	playPremove: ReturnType<typeof vi.fn>;
@@ -15,6 +16,9 @@ type MockBoard = {
 		selectSquare: ReturnType<typeof vi.fn>;
 		state: {
 		pieces: Map<string, { role?: string; color?: string }>;
+		events: {
+			select?: (key: string) => void;
+		};
 		movable: {
 			color?: string;
 			free?: boolean;
@@ -56,6 +60,7 @@ vi.mock('chessground', () => {
 	return {
 		Chessground: vi.fn(() => {
 			const board: MockBoard = {
+				redrawAll: vi.fn(),
 				set: vi.fn((config: Record<string, unknown> = {}) => {
 					if ('viewOnly' in config) {
 						board.state.viewOnly = config.viewOnly as boolean;
@@ -77,6 +82,12 @@ vi.mock('chessground', () => {
 					}
 					if ('selected' in config) {
 						board.state.selected = config.selected as string;
+					}
+					if ('events' in config) {
+						Object.assign(
+							board.state.events,
+							config.events as Record<string, unknown>,
+						);
 					}
 					if ('premovable' in config) {
 						Object.assign(
@@ -105,10 +116,14 @@ vi.mock('chessground', () => {
 					board.state.premovable.current = undefined;
 				}),
 				selectSquare: vi.fn((key: string | null) => {
+					if (key) {
+						board.state.events.select?.(key);
+					}
 					board.state.selected = key ?? undefined;
 				}),
-				state: {
+					state: {
 					pieces: new Map(),
+					events: {},
 					movable: {},
 					premovable: {},
 					draggable: {},
@@ -184,6 +199,7 @@ function renderDom(): void {
 			<div id="white-clock"></div>
 		</div>
 		<div id="board-container"></div>
+		<div id="confetti-stage"></div>
 	`;
 }
 
@@ -639,6 +655,54 @@ describe('MustGoFaster connect flow', () => {
 		expect(chessgroundMock.lastBoard?.state.premovable.customDests).toBeDefined();
 	});
 
+	it.each(['computer', 'human'] as const)('re-enables the board when starting a second %s game after game over', async (opponentType) => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-08-29T12:00:00.000Z'));
+
+		const app = createApp(opponentType);
+
+		app.connect();
+		const firstSocket = fakeSockets[0];
+		firstSocket.onopen?.(new Event('open'));
+		emitJoinedMessage(firstSocket, {
+			playerColor: 'white',
+			isAgainstComputer: opponentType === 'computer',
+			whosNext: 'white',
+		});
+		await vi.advanceTimersByTimeAsync(6_000);
+		expect(document.querySelector<HTMLDivElement>('#board')!.style.pointerEvents).toBe(
+			'auto',
+		);
+
+		emitMoveMessage(firstSocket, {
+			playerColor: 'white',
+			isAgainstComputer: opponentType === 'computer',
+			whosNext: 'white',
+			gameOutcome: '1-0',
+			isCheckmated: 'black',
+		});
+
+		expect(document.querySelector<HTMLDivElement>('#board')!.style.pointerEvents).toBe(
+			'none',
+		);
+
+		app.connect();
+		const secondSocket = fakeSockets[1];
+		secondSocket.onopen?.(new Event('open'));
+		emitJoinedMessage(secondSocket, {
+			playerColor: 'black',
+			isAgainstComputer: opponentType === 'computer',
+			whosNext: 'white',
+		});
+		await vi.advanceTimersByTimeAsync(6_000);
+
+		expect(document.querySelector<HTMLDivElement>('#board')!.style.pointerEvents).toBe(
+			'auto',
+		);
+		expect(chessgroundMock.lastBoard?.state.viewOnly).toBe(false);
+		expect(chessgroundMock.lastBoard?.redrawAll).toHaveBeenCalledTimes(2);
+	});
+
 	it('sends a premove immediately when the player queues one', () => {
 		const app = createApp('human');
 
@@ -780,6 +844,34 @@ describe('MustGoFaster connect flow', () => {
 		expect(chessgroundMock.lastBoard?.cancelMove).toHaveBeenCalled();
 		expect(chessgroundMock.lastBoard?.state.fen).toBe('authoritative-fen');
 		expect(chessgroundMock.lastBoard?.state.lastMove).toBeUndefined();
+	});
+
+	it('replaces a selected piece when another own piece is clicked', () => {
+		const app = createApp('human');
+
+		app.connect();
+		const socket = fakeSockets[0];
+		socket.onopen?.(new Event('open'));
+		emitJoinedMessage(socket, {
+			playerColor: 'white',
+			isAgainstComputer: false,
+			whosNext: 'white',
+		});
+		emitGameStartedMessage(socket, {
+			playerColor: 'white',
+			isAgainstComputer: false,
+			whosNext: 'white',
+		});
+
+		const board = chessgroundMock.lastBoard!;
+		board.state.pieces.set('g1', { role: 'knight', color: 'white' });
+		board.state.pieces.set('a2', { role: 'pawn', color: 'white' });
+		board.selectSquare('g1');
+
+		board.selectSquare('a2');
+
+		expect(board.selectSquare).toHaveBeenCalledWith(null);
+		expect(board.state.selected).toBe('a2');
 	});
 
 	it("preserves the selected piece when the opponent's move updates the board", () => {

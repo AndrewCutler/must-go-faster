@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+ */
+
 package game
 
 import (
@@ -150,8 +154,14 @@ func normalizeStartingFEN(fen string) string {
 	return strings.Join(parts, " ")
 }
 
-func randomComputerDelay(remainingSeconds float64) time.Duration {
-	delay := time.Duration(rand.Intn(4001)+500) * time.Millisecond
+func randomComputerDelay(remainingSeconds float64, legalMoveCount int) time.Duration {
+	// More choices allow more thinking time, up to a 2.5-second total delay.
+	extraChoices := min(max(legalMoveCount-1, 0), 40)
+	minimumMillis, windowMillis := 500, extraChoices*50
+	if legalMoveCount == 1 {
+		minimumMillis, windowMillis = 100, 400
+	}
+	delay := time.Duration(minimumMillis+rand.Intn(windowMillis+1)) * time.Millisecond
 	remaining := time.Duration(remainingSeconds * float64(time.Second))
 	if remaining > 0 && delay > remaining {
 		return remaining

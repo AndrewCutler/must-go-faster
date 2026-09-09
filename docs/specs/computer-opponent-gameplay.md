@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+*/
+
 # Computer-opponent gameplay
 
 ## Status
@@ -54,5 +58,5 @@ After a game with a computer opponent is started, the user is able to play an ac
 
 - Add tests for as many code paths as is practical, especially the creation, cancel, timeout, join, and disconnect flows.
 - The computer should play uniformly random legal moves chosen from the list of available legal moves for the computer player's color.
-- The computer should take between .5 and 7.5 seconds per move.
+- With exactly one legal move, the computer chooses a random delay of 0.1–0.5 seconds, inclusive. With multiple legal moves, it chooses a random delay in whole milliseconds between 0.5 seconds and `min(2.5 seconds, 0.5 seconds + 50 ms * (legal move count - 1))`, inclusive. The delay is capped by the positive remaining clock time.
 - The frontend must not perform independent chess legality checks; the backend must validate and authorize all move attempts and state transitions.

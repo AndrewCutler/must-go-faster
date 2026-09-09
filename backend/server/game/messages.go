@@ -1,3 +1,7 @@
+/*
+ * CODEX-MODIFIED: the contents of this file were written by a human and modified after the fact by a Codex agent.
+ */
+
 package game
 
 import (
@@ -525,7 +529,7 @@ func maybeScheduleComputerMove(session *Session) {
 	}
 
 	nextMove := moves[rand.Intn(len(moves))]
-	delay := scheduleComputerMoveDelay(computer.Clock.TimeLeft)
+	delay := scheduleComputerMoveDelay(computer.Clock.TimeLeft, len(moves))
 
 	go func() {
 		time.Sleep(delay)

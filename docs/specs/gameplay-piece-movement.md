@@ -88,7 +88,7 @@ The requirements below were consolidated from:
 
 - A game starts after the five-second countdown.
 - A computer opponent makes uniformly random legal moves from its available legal moves.
-- Computer moves occur within a random 0.5-to-7.5-second window.
+- Forced computer moves (exactly one legal move) take a random 0.1–0.5 seconds. With multiple legal moves, delays range from 0.5 seconds to a maximum that increases by 50 ms per additional legal move, capped at 2.5 seconds. All delays are limited by positive remaining clock time.
 - The 50-move-rule clock starts from the generated game position rather than historical PGN moves used to source that position.
 
 ## Unspecified behavior and open UX gaps

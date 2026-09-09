@@ -28,7 +28,7 @@ func withComputerMoveDelay(t *testing.T, delay time.Duration) {
 	t.Helper()
 
 	original := scheduleComputerMoveDelay
-	scheduleComputerMoveDelay = func(float64) time.Duration {
+	scheduleComputerMoveDelay = func(float64, int) time.Duration {
 		return delay
 	}
 	t.Cleanup(func() {
